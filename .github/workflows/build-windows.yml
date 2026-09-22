@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "zip_parts/**"
+      - "POSITION_TRACKING_OFFICER_FINAL.zip"
       - ".github/workflows/build-windows.yml"
 
 jobs:
@@ -14,33 +14,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Reconstruct and validate source package
+      - name: Verify uploaded final ZIP
         shell: powershell
         run: |
-          $names = @("part01.b64","part02a.b64","part02b.b64","part03.b64","part04.b64","part05.b64")
-          $parts = $names | ForEach-Object { Get-Item ("zip_parts\" + $_) }
-          $expected = @(
-            "b783a0fd61c555422c08f06fdc8b8bab457a2c8bf62781517213f703a145272e",
-            "1232684a5187cec0fdb7d5fabee55e7e5266903a81f609e561b858d277c16da0",
-            "924aa74f199b80a3bf9b75d2ffc804103a723ee8711d654f2b952851f84332b2",
-            "a173a893fe7462ee30a30d7f01331b8664cfec73fae78261bae083666480f252",
-            "c536e4fe67074b7fa0f0eb81e4da404084200850bb36e9b6db0312de7cb81845",
-            "eef7b965f0df5a140dc1e8bfd9bc849f9ff0bcb1b8978dae5b60771bbfd00ed3"
-          )
-          for ($i=0; $i -lt $parts.Count; $i++) {
-            $actual = (Get-FileHash $parts[$i].FullName -Algorithm SHA256).Hash.ToLower()
-            Write-Host "$($parts[$i].Name) SHA256: $actual"
-            if ($actual -ne $expected[$i]) { throw "Chunk hash mismatch: $($parts[$i].Name)" }
-          }
-          $b64 = ($parts | ForEach-Object { (Get-Content $_.FullName -Raw).Trim() }) -join ""
-          if ($b64.Length -ne 35016) { throw "Unexpected base64 length: $($b64.Length)" }
-          [IO.File]::WriteAllBytes("POSITION_TRACKING_OFFICER_FINAL_RECONSTRUCTED.zip",[Convert]::FromBase64String($b64))
-          $zipHash = (Get-FileHash "POSITION_TRACKING_OFFICER_FINAL_RECONSTRUCTED.zip" -Algorithm SHA256).Hash.ToLower()
+          if (-not (Test-Path "POSITION_TRACKING_OFFICER_FINAL.zip")) { throw "Final ZIP not found" }
+          $zipHash = (Get-FileHash "POSITION_TRACKING_OFFICER_FINAL.zip" -Algorithm SHA256).Hash.ToLower()
           Write-Host "ZIP SHA256: $zipHash"
           if ($zipHash -ne "33e8adeda50995b6526f25bc28ab883e117e478f207fe1b58eb179b521488cb8") { throw "ZIP SHA256 mismatch" }
 
@@ -48,7 +26,7 @@ jobs:
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path buildsrc | Out-Null
-          Expand-Archive -Path "POSITION_TRACKING_OFFICER_FINAL_RECONSTRUCTED.zip" -DestinationPath "buildsrc" -Force
+          Expand-Archive -Path "POSITION_TRACKING_OFFICER_FINAL.zip" -DestinationPath "buildsrc" -Force
 
       - name: Locate source
         shell: powershell
@@ -65,9 +43,14 @@ jobs:
           $officer = Get-Content "$env:SOURCE_DIR\OFFICER_CHANGE_VERIFICATION.txt" -Raw
           if ($r14 -notmatch "RESULT 14/14") { throw "Import tests not verified" }
           if ($r121 -notmatch "RESULT 121/121") { throw "Hard stress tests not verified" }
-          if ($officer -notmatch "15/15 critical functions PASS") { throw "Officer critical regression not verified" }
+          if ($officer -notmatch "15/15 critical functions PASS") { throw "Officer regression not verified" }
           if ($officer -notmatch "100 sequential sessions: PASS") { throw "START END stress not verified" }
           if ($officer -notmatch "Removed PIN/password authentication flow") { throw "No-PIN change not verified" }
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - name: Install dependencies
         shell: powershell
