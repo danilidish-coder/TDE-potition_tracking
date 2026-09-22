@@ -76,8 +76,10 @@ jobs:
       - name: Verify build output
         shell: powershell
         run: |
-          $exe = Get-ChildItem "$env:SOURCE_DIR\dist" -Recurse -Filter "*.exe" | Select-Object -First 1
-          if (-not $exe) { throw "Windows EXE was not created" }
+          $exeFiles = @(Get-ChildItem "$env:SOURCE_DIR\dist" -Filter "*.exe")
+          if ($exeFiles.Count -ne 1) { throw "Expected exactly one EXE, found $($exeFiles.Count)" }
+          $exe = $exeFiles[0]
+          if ($exe.Name -ne "Καταγραφή Θέσεων.exe") { throw "Unexpected EXE name: $($exe.Name)" }
           $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash
           Write-Host "EXE: $($exe.FullName)"
           Write-Host "EXE SHA256: $hash"
@@ -96,6 +98,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: POSITION_TRACKING_WINDOWS_FINAL
-          path: ${{ env.SOURCE_DIR }}/dist/PositionTracking/
+          path: ${{ env.SOURCE_DIR }}/dist/Καταγραφή Θέσεων.exe
           if-no-files-found: error
           retention-days: 30
