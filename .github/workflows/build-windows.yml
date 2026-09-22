@@ -70,8 +70,8 @@ jobs:
         shell: powershell
         run: |
           Set-Location "$env:SOURCE_DIR"
-          python -m PyInstaller --noconfirm --clean --windowed --name "PositionTracking" "position_tracking_FINAL.py"
-          python -c "from pathlib import Path; p=Path('dist/PositionTracking'); (p/'PositionTracking.exe').rename(p/'\u039a\u03b1\u03c4\u03b1\u03b3\u03c1\u03b1\u03c6\u03ae \u0398\u03ad\u03c3\u03b5\u03c9\u03bd.exe')"
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --name "PositionTracking" "position_tracking_FINAL.py"
+          python -c "from pathlib import Path; p=Path('dist'); (p/'PositionTracking.exe').rename(p/'\u039a\u03b1\u03c4\u03b1\u03b3\u03c1\u03b1\u03c6\u03ae \u0398\u03ad\u03c3\u03b5\u03c9\u03bd.exe')"
 
       - name: Verify build output
         shell: powershell
