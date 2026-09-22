@@ -10,7 +10,6 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,11 +22,12 @@ jobs:
       - name: Reconstruct and validate source package
         shell: powershell
         run: |
-          $parts = Get-ChildItem "zip_parts\part*.b64" | Sort-Object Name
-          if ($parts.Count -ne 5) { throw "Expected 5 package chunks, found $($parts.Count)" }
+          $names = @("part01.b64","part02a.b64","part02b.b64","part03.b64","part04.b64","part05.b64")
+          $parts = $names | ForEach-Object { Get-Item ("zip_parts\" + $_) }
           $expected = @(
             "b783a0fd61c555422c08f06fdc8b8bab457a2c8bf62781517213f703a145272e",
-            "3cf6df067b56b78eb4795c34fc07f1677d745aa6680b58034ca86de36875e810",
+            "1232684a5187cec0fdb7d5fabee55e7e5266903a81f609e561b858d277c16da0",
+            "924aa74f199b80a3bf9b75d2ffc804103a723ee8711d654f2b952851f84332b2",
             "a173a893fe7462ee30a30d7f01331b8664cfec73fae78261bae083666480f252",
             "c536e4fe67074b7fa0f0eb81e4da404084200850bb36e9b6db0312de7cb81845",
             "eef7b965f0df5a140dc1e8bfd9bc849f9ff0bcb1b8978dae5b60771bbfd00ed3"
@@ -38,12 +38,10 @@ jobs:
             if ($actual -ne $expected[$i]) { throw "Chunk hash mismatch: $($parts[$i].Name)" }
           }
           $b64 = ($parts | ForEach-Object { (Get-Content $_.FullName -Raw).Trim() }) -join ""
-          Write-Host "Base64 chars: $($b64.Length)"
           if ($b64.Length -ne 35016) { throw "Unexpected base64 length: $($b64.Length)" }
-          $bytes = [Convert]::FromBase64String($b64)
-          [IO.File]::WriteAllBytes("POSITION_TRACKING_OFFICER_FINAL_RECONSTRUCTED.zip", $bytes)
+          [IO.File]::WriteAllBytes("POSITION_TRACKING_OFFICER_FINAL_RECONSTRUCTED.zip",[Convert]::FromBase64String($b64))
           $zipHash = (Get-FileHash "POSITION_TRACKING_OFFICER_FINAL_RECONSTRUCTED.zip" -Algorithm SHA256).Hash.ToLower()
-          Write-Host "Reconstructed ZIP SHA256: $zipHash"
+          Write-Host "ZIP SHA256: $zipHash"
           if ($zipHash -ne "33e8adeda50995b6526f25bc28ab883e117e478f207fe1b58eb179b521488cb8") { throw "ZIP SHA256 mismatch" }
 
       - name: Extract source package
@@ -51,27 +49,25 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path buildsrc | Out-Null
           Expand-Archive -Path "POSITION_TRACKING_OFFICER_FINAL_RECONSTRUCTED.zip" -DestinationPath "buildsrc" -Force
-          Get-ChildItem buildsrc -Recurse
 
       - name: Locate source
         shell: powershell
         run: |
           $source = Get-ChildItem buildsrc -Recurse -Filter "position_tracking_FINAL.py" | Select-Object -First 1
           if (-not $source) { throw "position_tracking_FINAL.py not found" }
-          $folder = $source.Directory.FullName
-          "SOURCE_DIR=$folder" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "SOURCE_DIR=$($source.Directory.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Verify embedded test reports
+      - name: Verify embedded stress reports
         shell: powershell
         run: |
           $r14 = Get-Content "$env:SOURCE_DIR\FLEXIBLE_IMPORT_TEST_14_OF_14.txt" -Raw
           $r121 = Get-Content "$env:SOURCE_DIR\FLEXIBLE_HARD_STRESS_121_OF_121.txt" -Raw
           $officer = Get-Content "$env:SOURCE_DIR\OFFICER_CHANGE_VERIFICATION.txt" -Raw
-          if ($r14 -notmatch "RESULT 14/14") { throw "14/14 import report verification failed" }
-          if ($r121 -notmatch "RESULT 121/121") { throw "121/121 hard stress report verification failed" }
-          if ($officer -notmatch "15/15 critical functions PASS") { throw "Officer regression verification failed" }
-          if ($officer -notmatch "100 sequential sessions: PASS") { throw "Officer START/END verification failed" }
-          if ($officer -notmatch "Removed PIN/password authentication flow") { throw "Officer no-PIN verification failed" }
+          if ($r14 -notmatch "RESULT 14/14") { throw "Import tests not verified" }
+          if ($r121 -notmatch "RESULT 121/121") { throw "Hard stress tests not verified" }
+          if ($officer -notmatch "15/15 critical functions PASS") { throw "Officer critical regression not verified" }
+          if ($officer -notmatch "100 sequential sessions: PASS") { throw "START END stress not verified" }
+          if ($officer -notmatch "Removed PIN/password authentication flow") { throw "No-PIN change not verified" }
 
       - name: Install dependencies
         shell: powershell
@@ -83,6 +79,7 @@ jobs:
         shell: powershell
         run: |
           $actual = (Get-FileHash "$env:SOURCE_DIR\position_tracking_FINAL.py" -Algorithm SHA256).Hash.ToLower()
+          Write-Host "SOURCE SHA256: $actual"
           if ($actual -ne "bc964eecda93aa63fad91ff157fd71a4d0c06a3fd0e3510f70bd06247f558a95") { throw "Source SHA256 mismatch" }
           python -m py_compile "$env:SOURCE_DIR\position_tracking_FINAL.py"
 
@@ -97,9 +94,9 @@ jobs:
         run: |
           $exe = Get-ChildItem "$env:SOURCE_DIR\dist" -Recurse -Filter "*.exe" | Select-Object -First 1
           if (-not $exe) { throw "Windows EXE was not created" }
-          $hash = Get-FileHash $exe.FullName -Algorithm SHA256
+          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash
           Write-Host "EXE: $($exe.FullName)"
-          Write-Host "EXE SHA256: $($hash.Hash)"
+          Write-Host "EXE SHA256: $hash"
           "EXE_PATH=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Smoke test launch
