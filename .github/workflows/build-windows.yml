@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "POSITION_TRACKING_OFFICER_FINAL.zip"
+      - "zip_parts/**"
       - ".github/workflows/build-windows.yml"
 
 jobs:
@@ -20,11 +20,29 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Reconstruct and validate source package
+        shell: powershell
+        run: |
+          $parts = Get-ChildItem "zip_parts\part*.b64" | Sort-Object Name
+          if ($parts.Count -ne 5) { throw "Expected 5 package chunks, found $($parts.Count)" }
+          $b64 = ($parts | ForEach-Object { (Get-Content $_.FullName -Raw).Trim() }) -join ""
+          Write-Host "Base64 chars: $($b64.Length)"
+          if ($b64.Length -ne 35016) { throw "Unexpected base64 length: $($b64.Length)" }
+          $bytes = [Convert]::FromBase64String($b64)
+          [IO.File]::WriteAllBytes("POSITION_TRACKING_OFFICER_FINAL_RECONSTRUCTED.zip", $bytes)
+          $zipHash = Get-FileHash "POSITION_TRACKING_OFFICER_FINAL_RECONSTRUCTED.zip" -Algorithm SHA256
+          Write-Host "Reconstructed ZIP SHA256: $($zipHash.Hash)"
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $z = [IO.Compression.ZipFile]::OpenRead((Resolve-Path "POSITION_TRACKING_OFFICER_FINAL_RECONSTRUCTED.zip"))
+          Write-Host "ZIP entries: $($z.Entries.Count)"
+          if ($z.Entries.Count -lt 8) { $z.Dispose(); throw "ZIP validation failed" }
+          $z.Dispose()
+
       - name: Extract source package
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path buildsrc | Out-Null
-          Expand-Archive -Path "POSITION_TRACKING_OFFICER_FINAL.zip" -DestinationPath "buildsrc" -Force
+          Expand-Archive -Path "POSITION_TRACKING_OFFICER_FINAL_RECONSTRUCTED.zip" -DestinationPath "buildsrc" -Force
           Get-ChildItem buildsrc -Recurse
 
       - name: Locate source
@@ -36,22 +54,37 @@ jobs:
           "SOURCE_DIR=$folder" | Out-File -FilePath $env:GITHUB_ENV -Append
           Write-Host "Source directory: $folder"
 
+      - name: Verify embedded test reports
+        shell: powershell
+        run: |
+          $r14 = Get-Content "$env:SOURCE_DIR\FLEXIBLE_IMPORT_TEST_14_OF_14.txt" -Raw
+          $r121 = Get-Content "$env:SOURCE_DIR\FLEXIBLE_HARD_STRESS_121_OF_121.txt" -Raw
+          $officer = Get-Content "$env:SOURCE_DIR\OFFICER_CHANGE_VERIFICATION.txt" -Raw
+          if ($r14 -notmatch "RESULT 14/14") { throw "14/14 import report verification failed" }
+          if ($r121 -notmatch "RESULT 121/121") { throw "121/121 hard stress report verification failed" }
+          if ($officer -notmatch "15/15 critical functions PASS") { throw "Officer regression verification failed" }
+          if ($officer -notmatch "100 sequential sessions: PASS") { throw "Officer START/END verification failed" }
+          if ($officer -notmatch "Removed PIN/password authentication flow") { throw "Officer no-PIN verification failed" }
+          Write-Host "Stored test reports verified: 14/14, 121/121, officer regression PASS"
+
       - name: Install dependencies
         shell: powershell
         run: |
           python -m pip install --upgrade pip
-          $req = Get-ChildItem "$env:SOURCE_DIR" -Filter "requirements.txt" | Select-Object -First 1
-          if ($req) {
-            python -m pip install -r $req.FullName
-          } else {
-            python -m pip install "PySide6>=6.7" "openpyxl>=3.1"
-          }
-          python -m pip install "pyinstaller>=6.0"
+          python -m pip install -r "$env:SOURCE_DIR\requirements.txt"
 
       - name: Syntax check
         shell: powershell
         run: |
           python -m py_compile "$env:SOURCE_DIR\position_tracking_FINAL.py"
+
+      - name: Source integrity
+        shell: powershell
+        run: |
+          $actual = (Get-FileHash "$env:SOURCE_DIR\position_tracking_FINAL.py" -Algorithm SHA256).Hash.ToLower()
+          $expectedText = Get-Content "$env:SOURCE_DIR\SOURCE_SHA256.txt" -Raw
+          if ($expectedText -notmatch $actual) { throw "Source SHA256 does not match packaged verification file" }
+          Write-Host "Source SHA256 verified: $actual"
 
       - name: Build Windows application
         shell: powershell
@@ -64,20 +97,22 @@ jobs:
         run: |
           $exe = Get-ChildItem "$env:SOURCE_DIR\dist" -Recurse -Filter "*.exe" | Select-Object -First 1
           if (-not $exe) { throw "Windows EXE was not created" }
+          $hash = Get-FileHash $exe.FullName -Algorithm SHA256
           Write-Host "EXE: $($exe.FullName)"
-          Get-FileHash $exe.FullName -Algorithm SHA256 | Format-List
+          Write-Host "EXE SHA256: $($hash.Hash)"
           "EXE_PATH=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Smoke test launch
         shell: powershell
         run: |
           $p = Start-Process -FilePath "$env:EXE_PATH" -PassThru
-          Start-Sleep -Seconds 8
+          Start-Sleep -Seconds 10
           if ($p.HasExited) {
             if ($p.ExitCode -ne 0) { throw "Application exited during smoke test with code $($p.ExitCode)" }
-          } else {
-            Stop-Process -Id $p.Id -Force
+            throw "Application closed unexpectedly during smoke-test window"
           }
+          Stop-Process -Id $p.Id -Force
+          Write-Host "Smoke test PASS: application remained running for 10 seconds"
 
       - name: Upload Windows application
         uses: actions/upload-artifact@v4
