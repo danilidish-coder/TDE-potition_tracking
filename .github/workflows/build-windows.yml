@@ -7,6 +7,9 @@ on:
       - "POSITION_TRACKING_OFFICER_FINAL.zip"
       - ".github/workflows/build-windows.yml"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -92,6 +95,21 @@ jobs:
           if ($p.HasExited) { throw "Application exited unexpectedly during smoke test" }
           Stop-Process -Id $p.Id -Force
           Write-Host "Smoke test PASS"
+
+      - name: Archive EXE in repository
+        shell: powershell
+        run: |
+          python -c "from pathlib import Path; import shutil; src=next(Path(r'$env:SOURCE_DIR').joinpath('dist').glob('*.exe')); dst=Path('release')/'\u039a\u03b1\u03c4\u03b1\u03b3\u03c1\u03b1\u03c6\u03ae \u0398\u03ad\u03c3\u03b5\u03c9\u03bd.exe'; dst.parent.mkdir(exist_ok=True); shutil.copy2(src,dst)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Archive final standalone EXE"
+            git push
+          } else {
+            Write-Host "Archived EXE is already up to date"
+          }
 
       - name: Upload Windows application
         uses: actions/upload-artifact@v4
