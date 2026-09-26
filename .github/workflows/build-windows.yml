@@ -6,10 +6,11 @@ on:
     branches:
       - main
       - "test/shift-stats-20260926"
+      - "test/officer-simple-20260926"
     paths:
       - "src/**"
       - "requirements.txt"
-      - "tests/reports/**"
+      - "tests/**"
       - ".github/workflows/build-windows.yml"
 
 permissions:
@@ -45,6 +46,7 @@ jobs:
           if ($r121 -notmatch "RESULT 121/121") { throw "Stress report failed" }
           if ($runtime -notmatch "100 sequential shifts stress test: PASS") { throw "Runtime shift report failed" }
           python -c "import json,pathlib; d=json.loads(pathlib.Path(r'tests/reports/INTEGRATED_REGRESSION_STRESS.txt').read_text(encoding='utf-8')); assert d['shifts']==100 and d['pending_blocks']==100 and d['late_accept']==100 and d['exclude']==100 and d['events']==600 and d['charts']>=1"
+          python "tests\simulate_officer_simple_flow.py"
 
       - name: Build Windows application
         shell: powershell
