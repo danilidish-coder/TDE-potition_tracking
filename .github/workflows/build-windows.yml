@@ -72,17 +72,18 @@ jobs:
           Write-Host "Smoke test PASS"
           Write-Host "EXE SHA256: $((Get-FileHash $exe -Algorithm SHA256).Hash)"
 
-      - name: Archive test EXE
+      - name: Archive Windows EXE
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
           Copy-Item "dist\PositionTracking_TEST.exe" "release\PositionTracking_TEST.exe" -Force
+          Copy-Item "dist\PositionTracking_TEST.exe" "release\Καταγραφή Θέσεων.exe" -Force
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add release/PositionTracking_TEST.exe
+          git add "release/PositionTracking_TEST.exe" "release/Καταγραφή Θέσεων.exe"
           git diff --cached --quiet
           if ($LASTEXITCODE -ne 0) {
-            git commit -m "Archive unpacked-source Windows test EXE"
+            git commit -m "Archive final Windows EXE"
             git push
           }
 
