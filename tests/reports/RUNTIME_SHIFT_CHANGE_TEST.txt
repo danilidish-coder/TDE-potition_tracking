@@ -1,0 +1,20 @@
+RUNTIME/SHIFT CHANGE TEST - 2026-09-26
+- Removed all folder/file browse UI paths from the application.
+- Automatic hidden .tde_runtime beside the EXE.
+- Officer starts/ends shift by AGMS.
+- People active at shift start are initially approved; officer can exclude them.
+- Later arrivals are pending until APPROVED/EXCLUDED.
+- Shift end blocked while pending people exist.
+- Current editable Word report.
+- Word report: Hellenic Police/TDE heading, per officer positions/times only, start officer signature.
+- Archive: .tde_runtime/archive/YYYY/MM/YYYY-MM-DD/...
+- ARCHIVES button opens archive directly; no folder picker.
+- Personnel file is auto-detected from CONFIG/PERSONNEL (ΠΡΟΣΩΠΙΚΟ.xlsx/.xlsm) or existing legacy path.
+
+Verification:
+- Python syntax: PASS
+- Functional flow: PASS
+- Word content assertions: PASS
+- 100 sequential shifts stress test: PASS
+- 100 final shift records: PASS
+- 2400 event files processed in stress test: PASS
