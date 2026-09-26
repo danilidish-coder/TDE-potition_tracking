@@ -7,6 +7,7 @@ on:
       - main
       - "test/shift-stats-20260926"
       - "test/officer-simple-20260926"
+      - "test/final-polish-20260926"
     paths:
       - "src/**"
       - "requirements.txt"
