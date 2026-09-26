@@ -43,7 +43,7 @@ jobs:
         run: |
           python -c "import base64,gzip,pathlib; src=pathlib.Path('position_tracking_test.patch.b64').read_text(encoding='utf-8').strip(); pathlib.Path('position_tracking_test.patch').write_bytes(gzip.decompress(base64.b64decode(src)))"
           Set-Location "$env:SOURCE_DIR"
-          git apply --unsafe-paths "$env:GITHUB_WORKSPACE\position_tracking_test.patch"
+          git apply --no-index --unsafe-paths "$env:GITHUB_WORKSPACE\position_tracking_test.patch"
 
       - name: Verify embedded stress reports
         shell: powershell
