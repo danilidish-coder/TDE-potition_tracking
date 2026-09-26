@@ -46,9 +46,7 @@ jobs:
       - name: Verify migrated source
         shell: powershell
         run: |
-          $actual = (Get-FileHash "$env:SOURCE_DIR\position_tracking_FINAL.py" -Algorithm SHA256).Hash.ToLower()
-          Write-Host "SOURCE SHA256: $actual"
-          if ($actual -ne "c0d53c8b0bcba6305cb8e20bcf243d467e7220326539554bb95fe5b2fbfff0ba") { throw "Migrated source SHA256 mismatch" }
+          python -c "from pathlib import Path; import hashlib; p=Path(r'$env:SOURCE_DIR')/'position_tracking_FINAL.py'; b=p.read_text(encoding='utf-8').replace('\\r\\n','\\n').encode('utf-8'); h=hashlib.sha256(b).hexdigest(); print('NORMALIZED SOURCE SHA256:',h); assert h=='c0d53c8b0bcba6305cb8e20bcf243d467e7220326539554bb95fe5b2fbfff0ba', 'Migrated source SHA256 mismatch'"
           python -m py_compile "$env:SOURCE_DIR\position_tracking_FINAL.py"
 
       - name: Publish unpacked source tree
