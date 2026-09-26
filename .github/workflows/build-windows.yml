@@ -60,8 +60,6 @@ jobs:
           Copy-Item "$env:SOURCE_DIR\FLEXIBLE_HARD_STRESS_121_OF_121.txt" "tests\reports\FLEXIBLE_HARD_STRESS_121_OF_121.txt" -Force
           Copy-Item "$env:SOURCE_DIR\REGRESSION_STRESS_36_OF_36.txt" "tests\reports\REGRESSION_STRESS_36_OF_36.txt" -Force
           Copy-Item "$env:SOURCE_DIR\OFFICER_CHANGE_VERIFICATION.txt" "tests\reports\OFFICER_CHANGE_VERIFICATION.txt" -Force
-          Copy-Item "$env:SOURCE_DIR\RUNTIME_SHIFT_CHANGE_TEST.txt" "tests\reports\RUNTIME_SHIFT_CHANGE_TEST.txt" -Force
-          Copy-Item "$env:SOURCE_DIR\INTEGRATED_REGRESSION_STRESS.txt" "tests\reports\INTEGRATED_REGRESSION_STRESS.txt" -Force
 
       - name: Setup Python
         uses: actions/setup-python@v5
