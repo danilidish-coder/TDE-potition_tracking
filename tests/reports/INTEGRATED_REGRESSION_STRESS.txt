@@ -1,0 +1,10 @@
+{
+  "shifts": 100,
+  "pending_blocks": 100,
+  "late_accept": 100,
+  "exclude": 100,
+  "word": 10,
+  "events": 600,
+  "charts": 3,
+  "stats_size": 8942
+}
