@@ -89,6 +89,7 @@ class AppConfig:
     cutoff: str = DEFAULT_CUTOFF
     positions: list[str] | None = None
     admin_pin_hash: str = ""
+    theme: str = "light"
 
     def __post_init__(self):
         booth_positions = [str(i) for i in range(1, 15)]
@@ -112,6 +113,7 @@ class AppConfig:
                 cutoff=_clean(data.get("cutoff")) or DEFAULT_CUTOFF,
                 positions=[_clean(x) for x in data.get("positions", []) if _clean(x)] or None,
                 admin_pin_hash=_clean(data.get("admin_pin_hash")),
+                theme=(_clean(data.get("theme")).lower() if _clean(data.get("theme")).lower() in {"light", "dark"} else "light"),
             )
         except Exception:
             return cls()
@@ -670,21 +672,50 @@ class SharedEventStore:
             "given_name": person.given_name, "full_name": person.full_name,
         }
 
-    def start_officer_shift(self, officer: PersonnelRecord, when: datetime | None = None) -> dict:
+    def start_officer_shift(
+        self,
+        officer: PersonnelRecord,
+        when: datetime | None = None,
+        initial_approved: list[str] | tuple[str, ...] | None = None,
+        initial_excluded: list[str] | tuple[str, ...] | None = None,
+    ) -> dict:
         if self.current_shift():
             raise ValueError("Υπάρχει ήδη ενεργή βάρδια. Πρέπει πρώτα να γίνει ΛΗΞΗ ΒΑΡΔΙΑΣ.")
         when = when or datetime.now()
         active_now = self.active_all()
-        approved = []
-        initial_active = {}
+        active_by_agms = {}
         for item in active_now:
             agms = _clean(item.get("agms"))
-            if agms and agms not in approved:
-                approved.append(agms)
-                initial_active[agms] = {
-                    "timestamp": _clean(item.get("timestamp")),
-                    "event_id": _clean(item.get("event_id")),
-                }
+            if agms and agms not in active_by_agms:
+                active_by_agms[agms] = item
+
+        if initial_approved is None and initial_excluded is None:
+            approved = list(active_by_agms)
+            excluded = []
+        else:
+            approved = []
+            seen = set()
+            for value in initial_approved or []:
+                agms = _clean(value)
+                if agms and agms in active_by_agms and agms not in seen:
+                    approved.append(agms); seen.add(agms)
+            excluded = []
+            for value in initial_excluded or []:
+                agms = _clean(value)
+                if agms and agms in active_by_agms and agms not in seen:
+                    excluded.append(agms); seen.add(agms)
+            for agms in active_by_agms:
+                if agms not in seen:
+                    excluded.append(agms)
+
+        initial_active = {}
+        for agms in approved:
+            item = active_by_agms.get(agms) or {}
+            initial_active[agms] = {
+                "timestamp": _clean(item.get("timestamp")),
+                "event_id": _clean(item.get("event_id")),
+            }
+
         shift = {
             "version": 2,
             "shift_id": f"SHIFT_{when:%Y%m%d_%H%M%S_%f}",
@@ -692,13 +723,18 @@ class SharedEventStore:
             "start_at": when.isoformat(timespec="seconds"),
             "start_officer": self._person_payload(officer),
             "approved": approved,
-            "excluded": [],
+            "excluded": excluded,
             "pending": [],
             "initial_active": initial_active,
             "created_at": datetime.now().isoformat(timespec="seconds"),
         }
         self._atomic_json(self._current_shift_path(), shift)
-        self.log_admin_action("SHIFT_STARTED", {"shift_id": shift["shift_id"], "officer_agms": officer.agms, "initial_people": len(approved)})
+        self.log_admin_action("SHIFT_STARTED", {
+            "shift_id": shift["shift_id"],
+            "officer_agms": officer.agms,
+            "initial_people": len(approved),
+            "initial_excluded": len(excluded),
+        })
         return shift
 
     def sync_active_shift(self) -> dict | None:
@@ -1235,7 +1271,7 @@ def run(args=None) -> int:
     from PySide6.QtWidgets import (
         QApplication, QComboBox, QDateEdit, QFormLayout, QFrame, QHBoxLayout,
         QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout, QWidget,
-        QInputDialog, QDialog, QDateTimeEdit, QSpinBox, QListWidget, QGraphicsDropShadowEffect
+        QInputDialog, QDialog, QDateTimeEdit, QSpinBox, QListWidget, QListWidgetItem, QFileDialog
     )
 
     class BoothMapWidget(QWidget):
@@ -1363,128 +1399,164 @@ def run(args=None) -> int:
             self.people: tuple[PersonnelRecord, ...] = ()
             self._people_by_agms: dict[str, PersonnelRecord] = {}
             self.store: SharedEventStore | None = None
+            self._pending_prompt_active = False
+            self._last_shift_signature = ""
             self.setWindowTitle("Τ.Δ.Ε. Κρυσταλλοπηγής - Καταγραφή Θέσεων")
-            self.resize(900, 620)
-            self.setMinimumSize(780, 560)
+            self.resize(1120, 690)
+            self.setMinimumSize(980, 620)
             self._build()
+            self._apply_theme()
             self._apply_config()
+            self.shift_timer = QTimer(self)
+            self.shift_timer.timeout.connect(self._check_shift_updates)
+            self.shift_timer.start(3000)
 
         def _build(self):
-            root = QWidget(); self.setCentralWidget(root)
-            root.setObjectName("rootPanel")
-            root.setStyleSheet("""
-                QWidget#rootPanel {
-                    background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
-                        stop:0 #eef5f9, stop:0.55 #f8fbfd, stop:1 #e8f0f5);
-                }
-                QLabel { color:#1b3447; }
-                QLineEdit, QComboBox {
-                    background:#ffffff;
-                    border:1px solid #c9d8e3;
-                    border-radius:10px;
-                    padding:7px 10px;
-                    color:#17374e;
-                    selection-background-color:#2f6f98;
-                }
-                QLineEdit:focus, QComboBox:focus {
-                    border:2px solid #3a82ad;
-                    background:#ffffff;
-                }
-                QComboBox::drop-down { border:0; width:34px; }
-                QPushButton {
-                    border-radius:10px;
-                    border:1px solid #c3d2dc;
-                    background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #ffffff,stop:1 #e8eef2);
-                    color:#24475d;
-                    font-weight:700;
-                    padding:8px 16px;
-                }
-                QPushButton:hover { border-color:#7fa5bd; background:#f8fbfd; }
-                QPushButton:pressed { padding-top:10px; padding-bottom:6px; background:#dfe8ee; }
-            """)
-            layout = QVBoxLayout(root); layout.setContentsMargins(34,28,34,28); layout.setSpacing(15)
+            self.root = QWidget(); self.root.setObjectName("rootPanel"); self.setCentralWidget(self.root)
+            outer = QVBoxLayout(self.root); outer.setContentsMargins(28,22,28,20); outer.setSpacing(14)
 
-            title = QLabel("Τ.Δ.Ε. ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ")
-            title.setAlignment(Qt.AlignCenter)
-            title.setStyleSheet("font-size:27px;font-weight:900;color:#123f5a;letter-spacing:1px")
-            layout.addWidget(title)
-            subtitle = QLabel("ΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ")
-            subtitle.setAlignment(Qt.AlignCenter)
-            subtitle.setStyleSheet("font-size:18px;font-weight:800;color:#4a6b80;letter-spacing:2px")
-            layout.addWidget(subtitle)
+            header = QHBoxLayout()
+            titles = QVBoxLayout(); titles.setSpacing(2)
+            self.title_label = QLabel("Τ.Δ.Ε. ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ")
+            self.title_label.setStyleSheet("font-size:25px;font-weight:900;letter-spacing:1px")
+            self.subtitle_label = QLabel("ΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ")
+            self.subtitle_label.setStyleSheet("font-size:15px;font-weight:800;letter-spacing:2px")
+            titles.addWidget(self.title_label); titles.addWidget(self.subtitle_label)
+            header.addLayout(titles); header.addStretch()
 
-            card = QFrame()
-            card.setObjectName("mainCard")
-            card.setStyleSheet("QFrame#mainCard{background:#ffffff;border:1px solid #d4e0e8;border-radius:18px;padding:16px}")
-            card_shadow = QGraphicsDropShadowEffect(card)
-            card_shadow.setBlurRadius(28); card_shadow.setOffset(0,7); card_shadow.setColor(QColor(20,55,75,55))
-            card.setGraphicsEffect(card_shadow)
-            form = QFormLayout(card); form.setSpacing(15)
+            self.light_btn = QPushButton("ΦΩΤΕΙΝΟ")
+            self.dark_btn = QPushButton("ΣΚΟΤΕΙΝΟ")
+            self.light_btn.setCheckable(True); self.dark_btn.setCheckable(True)
+            self.light_btn.setFixedSize(92,34); self.dark_btn.setFixedSize(92,34)
+            self.light_btn.clicked.connect(lambda: self._set_theme("light"))
+            self.dark_btn.clicked.connect(lambda: self._set_theme("dark"))
+            header.addWidget(self.light_btn); header.addWidget(self.dark_btn)
+            outer.addLayout(header)
 
-            self.agms_input = QLineEdit()
-            self.agms_input.setPlaceholderText("Πληκτρολογήστε Α.Γ.Μ.Σ.")
-            self.agms_input.setMinimumHeight(42)
-            self.agms_input.setStyleSheet("font-size:18px;font-weight:800;padding:7px 10px")
-            self.agms_input.textChanged.connect(self._agms_changed)
+            columns = QHBoxLayout(); columns.setSpacing(16)
 
-            self.person_name = QLabel("—")
-            self.person_name.setStyleSheet("font-size:17px;font-weight:700;color:#17374e")
-            self.person_name.setWordWrap(True)
+            self.operator_card = QFrame(); self.operator_card.setObjectName("card")
+            left = QVBoxLayout(self.operator_card); left.setContentsMargins(20,18,20,18); left.setSpacing(12)
+            self.operator_title = QLabel("ΠΡΟΣΩΠΙΚΟ")
+            self.operator_title.setAlignment(Qt.AlignCenter); self.operator_title.setStyleSheet("font-size:18px;font-weight:900")
+            left.addWidget(self.operator_title)
+            operator_form = QFormLayout(); operator_form.setSpacing(12)
 
-            self.direction = QComboBox()
-            self.direction.setEditable(False)
-            self.direction.addItems(["ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"])
-            self.direction.setMinimumHeight(42)
-            self.direction.setStyleSheet("font-size:17px;font-weight:700;padding:6px 9px")
-
-            self.position = QComboBox()
-            self.position.setEditable(False)
-            self.position.setMinimumHeight(42)
-            self.position.setStyleSheet("font-size:17px;font-weight:700;padding:6px 9px")
-            self.position.currentTextChanged.connect(self._position_changed)
-
-            form.addRow("Α.Γ.Μ.Σ.", self.agms_input)
-            form.addRow("Αστυνομικός", self.person_name)
-            form.addRow("ΚΑΤΕΥΘΥΝΣΗ", self.direction)
-            form.addRow("ΘΕΣΗ", self.position)
-            layout.addWidget(card)
+            self.agms_input = QLineEdit(); self.agms_input.setPlaceholderText("Πληκτρολογήστε Α.Γ.Μ.Σ.")
+            self.agms_input.setMinimumHeight(42); self.agms_input.textChanged.connect(self._agms_changed)
+            self.person_name = QLabel("—"); self.person_name.setWordWrap(True); self.person_name.setStyleSheet("font-size:16px;font-weight:800")
+            self.direction = QComboBox(); self.direction.addItems(["ΕΙΣΟΔΟΣ","ΕΞΟΔΟΣ"]); self.direction.setMinimumHeight(42)
+            self.position = QComboBox(); self.position.setMinimumHeight(42); self.position.currentTextChanged.connect(self._position_changed)
+            operator_form.addRow("Α.Γ.Μ.Σ.", self.agms_input)
+            operator_form.addRow("Αστυνομικός", self.person_name)
+            operator_form.addRow("ΚΑΤΕΥΘΥΝΣΗ", self.direction)
+            operator_form.addRow("ΘΕΣΗ", self.position)
+            left.addLayout(operator_form)
 
             self.active_status = QLabel("Πληκτρολογήστε Α.Γ.Μ.Σ.")
-            self.active_status.setWordWrap(True)
-            self.active_status.setStyleSheet("color:#617b8c;font-size:13px;padding:4px 2px")
-            layout.addWidget(self.active_status)
+            self.active_status.setAlignment(Qt.AlignCenter); self.active_status.setWordWrap(True)
+            left.addWidget(self.active_status)
+            left.addStretch()
 
-            actions = QHBoxLayout(); actions.setSpacing(16)
-            self.start_btn = QPushButton("ΕΝΑΡΞΗ")
-            self.start_btn.setMinimumHeight(64); self.start_btn.clicked.connect(self._start)
-            self.end_btn = QPushButton("ΛΗΞΗ")
-            self.end_btn.setMinimumHeight(64); self.end_btn.clicked.connect(self._end)
-            self.start_btn.setStyleSheet("""QPushButton{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #35a978,stop:1 #1e7958);color:white;font-size:19px;font-weight:900;border:1px solid #176247;border-radius:12px;}QPushButton:hover{background:#2a966c;}QPushButton:pressed{background:#176247;padding-top:4px;}""")
-            self.end_btn.setStyleSheet("""QPushButton{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #df7257,stop:1 #b84d38);color:white;font-size:19px;font-weight:900;border:1px solid #9f402f;border-radius:12px;}QPushButton:hover{background:#cd624a;}QPushButton:pressed{background:#9f402f;padding-top:4px;}""")
-            for _b, _c in ((self.start_btn, QColor(19,92,67,85)), (self.end_btn, QColor(123,53,37,75))):
-                _sh = QGraphicsDropShadowEffect(_b); _sh.setBlurRadius(20); _sh.setOffset(0,5); _sh.setColor(_c); _b.setGraphicsEffect(_sh)
-            actions.addWidget(self.start_btn); actions.addWidget(self.end_btn)
-            layout.addLayout(actions)
+            op_buttons = QHBoxLayout(); op_buttons.setSpacing(12)
+            self.start_btn = QPushButton("ΕΝΑΡΞΗ"); self.start_btn.setObjectName("startButton"); self.start_btn.setMinimumHeight(54)
+            self.end_btn = QPushButton("ΛΗΞΗ"); self.end_btn.setObjectName("endButton"); self.end_btn.setMinimumHeight(54)
+            self.start_btn.clicked.connect(self._start); self.end_btn.clicked.connect(self._end)
+            op_buttons.addWidget(self.start_btn); op_buttons.addWidget(self.end_btn)
+            left.addLayout(op_buttons)
 
-            secondary = QHBoxLayout(); secondary.setSpacing(12)
-            b_report = QPushButton("ΤΡΕΧΟΝ ΕΝΤΥΠΟ WORD"); b_report.setMinimumHeight(42); b_report.clicked.connect(self._report)
-            b_files = QPushButton("ΑΡΧΕΙΑ"); b_files.setMinimumHeight(42); b_files.clicked.connect(self._open_files)
-            b_admin = QPushButton("ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ"); b_admin.setMinimumHeight(42); b_admin.clicked.connect(self._admin)
-            b_stats = QPushButton("ΣΤΑΤΙΣΤΙΚΑ ΠΡΟΣΩΠΙΚΟΥ"); b_stats.setMinimumHeight(42); b_stats.clicked.connect(self._personnel_statistics)
-            secondary.addStretch(); secondary.addWidget(b_report); secondary.addWidget(b_files); secondary.addWidget(b_stats); secondary.addWidget(b_admin)
-            layout.addLayout(secondary)
+            self.officer_card = QFrame(); self.officer_card.setObjectName("card")
+            right = QVBoxLayout(self.officer_card); right.setContentsMargins(22,18,22,18); right.setSpacing(13)
+            self.officer_title = QLabel("ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ")
+            self.officer_title.setAlignment(Qt.AlignCenter); self.officer_title.setStyleSheet("font-size:18px;font-weight:900")
+            right.addWidget(self.officer_title)
 
-            self.info = QLabel("")
-            self.info.setWordWrap(True)
-            self.info.setAlignment(Qt.AlignCenter)
-            self.info.setStyleSheet("background:rgba(255,255,255,180);border:1px solid #d7e2e9;border-radius:9px;color:#587184;font-size:11px;font-weight:650;padding:6px 10px")
-            layout.addWidget(self.info)
-            layout.addStretch()
+            officer_form = QFormLayout(); officer_form.setSpacing(12)
+            self.officer_agms = QLineEdit(); self.officer_agms.setPlaceholderText("Πληκτρολογήστε Α.Γ.Μ.Σ.")
+            self.officer_agms.setMinimumHeight(42); self.officer_agms.textChanged.connect(self._officer_changed)
+            self.officer_name = QLabel("—"); self.officer_name.setWordWrap(True); self.officer_name.setStyleSheet("font-size:16px;font-weight:800")
+            officer_form.addRow("Α.Γ.Μ.Σ.", self.officer_agms)
+            officer_form.addRow("Αξιωματικός", self.officer_name)
+            right.addLayout(officer_form)
 
-            credits = QLabel("ΑΝΘ/ΜΟΣ ΔΑΝΙΗΛΙΔΗΣ ΗΡΑΚΛΗΣ   •   ΑΝΘ/ΜΟΣ ΚΛΙΑΝΗΣ ΧΡΗΣΤΟΣ")
-            credits.setAlignment(Qt.AlignCenter)
-            credits.setStyleSheet("color:#8094a2;font-size:9px;font-weight:600;letter-spacing:0.5px")
-            layout.addWidget(credits)
+            self.shift_status = QLabel("Δεν υπάρχει ενεργή βάρδια.")
+            self.shift_status.setAlignment(Qt.AlignCenter); self.shift_status.setWordWrap(True); self.shift_status.setObjectName("statusBox")
+            right.addWidget(self.shift_status)
+            right.addStretch()
+
+            shift_buttons = QHBoxLayout(); shift_buttons.setSpacing(12)
+            self.start_shift_btn = QPushButton("ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ"); self.start_shift_btn.setMinimumHeight(54)
+            self.end_shift_btn = QPushButton("ΛΗΞΗ ΒΑΡΔΙΑΣ"); self.end_shift_btn.setMinimumHeight(54)
+            self.start_shift_btn.clicked.connect(self._start_officer_shift_ui)
+            self.end_shift_btn.clicked.connect(self._end_officer_shift_ui)
+            shift_buttons.addWidget(self.start_shift_btn); shift_buttons.addWidget(self.end_shift_btn)
+            right.addLayout(shift_buttons)
+
+            columns.addWidget(self.operator_card, 1); columns.addWidget(self.officer_card, 1)
+            outer.addLayout(columns, 1)
+
+            bottom = QHBoxLayout(); bottom.setSpacing(10)
+            self.print_btn = QPushButton("ΕΚΤΥΠΩΣΗ")
+            self.stats_btn = QPushButton("ΣΤΑΤΙΣΤΙΚΑ")
+            self.active_positions_btn = QPushButton("ΕΝΕΡΓΕΣ ΘΕΣΕΙΣ ΕΡΓΑΣΙΑΣ")
+            self.personnel_list_btn = QPushButton("ΕΠΙΛΟΓΗ ΛΙΣΤΑΣ ΠΡΟΣΩΠΙΚΟΥ")
+            for b in (self.print_btn,self.stats_btn,self.active_positions_btn,self.personnel_list_btn):
+                b.setMinimumHeight(44)
+                bottom.addWidget(b)
+            self.print_btn.clicked.connect(self._report)
+            self.stats_btn.clicked.connect(self._personnel_statistics)
+            self.active_positions_btn.clicked.connect(self._live_map)
+            self.personnel_list_btn.clicked.connect(self._choose_personnel_list)
+            outer.addLayout(bottom)
+
+            self.info = QLabel(""); self.info.setObjectName("infoBox"); self.info.setAlignment(Qt.AlignCenter); self.info.setWordWrap(True)
+            outer.addWidget(self.info)
+            self.credits = QLabel("ΑΝΘ/ΜΟΣ ΔΑΝΙΗΛΙΔΗΣ ΗΡΑΚΛΗΣ   •   ΑΝΘ/ΜΟΣ ΚΛΙΑΝΗΣ ΧΡΗΣΤΟΣ")
+            self.credits.setAlignment(Qt.AlignCenter)
+            outer.addWidget(self.credits)
+
+        def _set_theme(self, theme: str):
+            self.config.theme = "dark" if theme == "dark" else "light"
+            self.config.save()
+            self._apply_theme()
+
+        def _apply_theme(self):
+            dark = _clean(self.config.theme).lower() == "dark"
+            self.light_btn.setChecked(not dark); self.dark_btn.setChecked(dark)
+            if dark:
+                self.root.setStyleSheet("""
+                    QWidget#rootPanel{background:#111b24;font-family:'Segoe UI';}
+                    QFrame#card{background:#172631;border:1px solid #314959;border-radius:16px;}
+                    QLabel{color:#e5eef4;}
+                    QLineEdit,QComboBox{background:#20323e;color:#f4f8fa;border:1px solid #3b5668;border-radius:9px;padding:8px 10px;}
+                    QLineEdit:focus,QComboBox:focus{border:2px solid #62a1c5;}
+                    QLabel#statusBox,QLabel#infoBox{background:#1c2d38;border:1px solid #334d5d;border-radius:9px;padding:9px;color:#c7d9e3;}
+                    QPushButton{background:#263b49;color:#f2f7fa;border:1px solid #466273;border-radius:9px;padding:8px 12px;font-weight:750;}
+                    QPushButton:hover{background:#304957;border-color:#6d98b0;}
+                    QPushButton:checked{background:#3a6f8d;border-color:#78b7d9;}
+                    QPushButton#startButton{background:#237c5c;border-color:#2b9872;color:white;font-size:17px;font-weight:900;}
+                    QPushButton#endButton{background:#b95742;border-color:#d06b54;color:white;font-size:17px;font-weight:900;}
+                """)
+                self.subtitle_label.setStyleSheet("font-size:15px;font-weight:800;letter-spacing:2px;color:#8fb6cc")
+                self.credits.setStyleSheet("color:#7690a0;font-size:9px")
+            else:
+                self.root.setStyleSheet("""
+                    QWidget#rootPanel{background:#eef3f7;font-family:'Segoe UI';}
+                    QFrame#card{background:#ffffff;border:1px solid #cddae3;border-radius:16px;}
+                    QLabel{color:#1c394d;}
+                    QLineEdit,QComboBox{background:#ffffff;color:#17384d;border:1px solid #c2d2dc;border-radius:9px;padding:8px 10px;}
+                    QLineEdit:focus,QComboBox:focus{border:2px solid #4385aa;}
+                    QLabel#statusBox,QLabel#infoBox{background:#f7fafc;border:1px solid #d1dee6;border-radius:9px;padding:9px;color:#426276;}
+                    QPushButton{background:#f8fbfd;color:#24495f;border:1px solid #bdced8;border-radius:9px;padding:8px 12px;font-weight:750;}
+                    QPushButton:hover{background:#edf4f8;border-color:#7fa7bd;}
+                    QPushButton:checked{background:#d9eaf4;border-color:#5f94b1;}
+                    QPushButton#startButton{background:#2f996f;border-color:#247958;color:white;font-size:17px;font-weight:900;}
+                    QPushButton#endButton{background:#cf624a;border-color:#aa4937;color:white;font-size:17px;font-weight:900;}
+                """)
+                self.subtitle_label.setStyleSheet("font-size:15px;font-weight:800;letter-spacing:2px;color:#587b91")
+                self.credits.setStyleSheet("color:#8095a3;font-size:9px")
+            self._agms_changed()
+            self._officer_changed()
 
         def _find_personnel_file(self) -> Path | None:
             candidates = []
@@ -1511,61 +1583,71 @@ def run(args=None) -> int:
             personnel = self._find_personnel_file()
             if personnel:
                 try:
-                    self._load_people(str(personnel))
-                    self.config.personnel_file = str(personnel)
+                    self._load_people(str(personnel)); self.config.personnel_file = str(personnel)
                 except Exception as exc:
                     self.info.setText(f"Πρόβλημα προσωπικού: {exc}")
             self.config.save()
-            self._refresh_info(); self._agms_changed()
+            self._refresh_info(); self._agms_changed(); self._refresh_shift_status()
 
         def _refresh_info(self):
             if self.store and self.people:
-                self.info.setText("Σύστημα έτοιμο")
+                self.info.setText(f"Σύστημα έτοιμο — Λίστα προσωπικού: {len(self.people)} άτομα")
             elif not self.store:
-                self.info.setText("Δεν είναι διαθέσιμος ο κρυφός φάκελος .tde_runtime")
+                self.info.setText("Δεν είναι διαθέσιμος ο φάκελος δεδομένων.")
             else:
-                self.info.setText("Δεν βρέθηκε αυτόματα ΠΡΟΣΩΠΙΚΟ.xlsx στον φάκελο CONFIG")
+                self.info.setText("Δεν έχει επιλεγεί λίστα προσωπικού.")
 
         def _save_config(self):
             self.config.positions = [self.position.itemText(i) for i in range(self.position.count()) if _clean(self.position.itemText(i))]
-            self.config.save()
-            self._refresh_info()
+            self.config.save(); self._refresh_info()
 
         def _load_people(self, path: str):
             self.people = PersonnelRepository.load(path)
             self._people_by_agms = {_clean(p.agms): p for p in self.people}
-            self._agms_changed()
+            self._agms_changed(); self._officer_changed()
+
+        def _choose_personnel_list(self):
+            start_dir = str(Path(self.config.personnel_file).parent) if _clean(self.config.personnel_file) else str(_app_dir())
+            path, _ = QFileDialog.getOpenFileName(self, "Επιλογή λίστας προσωπικού", start_dir, "Excel (*.xlsx *.xlsm)")
+            if not path:
+                return
+            try:
+                self._load_people(path)
+                self.config.personnel_file = path
+                self.config.save()
+                if self.store:
+                    self.store.log_admin_action("PERSONNEL_LIST_SELECTED", {"file": path, "people": len(self.people)})
+                self._refresh_info()
+                QMessageBox.information(self, "Λίστα προσωπικού", f"Επιλέχθηκε λίστα με {len(self.people)} άτομα.\nΘα χρησιμοποιείται αυτόματα στις επόμενες εκκινήσεις.")
+            except Exception as exc:
+                QMessageBox.critical(self, "Λίστα προσωπικού", f"Δεν ήταν δυνατή η ανάγνωση του αρχείου.\n{exc}")
 
         def _selected(self) -> PersonnelRecord | None:
-            agms = _clean(self.agms_input.text()) if hasattr(self, "agms_input") else ""
-            return getattr(self, "_people_by_agms", {}).get(agms)
+            return self._people_by_agms.get(_clean(self.agms_input.text()))
+
+        def _officer_selected(self) -> PersonnelRecord | None:
+            return self._people_by_agms.get(_clean(self.officer_agms.text()))
+
+        def _officer_changed(self, *_):
+            p = self._officer_selected()
+            self.officer_name.setText(_clean(f"{p.rank} {p.surname} {p.given_name}") if p else "—")
+            self._refresh_shift_status()
 
         def _agms_changed(self, *_):
             p = self._selected()
             if not p:
                 self.person_name.setText("—")
-                if _clean(self.agms_input.text()):
-                    self.active_status.setText("Ο Α.Γ.Μ.Σ. δεν βρέθηκε στο προσωπικό")
-                    self.active_status.setStyleSheet("color:#a23f2c;font-weight:700;padding:4px 2px")
-                else:
-                    self.active_status.setText("Πληκτρολογήστε Α.Γ.Μ.Σ.")
-                    self.active_status.setStyleSheet("color:#617b8c;padding:4px 2px")
+                self.active_status.setText("Ο Α.Γ.Μ.Σ. δεν βρέθηκε στο προσωπικό" if _clean(self.agms_input.text()) else "Πληκτρολογήστε Α.Γ.Μ.Σ.")
                 self.start_btn.setEnabled(False); self.end_btn.setEnabled(False)
                 return
-
-            display_name = _clean(f"{p.rank} {p.surname} {p.given_name}")
-            self.person_name.setText(display_name or f"Α.Γ.Μ.Σ. {p.agms} — χωρίς στοιχεία ονόματος")
+            self.person_name.setText(_clean(f"{p.rank} {p.surname} {p.given_name}"))
             active = self.store.get_active(p.agms) if self.store else None
             if active:
-                ts = _clean(active.get("timestamp", "")).replace("T", " ")
-                self.active_status.setText(
-                    f"ΕΝΕΡΓΗ: ΘΕΣΗ {active.get('position','')} — {active.get('direction','')} — από {ts}"
-                )
-                self.active_status.setStyleSheet("color:#a23f2c;font-size:15px;font-weight:800;padding:4px 2px")
+                ts = _clean(active.get("timestamp","")).replace("T"," ")
+                self.active_status.setText(f"ΕΝΕΡΓΗ: ΘΕΣΗ {active.get('position','')} — {active.get('direction','')} — από {ts}")
                 self.start_btn.setEnabled(False); self.end_btn.setEnabled(True)
             else:
                 self.active_status.setText("Δεν υπάρχει ανοικτή καταχώριση")
-                self.active_status.setStyleSheet("color:#267052;font-size:14px;font-weight:700;padding:4px 2px")
                 self.start_btn.setEnabled(bool(self.store)); self.end_btn.setEnabled(False)
 
         @staticmethod
@@ -1573,51 +1655,196 @@ def run(args=None) -> int:
             pos = _clean(position)
             if pos.isdigit():
                 n = int(pos)
-                if 1 <= n <= 7:
-                    return "ΕΙΣΟΔΟΣ"
-                if 8 <= n <= 14:
-                    return "ΕΞΟΔΟΣ"
+                if 1 <= n <= 7: return "ΕΙΣΟΔΟΣ"
+                if 8 <= n <= 14: return "ΕΞΟΔΟΣ"
             return "ΕΙΣΟΔΟΣ"
 
         def _position_changed(self, position: str):
-            # Πρόταση μόνο όταν αλλάζει η θέση. Ο χειριστής μπορεί αμέσως μετά
-            # να αλλάξει ελεύθερα ΕΙΣΟΔΟΣ/ΕΞΟΔΟΣ πριν πατήσει ΕΝΑΡΞΗ.
-            if hasattr(self, "direction"):
-                suggested = self._suggested_direction(position)
-                idx = self.direction.findText(suggested)
-                if idx >= 0:
-                    self.direction.setCurrentIndex(idx)
+            suggested = self._suggested_direction(position)
+            idx = self.direction.findText(suggested)
+            if idx >= 0: self.direction.setCurrentIndex(idx)
 
         def _start(self):
             p = self._selected()
             if not p or not self.store:
-                QMessageBox.warning(self, "Έλεγχος", "Ορίστε κεντρικό φάκελο και προσωπικό."); return
+                QMessageBox.warning(self, "Έλεγχος", "Επιλέξτε λίστα προσωπικού."); return
             pos = _clean(self.position.currentText())
             direction = _clean(self.direction.currentText()).upper()
             try:
-                if pos not in {str(i) for i in range(1, 15)}:
-                    raise ValueError("Επιλέξτε θέση 1 έως 14.")
-                if direction not in {"ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"}:
-                    raise ValueError("Επιλέξτε κατεύθυνση ΕΙΣΟΔΟΣ ή ΕΞΟΔΟΣ.")
-                e = self.store.start(p, pos, direction)
-                QMessageBox.information(
-                    self, "Καταχώριση",
-                    f"ΕΝΑΡΞΗ: ΘΕΣΗ {pos} — {direction}\nΏρα: {e['timestamp'].replace('T',' ')}"
-                )
+                if pos not in {str(i) for i in range(1,15)}: raise ValueError("Επιλέξτε θέση 1 έως 14.")
+                e = self.store.start(p,pos,direction)
+                QMessageBox.information(self,"Καταχώριση",f"ΕΝΑΡΞΗ: ΘΕΣΗ {pos} — {direction}\nΏρα: {e['timestamp'].replace('T',' ')}")
                 self._agms_changed()
+                QTimer.singleShot(150, self._check_shift_updates)
             except Exception as exc:
-                QMessageBox.critical(self, "Δεν καταχωρίστηκε", str(exc))
+                QMessageBox.critical(self,"Δεν καταχωρίστηκε",str(exc))
 
         def _end(self):
             p = self._selected()
             if not p or not self.store:
-                QMessageBox.warning(self, "Έλεγχος", "Ορίστε κεντρικό φάκελο και προσωπικό."); return
+                QMessageBox.warning(self, "Έλεγχος", "Επιλέξτε λίστα προσωπικού."); return
             try:
-                e = self.store.end(p)
-                QMessageBox.information(self, "Καταχώριση", f"ΛΗΞΗ καταχωρίστηκε στις {e['timestamp'].replace('T',' ')}")
+                e=self.store.end(p)
+                QMessageBox.information(self,"Καταχώριση",f"ΛΗΞΗ καταχωρίστηκε στις {e['timestamp'].replace('T',' ')}")
                 self._agms_changed()
             except Exception as exc:
-                QMessageBox.critical(self, "Δεν καταχωρίστηκε", str(exc))
+                QMessageBox.critical(self,"Δεν καταχωρίστηκε",str(exc))
+
+        def _preview_list_dialog(self, title: str, intro: str, agms_list: list[str], allow_exclude: bool) -> tuple[bool,list[str],list[str]]:
+            dlg=QDialog(self); dlg.setWindowTitle(title); dlg.resize(620,480)
+            lay=QVBoxLayout(dlg); lay.setContentsMargins(20,18,20,18); lay.setSpacing(10)
+            heading=QLabel(title); heading.setStyleSheet("font-size:18px;font-weight:900")
+            text_label=QLabel(intro); text_label.setWordWrap(True)
+            lay.addWidget(heading); lay.addWidget(text_label)
+            listing=QListWidget()
+            for agms in agms_list:
+                p=self._people_by_agms.get(_clean(agms))
+                name=_clean(f"{p.rank} {p.surname} {p.given_name}") if p else f"ΑΓΜΣ {agms}"
+                item=QListWidgetItem(f"{agms} — {name}")
+                item.setData(Qt.UserRole,_clean(agms))
+                if allow_exclude:
+                    item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+                    item.setCheckState(Qt.Checked)
+                listing.addItem(item)
+            lay.addWidget(listing,1)
+            buttons=QHBoxLayout(); cancel=QPushButton("ΑΚΥΡΩΣΗ"); confirm=QPushButton("ΕΠΙΒΕΒΑΙΩΣΗ")
+            cancel.clicked.connect(dlg.reject); confirm.clicked.connect(dlg.accept)
+            buttons.addStretch(); buttons.addWidget(cancel); buttons.addWidget(confirm); lay.addLayout(buttons)
+            if dlg.exec()!=QDialog.Accepted:
+                return False,[],[]
+            approved=[]; excluded=[]
+            for i in range(listing.count()):
+                item=listing.item(i); agms=_clean(item.data(Qt.UserRole))
+                if allow_exclude and item.checkState()!=Qt.Checked: excluded.append(agms)
+                else: approved.append(agms)
+            return True,approved,excluded
+
+        def _start_officer_shift_ui(self):
+            if not self.store:
+                QMessageBox.warning(self,"Έλεγχος","Δεν είναι διαθέσιμος ο φάκελος δεδομένων."); return
+            p=self._officer_selected()
+            if not p:
+                QMessageBox.warning(self,"Έλεγχος","Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."); return
+            if self.store.current_shift():
+                QMessageBox.warning(self,"Βάρδια","Υπάρχει ήδη ενεργή βάρδια."); return
+            active=self.store.active_all()
+            agms=[]
+            for item in active:
+                a=_clean(item.get("agms"))
+                if a and a not in agms: agms.append(a)
+            ok,approved,excluded=self._preview_list_dialog(
+                "ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΕΝΑΡΞΗΣ ΒΑΡΔΙΑΣ",
+                "Ελέγξτε το προσωπικό που βρίσκεται ήδη σε ενεργή θέση. Αποεπιλέξτε όποιον δεν πρέπει να συμπεριληφθεί στη νέα βάρδια.",
+                agms, True
+            )
+            if not ok: return
+            try:
+                shift=self.store.start_officer_shift(p,initial_approved=approved,initial_excluded=excluded)
+                self._last_shift_signature=""
+                self._refresh_shift_status()
+                QMessageBox.information(self,"Βάρδια",f"Η βάρδια ξεκίνησε στις {shift['start_at'].replace('T',' ')}.")
+            except Exception as exc:
+                QMessageBox.critical(self,"Βάρδια",str(exc))
+
+        def _resolve_pending_members(self) -> bool:
+            if not self.store or self._pending_prompt_active:
+                return False
+            shift=self.store.sync_active_shift()
+            pending=list(shift.get("pending",[])) if shift else []
+            if not pending:
+                return True
+            self._pending_prompt_active=True
+            try:
+                for agms in pending:
+                    p=self._people_by_agms.get(_clean(agms))
+                    name=_clean(f"{p.rank} {p.surname} {p.given_name}") if p else f"ΑΓΜΣ {agms}"
+                    answer=QMessageBox.question(
+                        self,
+                        "Νέο άτομο στη βάρδια",
+                        f"{name}\n\nΚαταγράφηκε σε θέση μετά την έναρξη της βάρδιας.\nΝα συμπεριληφθεί στη βάρδια;",
+                        QMessageBox.Yes | QMessageBox.No,
+                        QMessageBox.Yes
+                    )
+                    self.store.set_shift_member_state(agms,"APPROVED" if answer==QMessageBox.Yes else "EXCLUDED")
+            finally:
+                self._pending_prompt_active=False
+            self._refresh_shift_status()
+            return True
+
+        def _end_officer_shift_ui(self):
+            if not self.store:
+                return
+            p=self._officer_selected()
+            if not p:
+                QMessageBox.warning(self,"Έλεγχος","Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."); return
+            shift=self.store.sync_active_shift()
+            if not shift:
+                QMessageBox.information(self,"Βάρδια","Δεν υπάρχει ενεργή βάρδια."); return
+            if shift.get("pending"):
+                self._resolve_pending_members()
+                shift=self.store.sync_active_shift()
+                if shift and shift.get("pending"):
+                    return
+            approved=list(shift.get("approved",[]))
+            ok,_,_=self._preview_list_dialog(
+                "ΕΠΙΒΕΒΑΙΩΣΗ ΛΗΞΗΣ ΒΑΡΔΙΑΣ",
+                "Αυτά είναι τα άτομα που θα συμπεριληφθούν στην τελική βάρδια. Επιβεβαιώστε για να ολοκληρωθεί η λήξη.",
+                approved, False
+            )
+            if not ok: return
+            try:
+                final=self.store.end_officer_shift(p)
+                archive=archive_shift_docx(self.store,final,self._people_by_agms)
+                create_shift_docx(self.store,final,self._people_by_agms)
+                self._refresh_shift_status()
+                QMessageBox.information(self,"Λήξη βάρδιας",f"Η βάρδια ολοκληρώθηκε.\nΑρχειοθετήθηκε: {archive}")
+            except Exception as exc:
+                QMessageBox.critical(self,"Λήξη βάρδιας",str(exc))
+
+        def _refresh_shift_status(self):
+            if not hasattr(self,"shift_status"): return
+            shift=self.store.current_shift() if self.store else None
+            p=self._officer_selected() if hasattr(self,"officer_agms") else None
+            if not shift:
+                self.shift_status.setText("Δεν υπάρχει ενεργή βάρδια.")
+                self.start_shift_btn.setEnabled(bool(p and self.store))
+                self.end_shift_btn.setEnabled(False)
+                return
+            st=datetime.fromisoformat(shift["start_at"])
+            off=shift.get("start_officer") or {}
+            name=_clean(f"{off.get('rank','')} {off.get('full_name','')}")
+            pending=len(shift.get("pending",[]))
+            text=f"Ενεργή βάρδια από {st:%d/%m/%Y %H:%M}\n{name}"
+            if pending: text += f"\nΑναμονή επιβεβαίωσης: {pending}"
+            self.shift_status.setText(text)
+            self.start_shift_btn.setEnabled(False)
+            self.end_shift_btn.setEnabled(bool(p))
+
+        def _check_shift_updates(self):
+            if not self.store: return
+            shift=self.store.sync_active_shift()
+            if not shift:
+                self._last_shift_signature=""
+                self._refresh_shift_status()
+                return
+            signature=json.dumps({
+                "approved":shift.get("approved",[]),
+                "excluded":shift.get("excluded",[]),
+                "pending":shift.get("pending",[])
+            },ensure_ascii=False,sort_keys=True)
+            if signature!=self._last_shift_signature:
+                self._last_shift_signature=signature
+                self._refresh_shift_status()
+            if shift.get("pending") and not self._pending_prompt_active:
+                self._resolve_pending_members()
+
+        def _live_map(self):
+            if not self.store:
+                QMessageBox.warning(self,"Έλεγχος","Δεν είναι διαθέσιμος ο φάκελος δεδομένων."); return
+            LiveMapDialog(self.store,self).exec()
+
+        def _shift_admin(self):
+            pass
 
         def _backup(self):
             if not self.store:
@@ -1807,6 +2034,7 @@ def run(args=None) -> int:
                 QMessageBox.information(self,"Στιγμιαία εικόνα","Δεν υπάρχουν ανοικτές θέσεις."); return
             lines = [f"{x.get('rank','')} {x.get('full_name','')} — Θ. {x.get('position','')} {x.get('direction','')} — από {x.get('timestamp','').replace('T',' ')}" for x in active]
             QMessageBox.information(self,"Στιγμιαία εικόνα","\n".join(lines))
+
 
     app = QApplication.instance() or QApplication(list(args or sys.argv))
     window = MainWindow(); window.show()
