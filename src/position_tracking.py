@@ -2118,7 +2118,11 @@ def run(args=None) -> int:
     app.setWindowIcon(app_icon)
     window = MainWindow()
     window.setWindowIcon(app_icon)
+    window.setAttribute(Qt.WA_DontShowOnScreen, True)
     window.show()
+    app.processEvents()
+    window.setAttribute(Qt.WA_DontShowOnScreen, False)
+    QTimer.singleShot(0, window.show)
     return app.exec()
 
 
