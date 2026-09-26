@@ -1267,12 +1267,107 @@ def build_shift_html(store: SharedEventStore, day: date, cutoff: str) -> str:
 
 def run(args=None) -> int:
     from PySide6.QtCore import Qt, QDate, QDateTime, QTimer, QRectF
-    from PySide6.QtGui import QColor, QFont, QPainter, QPen
+    from PySide6.QtGui import QColor, QFont, QPainter, QPen, QIcon, QPixmap
     from PySide6.QtWidgets import (
         QApplication, QComboBox, QDateEdit, QFormLayout, QFrame, QHBoxLayout,
         QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout, QWidget,
         QInputDialog, QDialog, QDateTimeEdit, QSpinBox, QListWidget, QListWidgetItem, QFileDialog
     )
+
+    THEME_DARK = {
+        "window": "#040912", "panel": "#091525", "card": "#0d2034", "card2": "#132b44",
+        "text": "#f5f9ff", "muted": "#91a7bd", "accent": "#1976c9", "accent2": "#0a4f8c",
+        "border": "#244b70", "danger": "#a92f43", "ok": "#16825f", "input": "#07131f",
+    }
+    THEME_LIGHT = {
+        "window": "#e7eef5", "panel": "#f5f8fb", "card": "#ffffff", "card2": "#eaf2f8",
+        "text": "#0b2035", "muted": "#587086", "accent": "#1269b5", "accent2": "#084b84",
+        "border": "#b9ccdc", "danger": "#a92f43", "ok": "#16795a", "input": "#ffffff",
+    }
+
+    def _theme_stylesheet(theme: str) -> str:
+        t = THEME_DARK if _clean(theme).lower() == "dark" else THEME_LIGHT
+        return f"""
+            QMainWindow, QWidget#rootPanel {{ background: {t['window']}; color: {t['text']}; }}
+            QWidget {{ color: {t['text']}; font-family:'Segoe UI'; font-size:10.5pt; }}
+            QDialog {{ background: {t['window']}; color: {t['text']}; }}
+            QDialog QLabel {{ color: {t['text']}; }}
+
+            QFrame#card {{
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['card2']},stop:0.10 {t['card']},stop:1 {t['card']});
+                border:1px solid {t['border']}; border-radius:16px;
+            }}
+            QLabel#statusBox, QLabel#infoBox {{
+                background:{t['card2']}; border:1px solid {t['border']}; border-radius:10px;
+                padding:9px; color:{t['muted']}; font-weight:700;
+            }}
+
+            QLineEdit, QComboBox, QDateEdit, QDateTimeEdit, QSpinBox {{
+                background:{t['input']}; color:{t['text']}; border:2px solid {t['border']};
+                border-radius:10px; min-height:36px; padding:4px 9px;
+            }}
+            QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QDateTimeEdit:focus, QSpinBox:focus {{
+                border:2px solid {t['accent']}; background:{t['card']};
+            }}
+            QComboBox {{ padding-right:28px; }}
+            QComboBox::drop-down {{
+                width:28px; border-left:1px solid {t['border']}; background:{t['card2']};
+                border-top-right-radius:8px; border-bottom-right-radius:8px;
+            }}
+            QComboBox QAbstractItemView {{
+                background:{t['card2']}; color:{t['text']}; border:2px solid {t['accent']};
+                selection-background-color:{t['accent']}; selection-color:white; outline:0; padding:4px;
+            }}
+
+            QPushButton {{
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['card2']},stop:1 {t['panel']});
+                color:{t['text']}; border:1px solid {t['border']}; border-bottom:3px solid {t['window']};
+                border-radius:12px; padding:7px 14px; font-weight:750;
+            }}
+            QPushButton:hover {{
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['accent']},stop:1 {t['accent2']});
+                color:white; border-color:{t['accent']}; border-bottom-color:{t['window']};
+            }}
+            QPushButton:pressed {{
+                background:{t['accent2']}; border-bottom-width:1px; padding-top:9px;
+            }}
+            QPushButton:disabled {{
+                color:{t['muted']}; background:{t['panel']}; border-color:{t['border']};
+            }}
+            QPushButton#themeButton:checked {{
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['accent']},stop:1 {t['accent2']});
+                color:white; border-color:{t['accent']};
+            }}
+            QPushButton#startButton {{
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['ok']},stop:1 #0d5f46);
+                color:white; border-color:{t['ok']}; border-bottom:3px solid {t['window']};
+                font-size:17px; font-weight:900; text-align:center;
+            }}
+            QPushButton#endButton {{
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['danger']},stop:1 #6f1f2d);
+                color:white; border-color:{t['danger']}; border-bottom:3px solid {t['window']};
+                font-size:17px; font-weight:900; text-align:center;
+            }}
+        """
+
+    def _network_icon() -> QIcon:
+        pixmap = QPixmap(256, 256)
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor("#0a4f8c"))
+        painter.drawRoundedRect(18, 18, 220, 220, 48, 48)
+        nodes = [(128, 128, 28), (66, 72, 22), (190, 72, 22), (66, 184, 22), (190, 184, 22)]
+        painter.setPen(QPen(QColor("#8fd0ff"), 12, Qt.SolidLine, Qt.RoundCap))
+        for x, y, _ in nodes[1:]:
+            painter.drawLine(128, 128, x, y)
+        for x, y, radius in nodes:
+            painter.setPen(QPen(QColor("#dff3ff"), 5))
+            painter.setBrush(QColor("#1976c9") if (x, y) != (128, 128) else QColor("#f5f9ff"))
+            painter.drawEllipse(x - radius, y - radius, radius * 2, radius * 2)
+        painter.end()
+        return QIcon(pixmap)
 
     class BoothMapWidget(QWidget):
         BOOTH_POS = {
@@ -1427,6 +1522,7 @@ def run(args=None) -> int:
             self.light_btn = QPushButton("ΦΩΤΕΙΝΟ")
             self.dark_btn = QPushButton("ΣΚΟΤΕΙΝΟ")
             self.light_btn.setCheckable(True); self.dark_btn.setCheckable(True)
+            self.light_btn.setObjectName("themeButton"); self.dark_btn.setObjectName("themeButton")
             self.light_btn.setFixedSize(92,34); self.dark_btn.setFixedSize(92,34)
             self.light_btn.clicked.connect(lambda: self._set_theme("light"))
             self.dark_btn.clicked.connect(lambda: self._set_theme("dark"))
@@ -1454,6 +1550,7 @@ def run(args=None) -> int:
             left.addLayout(operator_form)
 
             self.active_status = QLabel("Πληκτρολογήστε Α.Γ.Μ.Σ.")
+            self.active_status.setObjectName("statusBox")
             self.active_status.setAlignment(Qt.AlignCenter); self.active_status.setWordWrap(True)
             left.addWidget(self.active_status)
             left.addStretch()
@@ -1485,8 +1582,8 @@ def run(args=None) -> int:
             right.addStretch()
 
             shift_buttons = QHBoxLayout(); shift_buttons.setSpacing(12)
-            self.start_shift_btn = QPushButton("ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ"); self.start_shift_btn.setMinimumHeight(54)
-            self.end_shift_btn = QPushButton("ΛΗΞΗ ΒΑΡΔΙΑΣ"); self.end_shift_btn.setMinimumHeight(54)
+            self.start_shift_btn = QPushButton("ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ"); self.start_shift_btn.setObjectName("startButton"); self.start_shift_btn.setMinimumHeight(54)
+            self.end_shift_btn = QPushButton("ΛΗΞΗ ΒΑΡΔΙΑΣ"); self.end_shift_btn.setObjectName("endButton"); self.end_shift_btn.setMinimumHeight(54)
             self.start_shift_btn.clicked.connect(self._start_officer_shift_ui)
             self.end_shift_btn.clicked.connect(self._end_officer_shift_ui)
             shift_buttons.addWidget(self.start_shift_btn); shift_buttons.addWidget(self.end_shift_btn)
@@ -1523,38 +1620,14 @@ def run(args=None) -> int:
         def _apply_theme(self):
             dark = _clean(self.config.theme).lower() == "dark"
             self.light_btn.setChecked(not dark); self.dark_btn.setChecked(dark)
-            if dark:
-                self.root.setStyleSheet("""
-                    QWidget#rootPanel{background:#111b24;font-family:'Segoe UI';}
-                    QFrame#card{background:#172631;border:1px solid #314959;border-radius:16px;}
-                    QLabel{color:#e5eef4;}
-                    QLineEdit,QComboBox{background:#20323e;color:#f4f8fa;border:1px solid #3b5668;border-radius:9px;padding:8px 10px;}
-                    QLineEdit:focus,QComboBox:focus{border:2px solid #62a1c5;}
-                    QLabel#statusBox,QLabel#infoBox{background:#1c2d38;border:1px solid #334d5d;border-radius:9px;padding:9px;color:#c7d9e3;}
-                    QPushButton{background:#263b49;color:#f2f7fa;border:1px solid #466273;border-radius:9px;padding:8px 12px;font-weight:750;}
-                    QPushButton:hover{background:#304957;border-color:#6d98b0;}
-                    QPushButton:checked{background:#3a6f8d;border-color:#78b7d9;}
-                    QPushButton#startButton{background:#237c5c;border-color:#2b9872;color:white;font-size:17px;font-weight:900;}
-                    QPushButton#endButton{background:#b95742;border-color:#d06b54;color:white;font-size:17px;font-weight:900;}
-                """)
-                self.subtitle_label.setStyleSheet("font-size:15px;font-weight:800;letter-spacing:2px;color:#8fb6cc")
-                self.credits.setStyleSheet("color:#7690a0;font-size:9px")
-            else:
-                self.root.setStyleSheet("""
-                    QWidget#rootPanel{background:#eef3f7;font-family:'Segoe UI';}
-                    QFrame#card{background:#ffffff;border:1px solid #cddae3;border-radius:16px;}
-                    QLabel{color:#1c394d;}
-                    QLineEdit,QComboBox{background:#ffffff;color:#17384d;border:1px solid #c2d2dc;border-radius:9px;padding:8px 10px;}
-                    QLineEdit:focus,QComboBox:focus{border:2px solid #4385aa;}
-                    QLabel#statusBox,QLabel#infoBox{background:#f7fafc;border:1px solid #d1dee6;border-radius:9px;padding:9px;color:#426276;}
-                    QPushButton{background:#f8fbfd;color:#24495f;border:1px solid #bdced8;border-radius:9px;padding:8px 12px;font-weight:750;}
-                    QPushButton:hover{background:#edf4f8;border-color:#7fa7bd;}
-                    QPushButton:checked{background:#d9eaf4;border-color:#5f94b1;}
-                    QPushButton#startButton{background:#2f996f;border-color:#247958;color:white;font-size:17px;font-weight:900;}
-                    QPushButton#endButton{background:#cf624a;border-color:#aa4937;color:white;font-size:17px;font-weight:900;}
-                """)
-                self.subtitle_label.setStyleSheet("font-size:15px;font-weight:800;letter-spacing:2px;color:#587b91")
-                self.credits.setStyleSheet("color:#8095a3;font-size:9px")
+            app = QApplication.instance()
+            if app is not None:
+                app.setStyleSheet(_theme_stylesheet(self.config.theme))
+            t = THEME_DARK if dark else THEME_LIGHT
+            self.subtitle_label.setStyleSheet(
+                f"font-size:15px;font-weight:800;letter-spacing:2px;color:{t['muted']}"
+            )
+            self.credits.setStyleSheet(f"color:{t['muted']};font-size:9px")
             self._agms_changed()
             self._officer_changed()
 
@@ -2038,7 +2111,14 @@ def run(args=None) -> int:
 
 
     app = QApplication.instance() or QApplication(list(args or sys.argv))
-    window = MainWindow(); window.show()
+    app.setStyle("Fusion")
+    startup_theme = AppConfig.load().theme
+    app.setStyleSheet(_theme_stylesheet(startup_theme))
+    app_icon = _network_icon()
+    app.setWindowIcon(app_icon)
+    window = MainWindow()
+    window.setWindowIcon(app_icon)
+    window.show()
     return app.exec()
 
 
