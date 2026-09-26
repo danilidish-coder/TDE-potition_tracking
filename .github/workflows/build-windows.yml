@@ -1,65 +1,26 @@
-name: Migrate and Build Position Tracking
+name: Build Position Tracking Windows EXE
 
 on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - "test/shift-stats-20260926"
     paths:
-      - "POSITION_TRACKING_OFFICER_FINAL.zip"
-      - "full_patch_*.b64"
-      - "patch2_*.b64"
+      - "src/**"
+      - "requirements.txt"
+      - "tests/reports/**"
       - ".github/workflows/build-windows.yml"
 
 permissions:
   contents: write
 
 jobs:
-  migrate-build:
+  build:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Verify legacy source package
-        shell: powershell
-        run: |
-          if (-not (Test-Path "POSITION_TRACKING_OFFICER_FINAL.zip")) { throw "Legacy source ZIP not found" }
-          $zipHash = (Get-FileHash "POSITION_TRACKING_OFFICER_FINAL.zip" -Algorithm SHA256).Hash.ToLower()
-          if ($zipHash -ne "33e8adeda50995b6526f25bc28ab883e117e478f207fe1b58eb179b521488cb8") { throw "Legacy ZIP SHA256 mismatch" }
-
-      - name: Extract legacy source
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path buildsrc | Out-Null
-          Expand-Archive -Path "POSITION_TRACKING_OFFICER_FINAL.zip" -DestinationPath "buildsrc" -Force
-          $source = Get-ChildItem buildsrc -Recurse -Filter "position_tracking_FINAL.py" | Select-Object -First 1
-          if (-not $source) { throw "position_tracking_FINAL.py not found" }
-          "SOURCE_DIR=$($source.Directory.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      - name: Reconstruct verified migration patch
-        shell: powershell
-        run: |
-          python -c "import base64,gzip,pathlib; r=pathlib.Path('.'); names=['full_patch_01.b64','patch2_1.b64','patch2_2.b64','patch2_3.b64','patch2_4.b64','full_patch_03.b64','full_patch_04.b64','full_patch_05.b64']; s=''.join((r/n).read_text(encoding='utf-8').strip() for n in names); (r/'position_tracking_test.patch').write_bytes(gzip.decompress(base64.b64decode(s)))"
-          git apply --unsafe-paths --directory="buildsrc/POSITION_TRACKING_OFFICER_FINAL" "position_tracking_test.patch"
-
-      - name: Verify migrated source
-        shell: powershell
-        run: |
-          python -c "from pathlib import Path; import hashlib; p=Path(r'$env:SOURCE_DIR')/'position_tracking_FINAL.py'; b=p.read_text(encoding='utf-8').replace('\\r\\n','\\n').encode('utf-8'); h=hashlib.sha256(b).hexdigest(); print('NORMALIZED SOURCE SHA256:',h); assert h=='c0d53c8b0bcba6305cb8e20bcf243d467e7220326539554bb95fe5b2fbfff0ba', 'Migrated source SHA256 mismatch'"
-          python -m py_compile "$env:SOURCE_DIR\position_tracking_FINAL.py"
-
-      - name: Publish unpacked source tree
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path src | Out-Null
-          New-Item -ItemType Directory -Force -Path tests\reports | Out-Null
-          Copy-Item "$env:SOURCE_DIR\position_tracking_FINAL.py" "src\position_tracking.py" -Force
-          Copy-Item "$env:SOURCE_DIR\requirements.txt" "requirements.txt" -Force
-          Copy-Item "$env:SOURCE_DIR\FLEXIBLE_IMPORT_TEST_14_OF_14.txt" "tests\reports\FLEXIBLE_IMPORT_TEST_14_OF_14.txt" -Force
-          Copy-Item "$env:SOURCE_DIR\FLEXIBLE_HARD_STRESS_121_OF_121.txt" "tests\reports\FLEXIBLE_HARD_STRESS_121_OF_121.txt" -Force
-          Copy-Item "$env:SOURCE_DIR\REGRESSION_STRESS_36_OF_36.txt" "tests\reports\REGRESSION_STRESS_36_OF_36.txt" -Force
-          Copy-Item "$env:SOURCE_DIR\OFFICER_CHANGE_VERIFICATION.txt" "tests\reports\OFFICER_CHANGE_VERIFICATION.txt" -Force
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -72,34 +33,47 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      - name: Build Windows application directly from src
+      - name: Verify source and test reports
+        shell: powershell
+        run: |
+          if (-not (Test-Path "src\position_tracking.py")) { throw "Source file missing" }
+          python -m py_compile "src\position_tracking.py"
+          $r14 = Get-Content "tests\reports\FLEXIBLE_IMPORT_TEST_14_OF_14.txt" -Raw
+          $r121 = Get-Content "tests\reports\FLEXIBLE_HARD_STRESS_121_OF_121.txt" -Raw
+          $runtime = Get-Content "tests\reports\RUNTIME_SHIFT_CHANGE_TEST.txt" -Raw
+          if ($r14 -notmatch "RESULT 14/14") { throw "Import report failed" }
+          if ($r121 -notmatch "RESULT 121/121") { throw "Stress report failed" }
+          if ($runtime -notmatch "100 sequential shifts stress test: PASS") { throw "Runtime shift report failed" }
+          python -c "import json,pathlib; d=json.loads(pathlib.Path(r'tests/reports/INTEGRATED_REGRESSION_STRESS.txt').read_text(encoding='utf-8')); assert d['shifts']==100 and d['pending_blocks']==100 and d['late_accept']==100 and d['exclude']==100 and d['events']==600 and d['charts']>=1"
+
+      - name: Build Windows application
         shell: powershell
         run: |
           python -m PyInstaller --noconfirm --clean --windowed --onefile --name "PositionTracking_TEST" "src\position_tracking.py"
+          if (-not (Test-Path "dist\PositionTracking_TEST.exe")) { throw "EXE was not created" }
 
       - name: Smoke test launch
         shell: powershell
         run: |
-          $exe = Get-ChildItem "dist" -Filter "*.exe" | Select-Object -First 1
-          if (-not $exe) { throw "EXE was not created" }
-          $p = Start-Process -FilePath $exe.FullName -PassThru
+          $exe = Resolve-Path "dist\PositionTracking_TEST.exe"
+          $p = Start-Process -FilePath $exe -PassThru
           Start-Sleep -Seconds 10
           if ($p.HasExited) { throw "Application exited unexpectedly during smoke test" }
           Stop-Process -Id $p.Id -Force
           Write-Host "Smoke test PASS"
-          Write-Host "EXE SHA256: $((Get-FileHash $exe.FullName -Algorithm SHA256).Hash)"
+          Write-Host "EXE SHA256: $((Get-FileHash $exe -Algorithm SHA256).Hash)"
 
-      - name: Archive test EXE and unpacked source
+      - name: Archive test EXE
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
           Copy-Item "dist\PositionTracking_TEST.exe" "release\PositionTracking_TEST.exe" -Force
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src requirements.txt tests release
+          git add release/PositionTracking_TEST.exe
           git diff --cached --quiet
           if ($LASTEXITCODE -ne 0) {
-            git commit -m "Publish unpacked tested source and test EXE"
+            git commit -m "Archive unpacked-source Windows test EXE"
             git push
           }
 
