@@ -49,10 +49,16 @@ jobs:
           python -c "import json,pathlib; d=json.loads(pathlib.Path(r'tests/reports/INTEGRATED_REGRESSION_STRESS.txt').read_text(encoding='utf-8')); assert d['shifts']==100 and d['pending_blocks']==100 and d['late_accept']==100 and d['exclude']==100 and d['events']==600 and d['charts']>=1"
           python "tests\simulate_officer_simple_flow.py"
 
+      - name: Generate network application icon
+        shell: powershell
+        run: |
+          python "tools\generate_network_icon.py"
+          if (-not (Test-Path "build_assets\position_tracking_network.ico")) { throw "Network icon was not created" }
+
       - name: Build Windows application
         shell: powershell
         run: |
-          python -m PyInstaller --noconfirm --clean --windowed --onefile --name "PositionTracking_TEST" "src\position_tracking.py"
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --icon "build_assets\position_tracking_network.ico" --name "PositionTracking_TEST" "src\position_tracking.py"
           if (-not (Test-Path "dist\PositionTracking_TEST.exe")) { throw "EXE was not created" }
 
       - name: Smoke test launch
