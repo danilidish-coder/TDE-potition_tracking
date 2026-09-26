@@ -41,9 +41,9 @@ jobs:
       - name: Apply tested 2026-09-26 patch
         shell: powershell
         run: |
-          python -c "import base64,gzip,pathlib; src=pathlib.Path('position_tracking_test.patch.b64').read_text(encoding='utf-8').strip(); pathlib.Path('position_tracking_test.patch').write_bytes(gzip.decompress(base64.b64decode(src)))"
-          Set-Location "$env:SOURCE_DIR"
-          git apply --no-index --unsafe-paths "$env:GITHUB_WORKSPACE\position_tracking_test.patch"
+          python -c "import base64,gzip,pathlib; root=pathlib.Path(r'$env:GITHUB_WORKSPACE'); src=''.join((root/f'full_patch_{i:02d}.b64').read_text(encoding='utf-8').strip() for i in range(1,6)); (root/'position_tracking_test.patch').write_bytes(gzip.decompress(base64.b64decode(src)))"
+          Set-Location "$env:GITHUB_WORKSPACE"
+          git apply --unsafe-paths --directory="buildsrc/POSITION_TRACKING_OFFICER_FINAL" "position_tracking_test.patch"
 
       - name: Verify embedded stress reports
         shell: powershell
