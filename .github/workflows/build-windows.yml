@@ -75,8 +75,7 @@ jobs:
       - name: Build Windows application directly from src
         shell: powershell
         run: |
-          python -m PyInstaller --noconfirm --clean --windowed --onefile --name "PositionTracking" "src\position_tracking.py"
-          python -c "from pathlib import Path; p=Path('dist'); (p/'PositionTracking.exe').rename(p/'Καταγραφή Θέσεων TEST.exe')"
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --name "PositionTracking_TEST" "src\position_tracking.py"
 
       - name: Smoke test launch
         shell: powershell
@@ -94,7 +93,7 @@ jobs:
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
-          Copy-Item "dist\Καταγραφή Θέσεων TEST.exe" "release\Καταγραφή Θέσεων TEST.exe" -Force
+          Copy-Item "dist\PositionTracking_TEST.exe" "release\PositionTracking_TEST.exe" -Force
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src requirements.txt tests release
@@ -108,6 +107,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: POSITION_TRACKING_WINDOWS_TEST
-          path: dist/Καταγραφή Θέσεων TEST.exe
+          path: dist/PositionTracking_TEST.exe
           if-no-files-found: error
           retention-days: 30
