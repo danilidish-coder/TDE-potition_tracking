@@ -1824,8 +1824,9 @@ def run(args=None) -> int:
             if not self.store: return
             shift=self.store.sync_active_shift()
             if not shift:
-                self._last_shift_signature=""
-                self._refresh_shift_status()
+                if self._last_shift_signature != "NO_SHIFT":
+                    self._last_shift_signature = "NO_SHIFT"
+                    self._refresh_shift_status()
                 return
             signature=json.dumps({
                 "approved":shift.get("approved",[]),
