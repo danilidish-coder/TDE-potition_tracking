@@ -1,0 +1,37 @@
+RESULT 36/36
+PASS | START unchanged vs tested final baseline
+PASS | END unchanged vs tested final baseline
+PASS | start creates active
+PASS | duplicate start blocked
+PASS | end clears active
+PASS | end without start blocked
+PASS | 500 sessions -> 1002 total event files | 1002
+PASS | concurrent start exactly one wins | wins=[7], errs=['ValueError', 'ValueError', 'ValueError', 'ValueError', 'ValueError', 'ValueError', 'ValueError']
+PASS | 10-min early included
+PASS | 31-min early excluded at 30
+PASS | lookback adjustable
+PASS | 13-hour-later service excluded by automatic 12h window
+PASS | shift status draft
+PASS | duplicate roster removed
+PASS | audit created
+PASS | audit contains SHIFT_SAVED
+PASS | shift finalized
+PASS | final report exists
+PASS | final report hash correct
+PASS | finalized shift cannot overwrite
+PASS | finalize idempotent
+PASS | backup zip exists
+PASS | rapid consecutive backups have unique names
+PASS | backup has events
+PASS | backup excludes backups folder
+PASS | backup has shifts
+PASS | audit contains backup
+PASS | admin/finalize does not alter original event files
+PASS | list shifts sees finalized
+PASS | PIN stored hashed field
+PASS | admin auth gates admin
+PASS | backup button present
+PASS | audit viewer present
+PASS | finalize button present
+PASS | live map still present
+PASS | operator labels still minimal

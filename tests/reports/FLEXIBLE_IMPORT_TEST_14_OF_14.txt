@@ -1,0 +1,15 @@
+RESULT 14/14
+PASS | personnel canonical | (PersonnelRecord(agms='123456', rank='ΑΡΧ', surname='ΠΑΠΑΔΟΠΟΥΛΟΣ', given_name='ΙΩΑΝΝΗΣ'),)
+PASS | personnel header row 6 + aliases | (PersonnelRecord(agms='234567', rank='ΑΣΤ', surname='ΙΩΑΝΝΟΥ', given_name='ΜΑΡΙΑ'),)
+PASS | personnel only agms fullname | (PersonnelRecord(agms='345678', rank='', surname='ΚΩΝΣΤΑΝΤΙΝΟΥ', given_name='ΠΕΤΡΟΣ'),)
+PASS | personnel agms only accepted | (PersonnelRecord(agms='456789', rank='', surname='', given_name=''), PersonnelRecord(agms='567890', rank='', surname='', given_name=''))
+PASS | personnel no header inference | (PersonnelRecord(agms='678901', rank='', surname='', given_name=''), PersonnelRecord(agms='678902', rank='', surname='', given_name=''), PersonnelRecord(agms='678903', rank='', surname='', given_name=''))
+PASS | personnel duplicate merge | (PersonnelRecord(agms='789012', rank='ΑΣΤ', surname='ΔΟΚΙΜΗ', given_name='ΝΙΚΟΣ'),)
+PASS | personnel latin headers | (PersonnelRecord(agms='890123', rank='ΑΣΤ', surname='TEST', given_name='USER'),)
+PASS | roster late header aliases duplicate unknown | ('111111', '222222', '999999')
+PASS | roster no header uses known AGMS | ('111111', '222222', '333333')
+PASS | roster no header infer | ('111111', '222222', '333333')
+PASS | roster searches multiple sheets | ('111111', '222222')
+PASS | xlsm accepted | ('111111',)
+PASS | malformed workbook clean error
+PASS | no agms is blocking condition

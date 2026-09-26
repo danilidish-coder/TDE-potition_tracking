@@ -1,0 +1,20 @@
+POSITION TRACKING - OFFICER DUTY CHANGE VERIFICATION
+Date: 2026-09-22
+
+CHANGE ONLY:
+- Main button ADMIN -> ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ
+- Removed PIN/password authentication flow.
+- Removed Change ADMIN password button.
+- Human-visible ADMIN titles changed to ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ.
+- Internal audit data format preserved for compatibility.
+
+REGRESSION:
+- Core AST unchanged: 15/15 critical functions PASS.
+- START/END 100 sequential sessions: PASS.
+- Duplicate START protection: PASS.
+- Shift 30-minute lookback: PASS.
+- Finalize shift: PASS.
+- Backup ZIP creation/readability: PASS.
+- Syntax/py_compile: PASS.
+
+NO BUSINESS LOGIC CHANGES.
