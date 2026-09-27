@@ -57,10 +57,15 @@ with tempfile.TemporaryDirectory() as td:
     shift2 = store.sync_active_shift()
     assert shift2["pending"] == ["1003"]
 
-    # Επιβεβαίωση νέου εργαζόμενου.
+    # Νέος εργαζόμενος: λάθος εξαίρεση και μετά αναίρεση.
+    shift = store.set_shift_member_state("1003", "EXCLUDED")
+    assert "1003" in shift["excluded"]
+    assert "1003" not in shift["pending"]
     shift = store.set_shift_member_state("1003", "APPROVED")
     assert "1003" in shift["approved"]
-    assert "1003" not in shift["pending"]
+    assert "1003" not in shift["excluded"]
+    late_restored = [x for x in store.shift_sessions_v2(shift) if x["start"].get("agms") == "1003"]
+    assert late_restored and late_restored[0]["start_dt"] == datetime(2026, 9, 26, 10, 5)
 
     # Διόρθωση λάθους: ο 1002 είχε ξεκινήσει ΠΡΙΝ τη βάρδια,
     # εξαιρέθηκε κατά λάθος και επανέρχεται σε ΑΠΟΔΟΧΗ.
@@ -97,6 +102,8 @@ with tempfile.TemporaryDirectory() as td:
         "ΕΝΕΡΓΕΣ ΘΕΣΕΙΣ ΕΡΓΑΣΙΑΣ",
         "ΦΩΤΕΙΝΟ",
         "ΣΚΟΤΕΙΝΟ",
+        "Επιβεβαίωση εξαίρεσης",
+        "Είστε βέβαιοι ότι θέλετε να ΕΞΑΙΡΕΣΕΤΕ",
     ):
         assert marker in source, marker
 
