@@ -715,9 +715,12 @@ class SharedEventStore:
                 if agms not in seen:
                     excluded.append(agms)
 
+        # Κρατάμε την πραγματική ώρα έναρξης ΟΛΩΝ όσων είναι ήδη ενεργοί
+        # κατά την έναρξη της βάρδιας, ακόμη κι αν αρχικά εξαιρεθούν.
+        # Έτσι μια μεταγενέστερη διόρθωση ΕΞΑΙΡΕΣΗ -> ΑΠΟΔΟΧΗ
+        # επαναφέρει πλήρως την πραγματική αρχική ώρα εργασίας.
         initial_active = {}
-        for agms in approved:
-            item = active_by_agms.get(agms) or {}
+        for agms, item in active_by_agms.items():
             initial_active[agms] = {
                 "timestamp": _clean(item.get("timestamp")),
                 "event_id": _clean(item.get("event_id")),
