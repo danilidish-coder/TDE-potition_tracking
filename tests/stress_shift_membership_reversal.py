@@ -35,7 +35,9 @@ with tempfile.TemporaryDirectory() as td:
         root = tmp / f"runtime_{cycle:03d}"
         store = mod.SharedEventStore(root)
 
-        shift_start = datetime(2026, 9, 27, 10, 0) + timedelta(days=cycle)
+        # Χρησιμοποιούμε παρελθοντικές ώρες ώστε το test να μην εξαρτάται
+        # από timezone/τρέχουσα ώρα του Windows runner.
+        shift_start = datetime(2025, 1, 1, 10, 0) + timedelta(days=cycle)
         early_start = shift_start - timedelta(minutes=17 + (cycle % 11))
         late_start = shift_start + timedelta(minutes=8 + (cycle % 13))
         shift_end = shift_start + timedelta(hours=8)
