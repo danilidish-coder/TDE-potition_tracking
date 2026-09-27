@@ -1,13 +1,24 @@
 # TDE Position Tracking
 
+## Γρήγορη λήψη του προγράμματος
+Για να κατεβάσεις το έτοιμο πρόγραμμα στα Windows:
+
+1. Πάτησε **Releases** στη δεξιά πλευρά της κεντρικής σελίδας του έργου.
+2. Άνοιξε την έκδοση που γράφει **Latest**.
+3. Στην ενότητα **Assets**, πάτησε **Καταγραφή Θέσεων.exe**.
+
+Για απλή χρήση δεν χρειάζεται να ανοίγεις τους φακέλους `src`, `tests`, `.github` ή `tools`. Αυτοί αφορούν μόνο την ανάπτυξη και τους ελέγχους του προγράμματος.
+
 Windows standalone εφαρμογή για Καταγραφή Θέσεων του Τ.Δ.Ε. Κρυσταλλοπηγής.
 
 ## Δομή
 - `src/position_tracking.py`: πραγματικός πηγαίος κώδικας.
 - `requirements.txt`: εξαρτήσεις build/runtime.
 - `tests/`: αυτοματοποιημένα tests και επιβεβαιωμένα reports.
-- `release/`: έτοιμα Windows EXE όπου απαιτείται.
+- `release/`: το τρέχον έτοιμο Windows EXE.
 - `.github/workflows/build-windows.yml`: Windows build, tests και smoke test.
+- `.github/workflows/publish-release.yml`: δημοσίευση της έκδοσης στο GitHub Releases.
+- `VERSION.txt`: αριθμός της τρέχουσας έκδοσης.
 - `DEVELOPMENT_RULES.md`: μόνιμοι κανόνες εργασίας για μελλοντικές αλλαγές.
 
 ## Κανόνας αποθήκευσης
