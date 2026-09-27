@@ -136,6 +136,53 @@ def summarize(samples):
     }
 
 
+def normalized_image_distance(img_a, img_b) -> float:
+    a = img_a.resize((180, 110)).convert("RGB")
+    b = img_b.resize((180, 110)).convert("RGB")
+    pa = list(a.getdata())
+    pb = list(b.getdata())
+    total = 0
+    for (r1,g1,b1),(r2,g2,b2) in zip(pa,pb):
+        total += abs(r1-r2)+abs(g1-g2)+abs(b1-b2)
+    return total / (len(pa)*3*255.0)
+
+
+def startup_endpoint_check(raw, out_dir: Path, prefix: str, threshold: float = 0.08):
+    if not raw:
+        return {"endpoint_anomaly_frames": 0, "max_endpoint_distance": 0.0}
+    final_ref = raw[-1][1]
+    scored = [(t, normalized_image_distance(img, final_ref), img) for t, img in raw]
+    anomalies = [x for x in scored if x[1] > threshold]
+    for rank, (t, dist, img) in enumerate(sorted(scored, key=lambda x: x[1], reverse=True)[:5], 1):
+        img.save(out_dir / f"{prefix}_endpoint_{rank:02d}_{t:.3f}s_d{dist:.3f}.png")
+    return {
+        "endpoint_anomaly_frames": len(anomalies),
+        "max_endpoint_distance": round(max(x[1] for x in scored), 5),
+        "endpoint_flicker_detected": bool(anomalies),
+    }
+
+
+def transition_endpoint_check(pre_raw, post_raw, out_dir: Path, prefix: str, threshold: float = 0.08):
+    if not pre_raw or not post_raw:
+        return {"third_state_frames": 0, "max_third_state_distance": 0.0}
+    pre_ref = pre_raw[-1][1]
+    post_ref = post_raw[-1][1]
+    scored = []
+    for t, img in pre_raw:
+        scored.append((t, min(normalized_image_distance(img, pre_ref), normalized_image_distance(img, post_ref)), img))
+    offset = pre_raw[-1][0] + 0.025
+    for t, img in post_raw:
+        scored.append((t + offset, min(normalized_image_distance(img, pre_ref), normalized_image_distance(img, post_ref)), img))
+    anomalies = [x for x in scored if x[1] > threshold]
+    for rank, (t, dist, img) in enumerate(sorted(scored, key=lambda x: x[1], reverse=True)[:5], 1):
+        img.save(out_dir / f"{prefix}_endpoint_{rank:02d}_{t:.3f}s_d{dist:.3f}.png")
+    return {
+        "third_state_frames": len(anomalies),
+        "max_third_state_distance": round(max(x[1] for x in scored), 5),
+        "endpoint_flicker_detected": bool(anomalies),
+    }
+
+
 def save_worst(raw, samples, out_dir: Path, prefix: str):
     if not samples:
         return
@@ -192,12 +239,13 @@ def main():
 
     report = {"startup_runs": [], "theme_toggles": [], "capture_supported": True}
 
-    for run in range(1, 6):
+    for run in range(1, 21):
         p = subprocess.Popen([exe], cwd=str(Path(exe).parent))
         try:
             hwnd = wait_for_window(p.pid)
-            samples, raw = capture_sequence(hwnd, 1.8)
+            samples, raw = capture_sequence(hwnd, 1.2)
             summary = summarize(samples)
+            summary.update(startup_endpoint_check(raw, out, f"startup_{run:02d}"))
             summary["run"] = run
             report["startup_runs"].append(summary)
             write_csv(samples, out / f"startup_{run:02d}.csv")
@@ -215,15 +263,16 @@ def main():
     try:
         hwnd = wait_for_window(p.pid)
         time.sleep(0.8)
-        for toggle in range(1, 11):
-            pre, pre_raw = capture_sequence(hwnd, 0.30)
+        for toggle in range(1, 31):
+            pre, pre_raw = capture_sequence(hwnd, 0.25)
             click_theme(hwnd)
-            post, post_raw = capture_sequence(hwnd, 0.90)
+            post, post_raw = capture_sequence(hwnd, 0.65)
             combined = list(pre)
             offset = pre[-1].t + 0.025 if pre else 0
             combined.extend(Sample(s.t+offset, s.luma, s.black_ratio, s.diff) for s in post)
             raw = pre_raw + [(t+offset,img) for t,img in post_raw]
             summary = summarize(combined)
+            summary.update(transition_endpoint_check(pre_raw, post_raw, out, f"theme_{toggle:02d}"))
             summary["toggle"] = toggle
             if pre and post:
                 summary["pre_mean_luma"] = round(sum(x.luma for x in pre)/len(pre),3)
@@ -242,8 +291,10 @@ def main():
             except subprocess.TimeoutExpired:
                 p.kill()
 
-    report["startup_flicker_runs"] = sum(1 for x in report["startup_runs"] if x.get("flicker_detected"))
-    report["theme_flicker_toggles"] = sum(1 for x in report["theme_toggles"] if x.get("flicker_detected"))
+    report["startup_flicker_runs_legacy"] = sum(1 for x in report["startup_runs"] if x.get("flicker_detected"))
+    report["startup_endpoint_flicker_runs"] = sum(1 for x in report["startup_runs"] if x.get("endpoint_flicker_detected"))
+    report["theme_flicker_toggles_legacy"] = sum(1 for x in report["theme_toggles"] if x.get("flicker_detected"))
+    report["theme_endpoint_flicker_toggles"] = sum(1 for x in report["theme_toggles"] if x.get("endpoint_flicker_detected"))
     report["theme_clicks_confirmed"] = sum(1 for x in report["theme_toggles"] if x.get("theme_changed"))
 
     (out / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
