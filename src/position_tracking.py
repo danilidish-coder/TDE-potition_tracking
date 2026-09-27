@@ -2162,21 +2162,6 @@ def run(args=None) -> int:
 
     app = QApplication(list(args or sys.argv))
     app.setApplicationName("TDE Position Tracking")
-
-    # Ορίζουμε το native background πριν δημιουργηθεί το κύριο παράθυρο.
-    # Έτσι το πρώτο frame των Windows/Qt δεν εμφανίζει το προεπιλεγμένο
-    # λευκό background πριν ζωγραφιστεί το πλήρες UI.
-    startup_config = AppConfig.load()
-    startup_dark = _clean(startup_config.theme).lower() == "dark"
-    startup_t = THEME_DARK if startup_dark else THEME_LIGHT
-    startup_palette = app.palette()
-    startup_palette.setColor(QPalette.Window, QColor(startup_t["window"]))
-    startup_palette.setColor(QPalette.Base, QColor(startup_t["input"]))
-    startup_palette.setColor(QPalette.AlternateBase, QColor(startup_t["card2"]))
-    startup_palette.setColor(QPalette.WindowText, QColor(startup_t["text"]))
-    startup_palette.setColor(QPalette.Text, QColor(startup_t["text"]))
-    app.setPalette(startup_palette)
-
     window = MainWindow()
     window.show()
     return app.exec()
