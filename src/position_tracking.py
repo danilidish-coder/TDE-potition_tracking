@@ -52,7 +52,14 @@ def _runtime_root() -> Path:
     root.mkdir(parents=True, exist_ok=True)
     if os.name == "nt":
         try:
-            subprocess.run(["attrib", "+h", str(root)], capture_output=True, check=False)
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            path = str(root)
+            attrs = kernel32.GetFileAttributesW(path)
+            invalid = 0xFFFFFFFF
+            hidden = 0x00000002
+            if attrs != invalid and not (attrs & hidden):
+                kernel32.SetFileAttributesW(path, attrs | hidden)
         except Exception:
             pass
     return root
