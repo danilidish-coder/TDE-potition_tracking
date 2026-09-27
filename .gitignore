@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Build output
+build/
+dist/
+artifact/
+
+# Local/runtime files
+*.log
+*.tmp
+
+# Project transfer archives are created only on explicit request
+*.zip
