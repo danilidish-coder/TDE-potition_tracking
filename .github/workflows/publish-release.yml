@@ -1,0 +1,50 @@
+name: Publish Position Tracking Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "VERSION.txt"
+      - ".github/workflows/publish-release.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read release version
+        id: version
+        shell: bash
+        run: |
+          TAG="$(tr -d '\r\n ' < VERSION.txt)"
+          if [ -z "$TAG" ]; then
+            echo "VERSION.txt is empty"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Verify final Windows EXE
+        shell: bash
+        run: |
+          test -f "release/Καταγραφή Θέσεων.exe"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          TITLE="Καταγραφή Θέσεων $TAG"
+          NOTES="Έτοιμη έκδοση Windows για λήψη και χρήση. Κατέβασε το αρχείο «Καταγραφή Θέσεων.exe» από τα Assets."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "release/Καταγραφή Θέσεων.exe" --clobber
+          else
+            gh release create "$TAG" "release/Καταγραφή Θέσεων.exe" --title "$TITLE" --notes "$NOTES" --latest
+          fi
