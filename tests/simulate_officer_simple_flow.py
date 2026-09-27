@@ -62,11 +62,28 @@ with tempfile.TemporaryDirectory() as td:
     assert "1003" in shift["approved"]
     assert "1003" not in shift["pending"]
 
+    # Διόρθωση λάθους: ο 1002 είχε ξεκινήσει ΠΡΙΝ τη βάρδια,
+    # εξαιρέθηκε κατά λάθος και επανέρχεται σε ΑΠΟΔΟΧΗ.
+    shift = store.set_shift_member_state("1002", "APPROVED")
+    assert "1002" in shift["approved"]
+    assert "1002" not in shift["excluded"]
+    restored = [x for x in store.shift_sessions_v2(shift) if x["start"].get("agms") == "1002"]
+    assert restored, "Η αναίρεση εξαίρεσης πρέπει να επαναφέρει τη συνεδρία"
+    assert restored[0]["start_dt"] == datetime(2026, 9, 26, 9, 57)
+
+    # Επαναφορά ξανά σε ΕΞΑΙΡΕΣΗ και δεύτερη αναίρεση.
+    shift = store.set_shift_member_state("1002", "EXCLUDED")
+    assert "1002" in shift["excluded"]
+    shift = store.set_shift_member_state("1002", "APPROVED")
+    assert "1002" in shift["approved"]
+    restored_again = [x for x in store.shift_sessions_v2(shift) if x["start"].get("agms") == "1002"]
+    assert restored_again and restored_again[0]["start_dt"] == datetime(2026, 9, 26, 9, 57)
+
     # Λήξη βάρδιας: μόνο επιβεβαιωμένοι στη τελική λίστα.
     final = store.end_officer_shift(by["1004"], datetime(2026, 9, 26, 18, 0))
     assert final["status"] == "FINALIZED"
-    assert set(final["approved"]) == {"1001", "1003"}
-    assert final["excluded"] == ["1002"]
+    assert set(final["approved"]) == {"1001", "1002", "1003"}
+    assert final["excluded"] == []
 
     # UI markers: απλός αξ/υπ + κάτω κουμπιά + θέματα.
     source = SRC.read_text(encoding="utf-8")
