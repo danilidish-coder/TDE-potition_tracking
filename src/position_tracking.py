@@ -1864,7 +1864,18 @@ def run(args=None) -> int:
                         QMessageBox.Yes | QMessageBox.No,
                         QMessageBox.Yes
                     )
-                    self.store.set_shift_member_state(agms,"APPROVED" if answer==QMessageBox.Yes else "EXCLUDED")
+                    if answer == QMessageBox.Yes:
+                        self.store.set_shift_member_state(agms, "APPROVED")
+                    else:
+                        confirm_exclusion = QMessageBox.question(
+                            self,
+                            "Επιβεβαίωση εξαίρεσης",
+                            f"{name}\n\nΕίστε βέβαιοι ότι θέλετε να ΕΞΑΙΡΕΣΕΤΕ το άτομο από τη βάρδια;",
+                            QMessageBox.Yes | QMessageBox.No,
+                            QMessageBox.No
+                        )
+                        if confirm_exclusion == QMessageBox.Yes:
+                            self.store.set_shift_member_state(agms, "EXCLUDED")
             finally:
                 self._pending_prompt_active=False
             self._refresh_shift_status()
@@ -2036,6 +2047,19 @@ def run(args=None) -> int:
                 item = members.currentItem()
                 if not item:
                     QMessageBox.warning(dlg, "Έλεγχος", "Επιλέξτε πρώτα άτομο."); return
+                if state == "EXCLUDED":
+                    agms = _clean(item.data(Qt.UserRole))
+                    person = self._people_by_agms.get(agms)
+                    name = _clean(f"{person.rank} {person.full_name}") if person else f"ΑΓΜΣ {agms}"
+                    confirm = QMessageBox.question(
+                        dlg,
+                        "Επιβεβαίωση εξαίρεσης",
+                        f"{name}\n\nΕίστε βέβαιοι ότι θέλετε να ΕΞΑΙΡΕΣΕΤΕ το άτομο από τη βάρδια;",
+                        QMessageBox.Yes | QMessageBox.No,
+                        QMessageBox.No
+                    )
+                    if confirm != QMessageBox.Yes:
+                        return
                 try:
                     self.store.set_shift_member_state(item.data(Qt.UserRole), state); refresh_members()
                 except Exception as exc:
