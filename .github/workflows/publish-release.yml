@@ -35,6 +35,11 @@ jobs:
         run: |
           test -f "release/Καταγραφή Θέσεων.exe"
 
+      - name: Prepare simple download filename
+        shell: bash
+        run: |
+          cp "release/Καταγραφή Θέσεων.exe" "TDE_Katagrafi_Theseon.exe"
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -42,9 +47,10 @@ jobs:
         shell: bash
         run: |
           TITLE="Καταγραφή Θέσεων $TAG"
-          NOTES="Έτοιμη έκδοση Windows για λήψη και χρήση. Κατέβασε το αρχείο «Καταγραφή Θέσεων.exe» από τα Assets."
+          NOTES="Έτοιμη έκδοση Windows για λήψη και χρήση. Κατέβασε το αρχείο TDE_Katagrafi_Theseon.exe από τα Assets."
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "release/Καταγραφή Θέσεων.exe" --clobber
+            gh release delete-asset "$TAG" "default.exe" -y >/dev/null 2>&1 || true
+            gh release upload "$TAG" "TDE_Katagrafi_Theseon.exe" --clobber
           else
-            gh release create "$TAG" "release/Καταγραφή Θέσεων.exe" --title "$TITLE" --notes "$NOTES" --latest
+            gh release create "$TAG" "TDE_Katagrafi_Theseon.exe" --title "$TITLE" --notes "$NOTES" --latest
           fi
