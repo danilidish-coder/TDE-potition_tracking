@@ -1267,11 +1267,11 @@ def build_shift_html(store: SharedEventStore, day: date, cutoff: str) -> str:
 
 def run(args=None) -> int:
     from PySide6.QtCore import Qt, QDate, QDateTime, QTimer, QRectF
-    from PySide6.QtGui import QColor, QFont, QPainter, QPen, QIcon, QPixmap
+    from PySide6.QtGui import QColor, QFont, QPainter, QPen, QIcon, QPixmap, QPalette
     from PySide6.QtWidgets import (
         QApplication, QComboBox, QDateEdit, QFormLayout, QFrame, QHBoxLayout,
         QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout, QWidget,
-        QInputDialog, QDialog, QDateTimeEdit, QSpinBox, QListWidget, QListWidgetItem, QFileDialog
+        QInputDialog, QDialog, QDateTimeEdit, QSpinBox, QListWidget, QListWidgetItem, QFileDialog, QToolButton
     )
 
     THEME_DARK = {
@@ -1334,9 +1334,12 @@ def run(args=None) -> int:
             QPushButton:disabled {{
                 color:{t['muted']}; background:{t['panel']}; border-color:{t['border']};
             }}
-            QPushButton#themeButton:checked {{
-                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['accent']},stop:1 {t['accent2']});
-                color:white; border-color:{t['accent']};
+            QToolButton {{
+                background:{t['card2']}; color:{t['text']}; border:1px solid {t['border']};
+                border-radius:12px; padding:8px 12px; font-weight:700;
+            }}
+            QToolButton:hover {{
+                background:{t['accent']}; color:white; border-color:{t['accent']};
             }}
             QPushButton#startButton {{
                 background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['ok']},stop:1 #0d5f46);
@@ -1519,14 +1522,11 @@ def run(args=None) -> int:
             titles.addWidget(self.title_label); titles.addWidget(self.subtitle_label)
             header.addLayout(titles); header.addStretch()
 
-            self.light_btn = QPushButton("ΦΩΤΕΙΝΟ")
-            self.dark_btn = QPushButton("ΣΚΟΤΕΙΝΟ")
-            self.light_btn.setCheckable(True); self.dark_btn.setCheckable(True)
-            self.light_btn.setObjectName("themeButton"); self.dark_btn.setObjectName("themeButton")
-            self.light_btn.setFixedSize(92,34); self.dark_btn.setFixedSize(92,34)
-            self.light_btn.clicked.connect(lambda: self._set_theme("light"))
-            self.dark_btn.clicked.connect(lambda: self._set_theme("dark"))
-            header.addWidget(self.light_btn); header.addWidget(self.dark_btn)
+            self.theme_btn = QToolButton()
+            self.theme_btn.setMinimumWidth(112)
+            self.theme_btn.setMinimumHeight(34)
+            self.theme_btn.clicked.connect(self._toggle_theme)
+            header.addWidget(self.theme_btn)
             outer.addLayout(header)
 
             columns = QHBoxLayout(); columns.setSpacing(16)
@@ -1612,22 +1612,40 @@ def run(args=None) -> int:
             self.credits.setAlignment(Qt.AlignCenter)
             outer.addWidget(self.credits)
 
-        def _set_theme(self, theme: str):
-            self.config.theme = "dark" if theme == "dark" else "light"
+        def _toggle_theme(self):
+            self.config.theme = "light" if _clean(self.config.theme).lower() == "dark" else "dark"
             self.config.save()
             self._apply_theme()
 
         def _apply_theme(self):
             dark = _clean(self.config.theme).lower() == "dark"
-            self.light_btn.setChecked(not dark); self.dark_btn.setChecked(dark)
-            self.setStyleSheet(_theme_stylesheet(self.config.theme))
             t = THEME_DARK if dark else THEME_LIGHT
-            self.subtitle_label.setStyleSheet(
-                f"font-size:15px;font-weight:800;letter-spacing:2px;color:{t['muted']}"
-            )
-            self.credits.setStyleSheet(f"color:{t['muted']};font-size:9px")
-            self._agms_changed()
-            self._officer_changed()
+
+            self.setUpdatesEnabled(False)
+            self.root.setUpdatesEnabled(False)
+            try:
+                palette = self.palette()
+                palette.setColor(QPalette.Window, QColor(t["window"]))
+                self.setPalette(palette)
+                self.setAutoFillBackground(True)
+
+                root_palette = self.root.palette()
+                root_palette.setColor(QPalette.Window, QColor(t["window"]))
+                self.root.setPalette(root_palette)
+                self.root.setAutoFillBackground(True)
+
+                self.setStyleSheet(_theme_stylesheet(self.config.theme))
+                self.theme_btn.setText("☀ ΦΩΤΕΙΝΟ" if dark else "☾ ΣΚΟΤΕΙΝΟ")
+                self.subtitle_label.setStyleSheet(
+                    f"font-size:15px;font-weight:800;letter-spacing:2px;color:{t['muted']}"
+                )
+                self.credits.setStyleSheet(f"color:{t['muted']};font-size:9px")
+                self._agms_changed()
+                self._officer_changed()
+            finally:
+                self.root.setUpdatesEnabled(True)
+                self.setUpdatesEnabled(True)
+                self.update()
 
         def _find_personnel_file(self) -> Path | None:
             candidates = []
