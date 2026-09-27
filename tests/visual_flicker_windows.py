@@ -35,16 +35,20 @@ class Sample:
     diff: float
 
 
-def find_hwnd_for_pid(pid: int) -> Optional[int]:
+def find_position_window() -> Optional[int]:
     found = []
 
     @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
     def cb(hwnd, _):
         if not user32.IsWindowVisible(hwnd):
             return True
-        proc_id = ctypes.c_ulong()
-        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(proc_id))
-        if proc_id.value == pid:
+        length = user32.GetWindowTextLengthW(hwnd)
+        if length <= 0:
+            return True
+        buf = ctypes.create_unicode_buffer(length + 1)
+        user32.GetWindowTextW(hwnd, buf, length + 1)
+        title = buf.value
+        if "Καταγραφή Θέσεων" in title or "ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ" in title.upper():
             found.append(int(hwnd))
             return False
         return True
@@ -166,10 +170,10 @@ def click_theme(hwnd: int):
     user32.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
 
 
-def wait_for_window(pid: int, timeout=15.0):
+def wait_for_window(pid: int, timeout=20.0):
     end = time.time()+timeout
     while time.time() < end:
-        hwnd = find_hwnd_for_pid(pid)
+        hwnd = find_position_window()
         if hwnd:
             return hwnd
         time.sleep(0.01)
