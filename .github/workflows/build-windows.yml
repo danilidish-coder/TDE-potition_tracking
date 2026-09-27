@@ -73,6 +73,19 @@ jobs:
           Write-Host "Smoke test PASS"
           Write-Host "EXE SHA256: $((Get-FileHash $exe -Algorithm SHA256).Hash)"
 
+      - name: Visual flicker test
+        shell: powershell
+        run: |
+          python "tests\visual_flicker_windows.py" --exe "dist\PositionTracking_TEST.exe" --out "visual_flicker"
+
+      - name: Upload visual flicker evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: POSITION_TRACKING_VISUAL_FLICKER
+          path: visual_flicker/**
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Archive Windows EXE
         shell: powershell
         run: |
