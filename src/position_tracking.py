@@ -2108,12 +2108,9 @@ def run(args=None) -> int:
             QMessageBox.information(self,"Στιγμιαία εικόνα","\n".join(lines))
 
 
-    app = QApplication.instance() or QApplication(list(args or sys.argv))
-    app.setStyle("Fusion")
-    app_icon = _network_icon()
-    app.setWindowIcon(app_icon)
+    app = QApplication(list(args or sys.argv))
+    app.setApplicationName("TDE Position Tracking")
     window = MainWindow()
-    window.setWindowIcon(app_icon)
     window.show()
     return app.exec()
 
