@@ -1275,14 +1275,14 @@ def run(args=None) -> int:
     )
 
     THEME_DARK = {
-        "window": "#040912", "panel": "#091525", "card": "#0d2034", "card2": "#132b44",
-        "text": "#f5f9ff", "muted": "#91a7bd", "accent": "#1976c9", "accent2": "#0a4f8c",
-        "border": "#244b70", "danger": "#a92f43", "ok": "#16825f", "input": "#07131f",
+        "window": "#07111f", "panel": "#0d1b2b", "card": "#10243a", "card2": "#132c46",
+        "text": "#f4f8ff", "muted": "#93a8bf", "accent": "#1378d4", "accent2": "#0b5ea8",
+        "border": "#214565", "danger": "#b73a4a", "ok": "#1f9d70", "input": "#0a1726",
     }
     THEME_LIGHT = {
-        "window": "#e7eef5", "panel": "#f5f8fb", "card": "#ffffff", "card2": "#eaf2f8",
-        "text": "#0b2035", "muted": "#587086", "accent": "#1269b5", "accent2": "#084b84",
-        "border": "#b9ccdc", "danger": "#a92f43", "ok": "#16795a", "input": "#ffffff",
+        "window": "#eaf1f8", "panel": "#f6f9fc", "card": "#ffffff", "card2": "#eef5fb",
+        "text": "#0d2238", "muted": "#587086", "accent": "#0c68bd", "accent2": "#084d8c",
+        "border": "#c4d5e5", "danger": "#b12f41", "ok": "#16795a", "input": "#ffffff",
     }
 
     def _theme_stylesheet(theme: str) -> str:
@@ -1500,8 +1500,8 @@ def run(args=None) -> int:
             self.resize(1120, 690)
             self.setMinimumSize(980, 620)
             self._build()
-            self._apply_theme()
             self._apply_config()
+            self._apply_theme()
             self.shift_timer = QTimer(self)
             self.shift_timer.timeout.connect(self._check_shift_updates)
             self.shift_timer.start(3000)
@@ -1620,9 +1620,7 @@ def run(args=None) -> int:
         def _apply_theme(self):
             dark = _clean(self.config.theme).lower() == "dark"
             self.light_btn.setChecked(not dark); self.dark_btn.setChecked(dark)
-            app = QApplication.instance()
-            if app is not None:
-                app.setStyleSheet(_theme_stylesheet(self.config.theme))
+            self.setStyleSheet(_theme_stylesheet(self.config.theme))
             t = THEME_DARK if dark else THEME_LIGHT
             self.subtitle_label.setStyleSheet(
                 f"font-size:15px;font-weight:800;letter-spacing:2px;color:{t['muted']}"
@@ -2112,14 +2110,11 @@ def run(args=None) -> int:
 
     app = QApplication.instance() or QApplication(list(args or sys.argv))
     app.setStyle("Fusion")
-    startup_theme = AppConfig.load().theme
-    app.setStyleSheet(_theme_stylesheet(startup_theme))
     app_icon = _network_icon()
     app.setWindowIcon(app_icon)
     window = MainWindow()
     window.setWindowIcon(app_icon)
-    app.processEvents()
-    QTimer.singleShot(0, window.show)
+    window.show()
     return app.exec()
 
 
