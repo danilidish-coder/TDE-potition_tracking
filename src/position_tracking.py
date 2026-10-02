@@ -1249,11 +1249,39 @@ def create_shift_docx(store: SharedEventStore, shift: dict, people_by_agms: dict
     return target
 
 
+GREEK_MONTH_GENITIVE = {
+    1: "Ιανουαρίου", 2: "Φεβρουαρίου", 3: "Μαρτίου", 4: "Απριλίου",
+    5: "Μαΐου", 6: "Ιουνίου", 7: "Ιουλίου", 8: "Αυγούστου",
+    9: "Σεπτεμβρίου", 10: "Οκτωβρίου", 11: "Νοεμβρίου", 12: "Δεκεμβρίου",
+}
+
+
+def shift_report_title(shift: dict) -> str:
+    start_at = datetime.fromisoformat(_clean(shift.get("start_at")))
+    end_at = datetime.fromisoformat(_clean(shift.get("end_at")) or _clean(shift.get("start_at")))
+    if start_at.year == end_at.year and start_at.month == end_at.month:
+        period = f"{start_at.day:02d}-{end_at.day:02d} {GREEK_MONTH_GENITIVE[end_at.month]} {end_at.year}"
+    elif start_at.year == end_at.year:
+        period = (
+            f"{start_at.day:02d} {GREEK_MONTH_GENITIVE[start_at.month]} - "
+            f"{end_at.day:02d} {GREEK_MONTH_GENITIVE[end_at.month]} {end_at.year}"
+        )
+    else:
+        period = (
+            f"{start_at.day:02d} {GREEK_MONTH_GENITIVE[start_at.month]} {start_at.year} - "
+            f"{end_at.day:02d} {GREEK_MONTH_GENITIVE[end_at.month]} {end_at.year}"
+        )
+    officer = shift.get("start_officer") or shift.get("end_officer") or {}
+    officer_name = _clean(f"{officer.get('surname','')} {officer.get('given_name','')}") or _clean(officer.get("full_name")) or "ΧΩΡΙΣ ΟΝΟΜΑ"
+    return f"Αναφορά {period} - {officer_name}"
+
+
 def archive_shift_docx(store: SharedEventStore, shift: dict, people_by_agms: dict[str, PersonnelRecord] | None = None) -> Path:
     stamp = datetime.fromisoformat(_clean(shift.get("end_at")) or _clean(shift.get("start_at")))
     folder = store.archive / f"{stamp:%Y}" / f"{stamp:%m}" / f"{stamp:%Y-%m-%d}"
     folder.mkdir(parents=True, exist_ok=True)
-    target = folder / f"ΚΑΤΑΓΡΑΦΗ_ΘΕΣΕΩΝ_{stamp:%Y-%m-%d_%H%M%S}.docx"
+    filename = re.sub(r'[<>:"/\\|?*]+', "_", shift_report_title(shift)).strip() + ".docx"
+    target = folder / filename
     return create_shift_docx(store, shift, people_by_agms, target)
 
 
@@ -1281,7 +1309,8 @@ def run(args=None) -> int:
     from PySide6.QtWidgets import (
         QApplication, QComboBox, QDateEdit, QFormLayout, QFrame, QHBoxLayout,
         QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout, QWidget,
-        QInputDialog, QDialog, QDateTimeEdit, QSpinBox, QListWidget, QListWidgetItem, QFileDialog, QToolButton
+        QInputDialog, QDialog, QDateTimeEdit, QSpinBox, QListWidget, QListWidgetItem, QFileDialog, QToolButton,
+        QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
     )
 
     THEME_DARK = {
@@ -1327,6 +1356,17 @@ def run(args=None) -> int:
             QComboBox QAbstractItemView {{
                 background:{t['card2']}; color:{t['text']}; border:2px solid {t['accent']};
                 selection-background-color:{t['accent']}; selection-color:white; outline:0; padding:4px;
+            }}
+            QListWidget, QTableWidget, QTextBrowser {{
+                background:{t['input']}; color:{t['text']}; border:2px solid {t['border']};
+                border-radius:9px; alternate-background-color:{t['card2']};
+                selection-background-color:{t['accent']}; selection-color:white;
+            }}
+            QListWidget::item {{ padding:6px; }}
+            QListWidget::item:selected {{ background:{t['accent']}; color:white; }}
+            QHeaderView::section {{
+                background:{t['card2']}; color:{t['text']}; border:1px solid {t['border']};
+                padding:6px; font-weight:700;
             }}
 
             QPushButton {{
@@ -1603,18 +1643,26 @@ def run(args=None) -> int:
             outer.addLayout(columns, 1)
 
             bottom = QHBoxLayout(); bottom.setSpacing(10)
-            self.print_btn = QPushButton("ΕΚΤΥΠΩΣΗ")
-            self.stats_btn = QPushButton("ΣΤΑΤΙΣΤΙΚΑ")
-            self.active_positions_btn = QPushButton("ΕΝΕΡΓΕΣ ΘΕΣΕΙΣ ΕΡΓΑΣΙΑΣ")
-            self.personnel_list_btn = QPushButton("ΕΠΙΛΟΓΗ ΛΙΣΤΑΣ ΠΡΟΣΩΠΙΚΟΥ")
-            for b in (self.print_btn,self.stats_btn,self.active_positions_btn,self.personnel_list_btn):
+            self.print_btn = QPushButton("ΤΡΕΧΟΥΣΑ ΑΝΑΦΟΡΑ")
+            self.archive_btn = QPushButton("ΑΡΧΕΙΟ ΑΝΑΦΟΡΩΝ")
+            self.history_btn = QPushButton("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ")
+            for b in (self.print_btn, self.archive_btn, self.history_btn):
                 b.setMinimumHeight(44)
                 bottom.addWidget(b)
             self.print_btn.clicked.connect(self._report)
-            self.stats_btn.clicked.connect(self._personnel_statistics)
+            self.archive_btn.clicked.connect(self._report_archive)
+            self.history_btn.clicked.connect(self._personnel_history)
+            outer.addLayout(bottom)
+
+            bottom2 = QHBoxLayout(); bottom2.setSpacing(10)
+            self.active_positions_btn = QPushButton("ΕΝΕΡΓΕΣ ΘΕΣΕΙΣ ΕΡΓΑΣΙΑΣ")
+            self.personnel_list_btn = QPushButton("ΕΠΙΛΟΓΗ ΛΙΣΤΑΣ ΠΡΟΣΩΠΙΚΟΥ")
+            for b in (self.active_positions_btn, self.personnel_list_btn):
+                b.setMinimumHeight(44)
+                bottom2.addWidget(b)
             self.active_positions_btn.clicked.connect(self._live_map)
             self.personnel_list_btn.clicked.connect(self._choose_personnel_list)
-            outer.addLayout(bottom)
+            outer.addLayout(bottom2)
 
             self.info = QLabel(""); self.info.setObjectName("infoBox"); self.info.setAlignment(Qt.AlignCenter); self.info.setWordWrap(True)
             outer.addWidget(self.info)
@@ -1994,20 +2042,17 @@ def run(args=None) -> int:
             except Exception:
                 pass
             dlg = QDialog(self); dlg.setWindowTitle("ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ"); dlg.resize(720, 620)
-            dlg.setStyleSheet("""
-                QDialog{background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #edf4f8,stop:1 #dde9f0);}
-                QLabel{color:#23465c;}
-                QLineEdit,QListWidget{background:#ffffff;border:1px solid #c8d7e0;border-radius:9px;padding:7px;}
-                QPushButton{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #ffffff,stop:1 #e4edf2);border:1px solid #bcced9;border-radius:11px;color:#24485f;font-weight:750;padding:9px 14px;}
-                QPushButton:hover{border:1px solid #6f9bb5;background:#f9fcfd;}
-            """)
+            t = THEME_DARK if _clean(self.config.theme).lower() == "dark" else THEME_LIGHT
+            dlg.setStyleSheet(_theme_stylesheet(self.config.theme))
             lay = QVBoxLayout(dlg); lay.setContentsMargins(24,22,24,22); lay.setSpacing(10)
-            header = QLabel("ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ"); header.setStyleSheet("font-size:20px;font-weight:900;color:#123f5a")
+            header = QLabel("ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ"); header.setStyleSheet(f"font-size:20px;font-weight:900;color:{t['text']}")
             lay.addWidget(header)
             officer_agms = QLineEdit(); officer_agms.setPlaceholderText("Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας")
             officer_name = QLabel("—"); officer_name.setStyleSheet("font-weight:800;font-size:15px")
             form = QFormLayout(); form.addRow("Α.Γ.Μ.Σ.", officer_agms); form.addRow("Αξιωματικός", officer_name); lay.addLayout(form)
-            status = QLabel(""); status.setWordWrap(True); status.setStyleSheet("background:#ffffff;border:1px solid #d2dfe7;border-radius:10px;padding:9px;font-weight:700")
+            status = QLabel(""); status.setWordWrap(True); status.setStyleSheet(
+                f"background:{t['card2']};color:{t['text']};border:1px solid {t['border']};border-radius:10px;padding:9px;font-weight:700"
+            )
             lay.addWidget(status)
             members = QListWidget(); lay.addWidget(members, 1)
             row = QHBoxLayout()
@@ -2133,22 +2178,190 @@ def run(args=None) -> int:
             except Exception as exc:
                 QMessageBox.critical(self, "Αρχεία", str(exc))
 
-        def _personnel_statistics(self):
+        def _report_archive(self):
             if not self.store:
                 QMessageBox.warning(self, "Έλεγχος", "Δεν είναι διαθέσιμο το .tde_runtime.")
                 return
-            pin, ok = QInputDialog.getText(self, "Στατιστικά προσωπικού", "Κωδικός πρόσβασης", QLineEdit.Password)
+            shifts = [s for s in self.store.list_shifts() if _clean(s.get("status")).upper() == "FINALIZED" and _clean(s.get("end_at"))]
+            dlg = QDialog(self); dlg.setWindowTitle("ΑΡΧΕΙΟ ΑΝΑΦΟΡΩΝ ΒΑΡΔΙΑΣ"); dlg.resize(780, 560)
+            lay = QVBoxLayout(dlg); lay.setContentsMargins(20,18,20,18); lay.setSpacing(10)
+            title = QLabel("ΑΡΧΕΙΟ ΑΝΑΦΟΡΩΝ ΒΑΡΔΙΑΣ"); title.setStyleSheet("font-size:18px;font-weight:900")
+            lay.addWidget(title)
+            listing = QListWidget()
+            for shift in shifts:
+                item = QListWidgetItem(shift_report_title(shift))
+                item.setData(Qt.UserRole, _clean(shift.get("shift_id")))
+                listing.addItem(item)
+            lay.addWidget(listing, 1)
+            info = QLabel(f"Συνολικές ολοκληρωμένες βάρδιες: {len(shifts)}")
+            lay.addWidget(info)
+            buttons = QHBoxLayout()
+            open_btn = QPushButton("ΑΝΟΙΓΜΑ ΑΝΑΦΟΡΑΣ")
+            folder_btn = QPushButton("ΑΝΟΙΓΜΑ ΦΑΚΕΛΟΥ")
+            close_btn = QPushButton("ΚΛΕΙΣΙΜΟ")
+            buttons.addWidget(open_btn); buttons.addWidget(folder_btn); buttons.addStretch(); buttons.addWidget(close_btn)
+            lay.addLayout(buttons)
+
+            def selected_shift():
+                item = listing.currentItem()
+                if not item:
+                    return None
+                sid = _clean(item.data(Qt.UserRole))
+                return next((s for s in shifts if _clean(s.get("shift_id")) == sid), None)
+
+            def open_report():
+                shift = selected_shift()
+                if not shift:
+                    QMessageBox.warning(dlg, "Αναφορές", "Επιλέξτε πρώτα μία βάρδια.")
+                    return
+                try:
+                    path = archive_shift_docx(self.store, shift, self._people_by_agms)
+                    _open_path(path)
+                except Exception as exc:
+                    QMessageBox.critical(dlg, "Αναφορές", str(exc))
+
+            open_btn.clicked.connect(open_report)
+            listing.itemDoubleClicked.connect(lambda *_: open_report())
+            folder_btn.clicked.connect(lambda: _open_path(self.store.archive))
+            close_btn.clicked.connect(dlg.accept)
+            dlg.exec()
+
+        def _personnel_history(self):
+            if not self.store:
+                QMessageBox.warning(self, "Έλεγχος", "Δεν είναι διαθέσιμο το .tde_runtime.")
+                return
+            pin, ok = QInputDialog.getText(self, "Ιστορικό προσωπικού", "Κωδικός πρόσβασης", QLineEdit.Password)
             if not ok:
                 return
             if hashlib.sha256(_clean(pin).encode("utf-8")).hexdigest() != STATISTICS_PIN_SHA256:
-                QMessageBox.warning(self, "Στατιστικά προσωπικού", "Λανθασμένος κωδικός.")
+                QMessageBox.warning(self, "Ιστορικό προσωπικού", "Λανθασμένος κωδικός.")
                 return
-            try:
-                path = create_personnel_statistics_xlsx(self.store, self._people_by_agms)
-                self.store.log_admin_action("PERSONNEL_STATISTICS_OPENED", {"file": str(path)})
-                _open_path(path)
-            except Exception as exc:
-                QMessageBox.critical(self, "Στατιστικά προσωπικού", str(exc))
+
+            dlg = QDialog(self); dlg.setWindowTitle("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ"); dlg.resize(1100, 720)
+            lay = QVBoxLayout(dlg); lay.setContentsMargins(20,18,20,18); lay.setSpacing(10)
+            title = QLabel("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ"); title.setStyleSheet("font-size:18px;font-weight:900")
+            lay.addWidget(title)
+
+            form = QFormLayout()
+            person_edit = QLineEdit(); person_edit.setPlaceholderText("ΑΓΜΣ, επώνυμο ή όνομα — αρκεί και μόνο αυτό")
+            from_edit = QLineEdit(); from_edit.setPlaceholderText("π.χ. 01/10/2026 (προαιρετικό)")
+            to_edit = QLineEdit(); to_edit.setPlaceholderText("π.χ. 31/10/2026 (προαιρετικό)")
+            position_combo = QComboBox(); position_combo.addItem("ΟΛΕΣ")
+            for pos in self.config.positions or []:
+                if _clean(pos):
+                    position_combo.addItem(_clean(pos))
+            direction_combo = QComboBox(); direction_combo.addItems(["ΟΛΑ", "ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"])
+            form.addRow("Άτομο", person_edit)
+            form.addRow("Από ημερομηνία", from_edit)
+            form.addRow("Έως ημερομηνία", to_edit)
+            form.addRow("Θέση", position_combo)
+            form.addRow("Κατεύθυνση", direction_combo)
+            lay.addLayout(form)
+
+            actions = QHBoxLayout()
+            search_btn = QPushButton("ΑΝΑΖΗΤΗΣΗ")
+            clear_btn = QPushButton("ΚΑΘΑΡΙΣΜΟΣ")
+            actions.addWidget(search_btn); actions.addWidget(clear_btn); actions.addStretch()
+            lay.addLayout(actions)
+
+            result_label = QLabel("Συμπληρώστε ένα ή περισσότερα κριτήρια.")
+            lay.addWidget(result_label)
+            table = QTableWidget(0, 8)
+            table.setHorizontalHeaderLabels(["ΗΜΕΡΟΜΗΝΙΑ", "ΑΓΜΣ", "ΟΝΟΜΑ", "ΘΕΣΗ", "ΚΑΤΕΥΘΥΝΣΗ", "ΕΝΑΡΞΗ", "ΛΗΞΗ", "ΔΙΑΡΚΕΙΑ"])
+            table.setAlternatingRowColors(True)
+            table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+            table.setSelectionBehavior(QAbstractItemView.SelectRows)
+            table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+            table.horizontalHeader().setStretchLastSection(True)
+            lay.addWidget(table, 1)
+
+            def norm(value):
+                raw = _clean(value).upper()
+                raw = "".join(ch for ch in unicodedata.normalize("NFD", raw) if unicodedata.category(ch) != "Mn")
+                return re.sub(r"\s+", " ", raw)
+
+            def parse_date(value):
+                value = _clean(value)
+                if not value:
+                    return None
+                for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d"):
+                    try:
+                        return datetime.strptime(value, fmt).date()
+                    except ValueError:
+                        pass
+                raise ValueError(f"Μη έγκυρη ημερομηνία: {value}")
+
+            def do_search():
+                query = norm(person_edit.text())
+                pos = _clean(position_combo.currentText())
+                direction = _clean(direction_combo.currentText()).upper()
+                if not query and not _clean(from_edit.text()) and not _clean(to_edit.text()) and pos == "ΟΛΕΣ" and direction == "ΟΛΑ":
+                    QMessageBox.warning(dlg, "Ιστορικό", "Συμπληρώστε τουλάχιστον ένα κριτήριο.")
+                    return
+                try:
+                    date_from = parse_date(from_edit.text())
+                    date_to = parse_date(to_edit.text())
+                except ValueError as exc:
+                    QMessageBox.warning(dlg, "Ιστορικό", str(exc))
+                    return
+                if date_from and date_to and date_from > date_to:
+                    QMessageBox.warning(dlg, "Ιστορικό", "Η ημερομηνία «Από» είναι μετά την ημερομηνία «Έως».")
+                    return
+
+                rows = []
+                for session in self.store.completed_sessions_all():
+                    st = session["start"]
+                    sdt = session["start_dt"]; edt = session["end_dt"]
+                    agms = _clean(st.get("agms"))
+                    person = self._people_by_agms.get(agms)
+                    if person:
+                        name = _clean(f"{person.rank} {person.surname} {person.given_name}")
+                        hay = norm(f"{person.agms} {person.rank} {person.surname} {person.given_name} {person.full_name}")
+                    else:
+                        name = _clean(f"{st.get('rank','')} {st.get('full_name','')}")
+                        hay = norm(f"{agms} {name}")
+                    if query and query not in hay:
+                        continue
+                    if date_from and sdt.date() < date_from:
+                        continue
+                    if date_to and sdt.date() > date_to:
+                        continue
+                    position = _clean(st.get("position"))
+                    item_direction = _clean(st.get("direction")).upper()
+                    if pos != "ΟΛΕΣ" and position != pos:
+                        continue
+                    if direction != "ΟΛΑ" and item_direction != direction:
+                        continue
+                    minutes = max(0, int((edt - sdt).total_seconds() // 60))
+                    hours, mins = divmod(minutes, 60)
+                    rows.append((sdt, [
+                        sdt.strftime("%d/%m/%Y"), agms, name, position, item_direction,
+                        sdt.strftime("%H:%M"), edt.strftime("%H:%M"), f"{hours:02d}:{mins:02d}"
+                    ]))
+
+                rows.sort(key=lambda x: x[0], reverse=True)
+                table.setRowCount(len(rows))
+                for r, (_, values) in enumerate(rows):
+                    for col, value in enumerate(values):
+                        table.setItem(r, col, QTableWidgetItem(str(value)))
+                result_label.setText(f"Βρέθηκαν {len(rows)} καταχωρίσεις.")
+                try:
+                    self.store.log_admin_action("PERSONNEL_HISTORY_SEARCH", {
+                        "query": _clean(person_edit.text()), "from": _clean(from_edit.text()), "to": _clean(to_edit.text()),
+                        "position": pos, "direction": direction, "results": len(rows)
+                    })
+                except Exception:
+                    pass
+
+            def clear_search():
+                person_edit.clear(); from_edit.clear(); to_edit.clear()
+                position_combo.setCurrentIndex(0); direction_combo.setCurrentIndex(0)
+                table.setRowCount(0); result_label.setText("Συμπληρώστε ένα ή περισσότερα κριτήρια.")
+
+            search_btn.clicked.connect(do_search)
+            clear_btn.clicked.connect(clear_search)
+            person_edit.returnPressed.connect(do_search)
+            dlg.exec()
 
         def _snapshot(self):
             if not self.store:
