@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import tempfile
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -9,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("position_tracking", ROOT / "src" / "position_tracking.py")
 MOD = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
+sys.modules[SPEC.name] = MOD
 SPEC.loader.exec_module(MOD)
 
 shift = {
