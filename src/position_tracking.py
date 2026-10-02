@@ -1310,7 +1310,7 @@ def run(args=None) -> int:
         QApplication, QComboBox, QDateEdit, QFormLayout, QFrame, QHBoxLayout,
         QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout, QWidget,
         QInputDialog, QDialog, QDateTimeEdit, QSpinBox, QListWidget, QListWidgetItem, QFileDialog, QToolButton,
-        QTableWidget, QTableWidgetItem, QHeaderView
+        QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
     )
 
     THEME_DARK = {
@@ -2269,8 +2269,8 @@ def run(args=None) -> int:
             table = QTableWidget(0, 8)
             table.setHorizontalHeaderLabels(["ΗΜΕΡΟΜΗΝΙΑ", "ΑΓΜΣ", "ΟΝΟΜΑ", "ΘΕΣΗ", "ΚΑΤΕΥΘΥΝΣΗ", "ΕΝΑΡΞΗ", "ΛΗΞΗ", "ΔΙΑΡΚΕΙΑ"])
             table.setAlternatingRowColors(True)
-            table.setEditTriggers(QTableWidget.NoEditTriggers)
-            table.setSelectionBehavior(QTableWidget.SelectRows)
+            table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+            table.setSelectionBehavior(QAbstractItemView.SelectRows)
             table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
             table.horizontalHeader().setStretchLastSection(True)
             lay.addWidget(table, 1)
