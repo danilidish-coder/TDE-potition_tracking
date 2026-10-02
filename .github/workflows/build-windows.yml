@@ -5,10 +5,7 @@ on:
   push:
     branches:
       - main
-      - "test/shift-stats-20260926"
-      - "test/officer-simple-20260926"
-      - "test/final-polish-20260926"
-      - "test/startup-first-paint-20260927"
+      - "feature/**"
     paths:
       - "src/**"
       - "requirements.txt"
