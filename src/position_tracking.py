@@ -672,6 +672,21 @@ class SharedEventStore:
         except Exception:
             return None
 
+    def current_report_shift(self) -> dict | None:
+        """Return the shift shown by ΤΡΕΧΟΥΣΑ ΑΝΑΦΟΡΑ.
+
+        A finalized shift remains the current report until the next officer
+        shift starts and replaces CURRENT_SHIFT.json.
+        """
+        path = self._current_shift_path()
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if _clean(data.get("shift_id")) and _clean(data.get("status")).upper() in {"ACTIVE", "FINALIZED"}:
+                return data
+        except Exception:
+            pass
+        return None
+
     @staticmethod
     def _person_payload(person: PersonnelRecord) -> dict:
         return {
@@ -795,7 +810,10 @@ class SharedEventStore:
         shift["finalized_at"] = datetime.now().isoformat(timespec="seconds")
         final_path = self.shifts / f"{shift['shift_id']}.json"
         self._atomic_json(final_path, shift)
-        self._current_shift_path().unlink(missing_ok=True)
+        # Η λήξη κλείνει επιχειρησιακά τη βάρδια, αλλά η αναφορά της
+        # παραμένει η "ΤΡΕΧΟΥΣΑ ΑΝΑΦΟΡΑ" μέχρι να ξεκινήσει η επόμενη.
+        # Το start_officer_shift θα αντικαταστήσει τότε το CURRENT_SHIFT.json.
+        self._atomic_json(self._current_shift_path(), shift)
         self.log_admin_action("SHIFT_ENDED", {"shift_id": shift["shift_id"], "officer_agms": officer.agms, "approved": len(shift.get("approved", [])), "excluded": len(shift.get("excluded", []))})
         return shift
 
@@ -1964,7 +1982,20 @@ def run(args=None) -> int:
             shift=self.store.current_shift() if self.store else None
             p=self._officer_selected() if hasattr(self,"officer_agms") else None
             if not shift:
-                self.shift_status.setText("Δεν υπάρχει ενεργή βάρδια.")
+                report_shift = self.store.current_report_shift() if self.store else None
+                if report_shift and _clean(report_shift.get("status")).upper() == "FINALIZED":
+                    ended = _clean(report_shift.get("end_at"))
+                    try:
+                        ended_dt = datetime.fromisoformat(ended)
+                        ended_text = f"{ended_dt:%d/%m/%Y %H:%M}"
+                    except Exception:
+                        ended_text = ended.replace("T", " ") if ended else "—"
+                    self.shift_status.setText(
+                        f"Η προηγούμενη βάρδια έληξε {ended_text}.\n"
+                        "Η αναφορά της παραμένει ΤΡΕΧΟΥΣΑ μέχρι την έναρξη της επόμενης."
+                    )
+                else:
+                    self.shift_status.setText("Δεν υπάρχει ενεργή βάρδια.")
                 self.start_shift_btn.setEnabled(bool(p and self.store))
                 self.end_shift_btn.setEnabled(False)
                 return
@@ -2163,7 +2194,9 @@ def run(args=None) -> int:
                 QMessageBox.warning(self, "Έλεγχος", "Δεν είναι διαθέσιμο το .tde_runtime."); return
             shift = self.store.sync_active_shift()
             if not shift:
-                QMessageBox.information(self, "Τρέχον έντυπο", "Δεν υπάρχει ενεργή βάρδια."); return
+                shift = self.store.current_report_shift()
+            if not shift:
+                QMessageBox.information(self, "Τρέχον έντυπο", "Δεν υπάρχει διαθέσιμη τρέχουσα αναφορά."); return
             try:
                 path = create_shift_docx(self.store, shift, self._people_by_agms)
                 _open_path(path)
