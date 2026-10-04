@@ -824,20 +824,19 @@ class SharedEventStore:
             return None
 
     def current_report_shift(self) -> dict | None:
-        """Return the report selected as current in the SQLite shift archive."""
-        shift_id = self._current_report_shift_id()
-        if shift_id:
-            data = self.get_shift(shift_id)
-            if data and _clean(data.get("status")).upper() in {"ACTIVE", "FINALIZED"}:
-                return data
+        """Return the active/last shift; finalized history itself lives in SQLite."""
         path = self._current_shift_path()
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             if _clean(data.get("shift_id")) and _clean(data.get("status")).upper() in {"ACTIVE", "FINALIZED"}:
-                self._store_shift_snapshot(data, make_current_report=True)
                 return data
         except Exception:
             pass
+        shift_id = self._current_report_shift_id()
+        if shift_id:
+            data = self.get_shift(shift_id)
+            if data and _clean(data.get("status")).upper() == "FINALIZED":
+                return data
         return None
 
     @staticmethod
@@ -907,7 +906,6 @@ class SharedEventStore:
             "created_at": datetime.now().isoformat(timespec="seconds"),
         }
         self._atomic_json(self._current_shift_path(), shift)
-        self._store_shift_snapshot(shift, make_current_report=True)
         self.log_admin_action("SHIFT_STARTED", {
             "shift_id": shift["shift_id"],
             "officer_agms": officer.agms,
@@ -933,7 +931,6 @@ class SharedEventStore:
             shift["pending"] = pending
             shift["updated_at"] = datetime.now().isoformat(timespec="seconds")
             self._atomic_json(self._current_shift_path(), shift)
-            self._store_shift_snapshot(shift)
         return shift
 
     def set_shift_member_state(self, agms: str, state: str) -> dict:
@@ -949,7 +946,6 @@ class SharedEventStore:
         shift["approved" if state == "APPROVED" else "excluded"].append(agms)
         shift["updated_at"] = datetime.now().isoformat(timespec="seconds")
         self._atomic_json(self._current_shift_path(), shift)
-        self._store_shift_snapshot(shift)
         self.log_admin_action("SHIFT_MEMBER_STATE", {"shift_id": shift["shift_id"], "agms": agms, "state": state})
         return shift
 
