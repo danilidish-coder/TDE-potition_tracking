@@ -8,6 +8,7 @@ on:
       - "feature/**"
     paths:
       - "src/**"
+      - "tools/**"
       - "requirements.txt"
       - "tests/**"
       - ".github/workflows/build-windows.yml"
