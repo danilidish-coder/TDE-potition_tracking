@@ -1,0 +1,27 @@
+name: Temporary Drive handoff
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/temp-drive-handoff.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  handoff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download v1.2.2 -p 'TDE_KATAGRAFI_THESEON_v1.2.2_FULL.zip' -R "${{ github.repository }}"
+
+      - name: Upload temporary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TDE_KATAGRAFI_THESEON_v1.2.2_FULL
+          path: TDE_KATAGRAFI_THESEON_v1.2.2_FULL.zip
+          retention-days: 1
+          compression-level: 0
