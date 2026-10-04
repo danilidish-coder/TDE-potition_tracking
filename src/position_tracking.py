@@ -2400,10 +2400,6 @@ def run(args=None) -> int:
 
             self.info = QLabel(""); self.info.setObjectName("infoBox"); self.info.setAlignment(Qt.AlignCenter); self.info.setWordWrap(True)
             outer.addWidget(self.info)
-            self.credits = QLabel("ΑΝΘ/ΜΟΣ ΔΑΝΙΗΛΙΔΗΣ ΗΡΑΚΛΗΣ   •   ΑΝΘ/ΜΟΣ ΚΛΙΑΝΗΣ ΧΡΗΣΤΟΣ")
-            self.credits.setAlignment(Qt.AlignCenter)
-            outer.addWidget(self.credits)
-
         def _toggle_theme(self):
             self.config.theme = "light" if _clean(self.config.theme).lower() == "dark" else "dark"
             self.config.save()
@@ -2431,7 +2427,6 @@ def run(args=None) -> int:
                 self.subtitle_label.setStyleSheet(
                     f"font-size:15px;font-weight:800;letter-spacing:2px;color:{t['muted']}"
                 )
-                self.credits.setStyleSheet(f"color:{t['muted']};font-size:9px")
                 self._agms_changed()
                 self._officer_changed()
             finally:
