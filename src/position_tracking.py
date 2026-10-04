@@ -5,6 +5,7 @@ import os
 import hashlib
 import shutil
 import re
+import sqlite3
 import subprocess
 import socket
 import sys
@@ -433,8 +434,10 @@ class SharedEventStore:
         self.current_docs = self.root / "current"
         self.archive = self.root / "archive"
         self.statistics = self.root / "statistics"
+        self.shift_db = self.root / "shift_reports.sqlite3"
         for p in (self.events, self.active, self.locks, self.reports, self.shifts, self.audit, self.backups, self.current_docs, self.archive, self.statistics):
             p.mkdir(parents=True, exist_ok=True)
+        self._init_shift_db()
 
     def _active_path(self, agms: str) -> Path:
         return self.active / f"{_safe_name(agms)}.json"
@@ -477,6 +480,153 @@ class SharedEventStore:
         temp = path.with_name(path.name + f".{uuid.uuid4().hex}.tmp")
         temp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         os.replace(temp, path)
+
+
+    @contextmanager
+    def _shift_db_write_lock(self, timeout: float = 10.0):
+        """Serialize SQLite writes across the shared runtime folder."""
+        path = self.locks / "shift_reports.sqlite.lock"
+        deadline = time.monotonic() + timeout
+        fd = None
+        while True:
+            try:
+                fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(fd, f"{socket.gethostname()}|{time.time()}".encode("utf-8", "ignore"))
+                break
+            except FileExistsError:
+                try:
+                    if time.time() - path.stat().st_mtime > 60:
+                        path.unlink(missing_ok=True)
+                        continue
+                except OSError:
+                    pass
+                if time.monotonic() >= deadline:
+                    raise BusyError("Το αρχείο βαρδιών χρησιμοποιείται από άλλο σταθμό. Δοκιμάστε ξανά.")
+                time.sleep(0.15)
+        try:
+            yield
+        finally:
+            try:
+                if fd is not None:
+                    os.close(fd)
+            finally:
+                path.unlink(missing_ok=True)
+
+    def _shift_db_connect(self):
+        con = sqlite3.connect(str(self.shift_db), timeout=10.0)
+        con.row_factory = sqlite3.Row
+        con.execute("PRAGMA journal_mode=DELETE")
+        con.execute("PRAGMA synchronous=FULL")
+        con.execute("PRAGMA busy_timeout=10000")
+        return con
+
+    @staticmethod
+    def _upsert_shift_con(con, shift: dict):
+        shift_id = _clean(shift.get("shift_id"))
+        if not shift_id:
+            raise ValueError("Μη έγκυρη βάρδια.")
+        status = _clean(shift.get("status")).upper() or "DRAFT"
+        start_at = _clean(shift.get("start_at"))
+        end_at = _clean(shift.get("end_at")) or None
+        payload = json.dumps(shift, ensure_ascii=False, separators=(",", ":"))
+        con.execute(
+            """
+            INSERT INTO shifts (shift_id, status, start_at, end_at, data_json, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(shift_id) DO UPDATE SET
+                status=excluded.status,
+                start_at=excluded.start_at,
+                end_at=excluded.end_at,
+                data_json=excluded.data_json,
+                updated_at=excluded.updated_at
+            """,
+            (shift_id, status, start_at, end_at, payload, datetime.now().isoformat(timespec="seconds")),
+        )
+
+    def _init_shift_db(self):
+        self.shift_db.parent.mkdir(parents=True, exist_ok=True)
+        with self._shift_db_write_lock():
+            with self._shift_db_connect() as con:
+                con.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS shifts (
+                        shift_id TEXT PRIMARY KEY,
+                        status TEXT NOT NULL,
+                        start_at TEXT NOT NULL,
+                        end_at TEXT,
+                        data_json TEXT NOT NULL,
+                        updated_at TEXT NOT NULL
+                    )
+                    """
+                )
+                con.execute("CREATE INDEX IF NOT EXISTS idx_shifts_start_at ON shifts(start_at DESC)")
+                con.execute("CREATE INDEX IF NOT EXISTS idx_shifts_status ON shifts(status)")
+                con.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS meta (
+                        key TEXT PRIMARY KEY,
+                        value TEXT
+                    )
+                    """
+                )
+                migrated = con.execute(
+                    "SELECT value FROM meta WHERE key='legacy_shift_json_migrated_v1'"
+                ).fetchone()
+                if not migrated:
+                    newest = None
+                    for path in sorted(self.shifts.glob("SHIFT_*.json")):
+                        try:
+                            data = json.loads(path.read_text(encoding="utf-8"))
+                            if _clean(data.get("shift_id")):
+                                self._upsert_shift_con(con, data)
+                                newest = data
+                        except Exception:
+                            continue
+                    current_path = self._current_shift_path()
+                    try:
+                        current = json.loads(current_path.read_text(encoding="utf-8"))
+                        if _clean(current.get("shift_id")):
+                            self._upsert_shift_con(con, current)
+                            newest = current
+                    except Exception:
+                        pass
+                    if newest and _clean(newest.get("shift_id")):
+                        con.execute(
+                            "INSERT OR REPLACE INTO meta(key,value) VALUES('current_report_shift_id',?)",
+                            (_clean(newest.get("shift_id")),),
+                        )
+                    con.execute(
+                        "INSERT OR REPLACE INTO meta(key,value) VALUES('legacy_shift_json_migrated_v1','1')"
+                    )
+
+    def _store_shift_snapshot(self, shift: dict, make_current_report: bool = False):
+        with self._shift_db_write_lock():
+            with self._shift_db_connect() as con:
+                self._upsert_shift_con(con, shift)
+                if make_current_report:
+                    con.execute(
+                        "INSERT OR REPLACE INTO meta(key,value) VALUES('current_report_shift_id',?)",
+                        (_clean(shift.get("shift_id")),),
+                    )
+
+    def get_shift(self, shift_id: str) -> dict | None:
+        shift_id = _clean(shift_id)
+        if not shift_id:
+            return None
+        try:
+            with self._shift_db_connect() as con:
+                row = con.execute("SELECT data_json FROM shifts WHERE shift_id=?", (shift_id,)).fetchone()
+            return json.loads(row["data_json"]) if row else None
+        except Exception:
+            return None
+
+    def _current_report_shift_id(self) -> str:
+        try:
+            with self._shift_db_connect() as con:
+                row = con.execute("SELECT value FROM meta WHERE key='current_report_shift_id'").fetchone()
+            return _clean(row["value"]) if row else ""
+        except Exception:
+            return ""
 
     def get_active(self, agms: str) -> dict | None:
         path = self._active_path(agms)
@@ -634,16 +784,9 @@ class SharedEventStore:
             raise ValueError("Η βάρδια δεν έχει προσωπικό.")
         lookback = max(0, min(int(lookback_minutes), 180))
         shift_id = f"SHIFT_{start_at:%Y%m%d_%H%M%S}"
-        existing_path = self.shifts / f"{shift_id}.json"
-        if existing_path.exists():
-            try:
-                existing = json.loads(existing_path.read_text(encoding="utf-8"))
-                if _clean(existing.get("status")).upper() == "FINALIZED":
-                    raise ValueError("Η βάρδια έχει οριστικοποιηθεί και δεν μπορεί να αντικατασταθεί.")
-            except ValueError:
-                raise
-            except Exception:
-                pass
+        existing = self.get_shift(shift_id)
+        if existing and _clean(existing.get("status")).upper() == "FINALIZED":
+            raise ValueError("Η βάρδια έχει οριστικοποιηθεί και δεν μπορεί να αντικατασταθεί.")
         data = {
             "version": 1,
             "shift_id": shift_id,
@@ -657,7 +800,7 @@ class SharedEventStore:
             "computer": socket.gethostname(),
             "status": "DRAFT",
         }
-        self._atomic_json(self.shifts / f"{shift_id}.json", data)
+        self._store_shift_snapshot(data)
         self.log_admin_action("SHIFT_SAVED", {"shift_id": shift_id, "people": len(unique), "lookback_minutes": lookback})
         return data
 
@@ -673,15 +816,17 @@ class SharedEventStore:
             return None
 
     def current_report_shift(self) -> dict | None:
-        """Return the shift shown by ΤΡΕΧΟΥΣΑ ΑΝΑΦΟΡΑ.
-
-        A finalized shift remains the current report until the next officer
-        shift starts and replaces CURRENT_SHIFT.json.
-        """
+        """Return the report selected as current in the SQLite shift archive."""
+        shift_id = self._current_report_shift_id()
+        if shift_id:
+            data = self.get_shift(shift_id)
+            if data and _clean(data.get("status")).upper() in {"ACTIVE", "FINALIZED"}:
+                return data
         path = self._current_shift_path()
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             if _clean(data.get("shift_id")) and _clean(data.get("status")).upper() in {"ACTIVE", "FINALIZED"}:
+                self._store_shift_snapshot(data, make_current_report=True)
                 return data
         except Exception:
             pass
@@ -754,6 +899,7 @@ class SharedEventStore:
             "created_at": datetime.now().isoformat(timespec="seconds"),
         }
         self._atomic_json(self._current_shift_path(), shift)
+        self._store_shift_snapshot(shift, make_current_report=True)
         self.log_admin_action("SHIFT_STARTED", {
             "shift_id": shift["shift_id"],
             "officer_agms": officer.agms,
@@ -779,6 +925,7 @@ class SharedEventStore:
             shift["pending"] = pending
             shift["updated_at"] = datetime.now().isoformat(timespec="seconds")
             self._atomic_json(self._current_shift_path(), shift)
+            self._store_shift_snapshot(shift)
         return shift
 
     def set_shift_member_state(self, agms: str, state: str) -> dict:
@@ -794,6 +941,7 @@ class SharedEventStore:
         shift["approved" if state == "APPROVED" else "excluded"].append(agms)
         shift["updated_at"] = datetime.now().isoformat(timespec="seconds")
         self._atomic_json(self._current_shift_path(), shift)
+        self._store_shift_snapshot(shift)
         self.log_admin_action("SHIFT_MEMBER_STATE", {"shift_id": shift["shift_id"], "agms": agms, "state": state})
         return shift
 
@@ -808,12 +956,10 @@ class SharedEventStore:
         shift["end_at"] = when.isoformat(timespec="seconds")
         shift["end_officer"] = self._person_payload(officer)
         shift["finalized_at"] = datetime.now().isoformat(timespec="seconds")
-        final_path = self.shifts / f"{shift['shift_id']}.json"
-        self._atomic_json(final_path, shift)
-        # Η λήξη κλείνει επιχειρησιακά τη βάρδια, αλλά η αναφορά της
-        # παραμένει η "ΤΡΕΧΟΥΣΑ ΑΝΑΦΟΡΑ" μέχρι να ξεκινήσει η επόμενη.
-        # Το start_officer_shift θα αντικαταστήσει τότε το CURRENT_SHIFT.json.
+        # Το ιστορικό βαρδιών αποθηκεύεται σε SQLite. Το CURRENT_SHIFT.json
+        # μένει μόνο ως ελαφρύ ζωντανό αρχείο συγχρονισμού μεταξύ σταθμών.
         self._atomic_json(self._current_shift_path(), shift)
+        self._store_shift_snapshot(shift, make_current_report=True)
         self.log_admin_action("SHIFT_ENDED", {"shift_id": shift["shift_id"], "officer_agms": officer.agms, "approved": len(shift.get("approved", [])), "excluded": len(shift.get("excluded", []))})
         return shift
 
@@ -871,12 +1017,17 @@ class SharedEventStore:
         return sorted(sessions, key=lambda x: (_clean(x["start"].get("full_name")), x["start_dt"]))
 
     def list_shifts(self) -> list[dict]:
-        result = []
-        for path in sorted(self.shifts.glob("SHIFT_*.json"), reverse=True):
-            try:
-                result.append(json.loads(path.read_text(encoding="utf-8")))
-            except Exception:
-                pass
+        result: list[dict] = []
+        try:
+            with self._shift_db_connect() as con:
+                rows = con.execute("SELECT data_json FROM shifts ORDER BY start_at DESC").fetchall()
+            for row in rows:
+                try:
+                    result.append(json.loads(row["data_json"]))
+                except Exception:
+                    continue
+        except Exception:
+            pass
         return result
 
     def roster_sessions(self, start_at: datetime, agms_list: list[str] | tuple[str, ...], lookback_minutes: int = 30, horizon_hours: int = 12) -> list[dict]:
@@ -946,11 +1097,9 @@ class SharedEventStore:
         shift_id = _clean(shift.get("shift_id"))
         if not shift_id:
             raise ValueError("Μη έγκυρη βάρδια.")
-        path = self.shifts / f"{shift_id}.json"
-        try:
-            current = json.loads(path.read_text(encoding="utf-8"))
-        except FileNotFoundError as exc:
-            raise ValueError("Δεν βρέθηκε η βάρδια για οριστικοποίηση.") from exc
+        current = self.get_shift(shift_id)
+        if not current:
+            raise ValueError("Δεν βρέθηκε η βάρδια για οριστικοποίηση.")
         if _clean(current.get("status")).upper() == "FINALIZED":
             return current
         current["status"] = "FINALIZED"
@@ -958,11 +1107,9 @@ class SharedEventStore:
         current["finalized_by"] = os.environ.get("USERNAME") or os.environ.get("USER") or ""
         current["finalized_computer"] = socket.gethostname()
         if report_text:
-            report_path = self.reports / f"FINAL_{shift_id}.txt"
-            report_path.write_text(report_text, encoding="utf-8")
-            current["final_report"] = str(report_path)
+            current["final_report_text"] = report_text
             current["final_report_sha256"] = hashlib.sha256(report_text.encode("utf-8")).hexdigest()
-        self._atomic_json(path, current)
+        self._store_shift_snapshot(current)
         self.log_admin_action("SHIFT_FINALIZED", {"shift_id": shift_id, "people": len(current.get("agms", []))})
         return current
 
@@ -1291,7 +1438,9 @@ def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[
     start_at = datetime.fromisoformat(shift["start_at"])
     end_at = datetime.fromisoformat(shift.get("end_at")) if shift.get("end_at") else None
     if target is None:
-        target = store.current_docs / "ΤΡΕΧΟΥΣΑ_ΒΑΡΔΙΑ.pdf"
+        preview_dir = Path(tempfile.gettempdir()) / "TDE_Krystallopigis" / "pdf_preview"
+        preview_dir.mkdir(parents=True, exist_ok=True)
+        target = preview_dir / "ΑΝΑΦΟΡΑ_ΒΑΡΔΙΑΣ.pdf"
     target = Path(target)
     target.parent.mkdir(parents=True, exist_ok=True)
 
@@ -1372,12 +1521,8 @@ def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[
 
 
 def archive_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[str, PersonnelRecord] | None = None) -> Path:
-    stamp = datetime.fromisoformat(_clean(shift.get("end_at")) or _clean(shift.get("start_at")))
-    folder = store.archive / f"{stamp:%Y}" / f"{stamp:%m}" / f"{stamp:%Y-%m-%d}"
-    folder.mkdir(parents=True, exist_ok=True)
-    filename = re.sub(r'[<>:"/\\|?*]+', "_", shift_report_title(shift)).strip() + ".pdf"
-    target = folder / filename
-    return create_shift_pdf(store, shift, people_by_agms, target)
+    """Compatibility alias: reports are rendered on demand, not stored in the archive."""
+    return create_shift_pdf(store, shift, people_by_agms)
 
 
 GREEK_MONTH_GENITIVE = {
@@ -2083,10 +2228,12 @@ def run(args=None) -> int:
             if not ok: return
             try:
                 final=self.store.end_officer_shift(p)
-                archive=archive_shift_pdf(self.store,final,self._people_by_agms)
-                create_shift_pdf(self.store,final,self._people_by_agms)
                 self._refresh_shift_status()
-                QMessageBox.information(self,"Λήξη βάρδιας",f"Η βάρδια ολοκληρώθηκε.\nΑρχειοθετήθηκε: {archive}")
+                QMessageBox.information(
+                    self,
+                    "Λήξη βάρδιας",
+                    "Η βάρδια ολοκληρώθηκε και αποθηκεύτηκε στο αρχείο αναφορών (SQLite)."
+                )
             except Exception as exc:
                 QMessageBox.critical(self,"Λήξη βάρδιας",str(exc))
 
@@ -2271,11 +2418,12 @@ def run(args=None) -> int:
                     QMessageBox.warning(dlg, "Έλεγχος", "Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."); return
                 try:
                     shift = self.store.end_officer_shift(p)
-                    archive = archive_shift_pdf(self.store, shift, self._people_by_agms)
-                    current = create_shift_pdf(self.store, shift, self._people_by_agms)
-                    QMessageBox.information(dlg, "Λήξη βάρδιας", f"Η βάρδια ολοκληρώθηκε.\nΑρχειοθετήθηκε: {archive}")
+                    QMessageBox.information(
+                        dlg,
+                        "Λήξη βάρδιας",
+                        "Η βάρδια ολοκληρώθηκε και αποθηκεύτηκε στο αρχείο αναφορών (SQLite)."
+                    )
                     refresh_members()
-                    _open_path(current)
                 except Exception as exc:
                     QMessageBox.critical(dlg, "Λήξη βάρδιας", str(exc))
 
@@ -2343,7 +2491,7 @@ def run(args=None) -> int:
             lay.addWidget(info)
             buttons = QHBoxLayout()
             open_btn = QPushButton("ΑΝΟΙΓΜΑ ΑΝΑΦΟΡΑΣ")
-            folder_btn = QPushButton("ΑΝΟΙΓΜΑ ΦΑΚΕΛΟΥ")
+            folder_btn = QPushButton("ΦΑΚΕΛΟΣ ΔΕΔΟΜΕΝΩΝ")
             close_btn = QPushButton("ΚΛΕΙΣΙΜΟ")
             buttons.addWidget(open_btn); buttons.addWidget(folder_btn); buttons.addStretch(); buttons.addWidget(close_btn)
             lay.addLayout(buttons)
@@ -2361,14 +2509,14 @@ def run(args=None) -> int:
                     QMessageBox.warning(dlg, "Αναφορές", "Επιλέξτε πρώτα μία βάρδια.")
                     return
                 try:
-                    path = archive_shift_pdf(self.store, shift, self._people_by_agms)
+                    path = create_shift_pdf(self.store, shift, self._people_by_agms)
                     _open_path(path)
                 except Exception as exc:
                     QMessageBox.critical(dlg, "Αναφορές", str(exc))
 
             open_btn.clicked.connect(open_report)
             listing.itemDoubleClicked.connect(lambda *_: open_report())
-            folder_btn.clicked.connect(lambda: _open_path(self.store.archive))
+            folder_btn.clicked.connect(lambda: _open_path(self.store.root))
             close_btn.clicked.connect(dlg.accept)
             dlg.exec()
 
