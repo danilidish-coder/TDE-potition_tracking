@@ -13,7 +13,7 @@ jobs:
   handoff:
     runs-on: ubuntu-latest
     steps:
-      - name: Print signed release ZIP URL
+      - name: Print encoded signed release ZIP URL
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -26,4 +26,5 @@ jobs:
           curl -sS -D headers.txt -o /dev/null -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" "$API_URL"
           LOC="$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print}' headers.txt | tail -1)"
           test -n "$LOC"
-          echo "SIGNED_URL=$LOC"
+          printf '%s' "$LOC" | base64 -w0
+          echo
