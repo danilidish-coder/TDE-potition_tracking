@@ -1267,6 +1267,119 @@ def create_shift_docx(store: SharedEventStore, shift: dict, people_by_agms: dict
     return target
 
 
+def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[str, PersonnelRecord] | None = None, target: str | Path | None = None) -> Path:
+    """Create the shift report directly as an A4 PDF, without Word."""
+    try:
+        from PySide6.QtCore import QMarginsF
+        from PySide6.QtGui import QPageLayout, QPageSize, QTextDocument
+        from PySide6.QtPrintSupport import QPrinter
+    except Exception as exc:
+        raise RuntimeError("Δεν είναι διαθέσιμη η δημιουργία PDF.") from exc
+
+    people_by_agms = people_by_agms or {}
+    sessions = store.shift_sessions_v2(shift) if int(shift.get("version", 1)) >= 2 else store.roster_sessions(
+        datetime.fromisoformat(shift["start_at"]),
+        shift.get("agms", []),
+        int(shift.get("lookback_minutes", 30)),
+        int(shift.get("max_window_hours", 12)),
+    )
+    roster = [_clean(x) for x in (shift.get("approved", []) if int(shift.get("version", 1)) >= 2 else shift.get("agms", [])) if _clean(x)]
+    by_agms: dict[str, list[dict]] = {a: [] for a in roster}
+    for item in sessions:
+        by_agms.setdefault(_clean(item["start"].get("agms")), []).append(item)
+
+    start_at = datetime.fromisoformat(shift["start_at"])
+    end_at = datetime.fromisoformat(shift.get("end_at")) if shift.get("end_at") else None
+    if target is None:
+        target = store.current_docs / "ΤΡΕΧΟΥΣΑ_ΒΑΡΔΙΑ.pdf"
+    target = Path(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    body_parts = [
+        "<div class='head'>ΕΛΛΗΝΙΚΗ ΑΣΤΥΝΟΜΙΑ</div>",
+        "<div class='subhead'>Τ.Δ.Ε. ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ</div>",
+        "<div class='subhead'>ΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ ΒΑΡΔΙΑΣ</div>",
+        "<div class='period'>" + _escape_html(
+            f"{start_at:%d/%m/%Y %H:%M}" + (f" - {end_at:%d/%m/%Y %H:%M}" if end_at else " - ΣΕ ΕΞΕΛΙΞΗ")
+        ) + "</div>",
+    ]
+
+    if not roster:
+        body_parts.append("<p class='empty'>Δεν υπάρχουν καταχωρίσεις στη βάρδια.</p>")
+
+    for agms in roster:
+        items = sorted(by_agms.get(agms, []), key=lambda x: x["start_dt"])
+        person = people_by_agms.get(agms)
+        if person:
+            name = _clean(f"{person.rank} {person.surname} {person.given_name}")
+        elif items:
+            st = items[0]["start"]
+            name = _clean(f"{st.get('rank','')} {st.get('full_name','')}") or f"ΑΓΜΣ {agms}"
+        else:
+            name = f"ΑΓΜΣ {agms}"
+
+        body_parts.append(f"<div class='person'>{_escape_html(name)}</div>")
+        if not items:
+            body_parts.append("<div class='row muted'>Χωρίς καταχώριση θέσης</div>")
+        for item in items:
+            st = item["start"]
+            sdt = item["start_dt"]
+            edt = item["end_dt"]
+            end_text = edt.strftime("%H:%M") if edt else "ΑΝΟΙΚΤΗ"
+            direction = _clean(st.get("direction")).upper()
+            details = f"ΘΕΣΗ {st.get('position','')}"
+            if direction:
+                details += f"   {direction}"
+            details += f"   {sdt:%H:%M} - {end_text}"
+            body_parts.append(f"<div class='row'>{_escape_html(details)}</div>")
+
+    officer = shift.get("start_officer") or shift.get("end_officer") or {}
+    officer_name = _clean(f"{officer.get('rank','')} {officer.get('full_name','')}")
+    place_date = f"Κρυσταλλοπηγή, την {end_at:%d/%m/%Y}" if end_at else "Κρυσταλλοπηγή, την __________"
+    body_parts.extend([
+        f"<div class='place'>{_escape_html(place_date)}</div>",
+        "<div class='signature'><b>Ο ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ</b><br><br>"
+        + _escape_html(officer_name)
+        + "<br><br>Υπογραφή: __________________________</div>",
+    ])
+
+    html = """<!doctype html><html><head><meta charset='utf-8'><style>
+        body { font-family: Arial, 'Segoe UI', sans-serif; font-size: 10.5pt; color: #000; }
+        .head { text-align:center; font-size:14pt; font-weight:700; margin-bottom:4px; }
+        .subhead { text-align:center; font-size:12.5pt; font-weight:700; margin-bottom:3px; }
+        .period { text-align:center; margin:10px 0 18px 0; }
+        .person { font-weight:700; margin-top:11px; margin-bottom:3px; }
+        .row { margin-left:14px; margin-bottom:2px; }
+        .muted { font-style:italic; }
+        .empty { margin-top:20px; }
+        .place { text-align:center; margin-top:28px; }
+        .signature { text-align:center; margin-top:12px; }
+    </style></head><body>""" + "".join(body_parts) + "</body></html>"
+
+    printer = QPrinter(QPrinter.HighResolution)
+    printer.setOutputFormat(QPrinter.PdfFormat)
+    printer.setOutputFileName(str(target))
+    printer.setPageSize(QPageSize(QPageSize.A4))
+    printer.setPageMargins(QMarginsF(15, 15, 15, 15), QPageLayout.Millimeter)
+
+    document = QTextDocument()
+    document.setHtml(html)
+    document.print_(printer)
+
+    if not target.is_file() or target.stat().st_size == 0:
+        raise RuntimeError("Δεν δημιουργήθηκε το PDF της αναφοράς.")
+    return target
+
+
+def archive_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[str, PersonnelRecord] | None = None) -> Path:
+    stamp = datetime.fromisoformat(_clean(shift.get("end_at")) or _clean(shift.get("start_at")))
+    folder = store.archive / f"{stamp:%Y}" / f"{stamp:%m}" / f"{stamp:%Y-%m-%d}"
+    folder.mkdir(parents=True, exist_ok=True)
+    filename = re.sub(r'[<>:"/\\|?*]+', "_", shift_report_title(shift)).strip() + ".pdf"
+    target = folder / filename
+    return create_shift_pdf(store, shift, people_by_agms, target)
+
+
 GREEK_MONTH_GENITIVE = {
     1: "Ιανουαρίου", 2: "Φεβρουαρίου", 3: "Μαρτίου", 4: "Απριλίου",
     5: "Μαΐου", 6: "Ιουνίου", 7: "Ιουλίου", 8: "Αυγούστου",
@@ -1970,8 +2083,8 @@ def run(args=None) -> int:
             if not ok: return
             try:
                 final=self.store.end_officer_shift(p)
-                archive=archive_shift_docx(self.store,final,self._people_by_agms)
-                create_shift_docx(self.store,final,self._people_by_agms)
+                archive=archive_shift_pdf(self.store,final,self._people_by_agms)
+                create_shift_pdf(self.store,final,self._people_by_agms)
                 self._refresh_shift_status()
                 QMessageBox.information(self,"Λήξη βάρδιας",f"Η βάρδια ολοκληρώθηκε.\nΑρχειοθετήθηκε: {archive}")
             except Exception as exc:
@@ -2158,8 +2271,8 @@ def run(args=None) -> int:
                     QMessageBox.warning(dlg, "Έλεγχος", "Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."); return
                 try:
                     shift = self.store.end_officer_shift(p)
-                    archive = archive_shift_docx(self.store, shift, self._people_by_agms)
-                    current = create_shift_docx(self.store, shift, self._people_by_agms)
+                    archive = archive_shift_pdf(self.store, shift, self._people_by_agms)
+                    current = create_shift_pdf(self.store, shift, self._people_by_agms)
                     QMessageBox.information(dlg, "Λήξη βάρδιας", f"Η βάρδια ολοκληρώθηκε.\nΑρχειοθετήθηκε: {archive}")
                     refresh_members()
                     _open_path(current)
@@ -2198,10 +2311,10 @@ def run(args=None) -> int:
             if not shift:
                 QMessageBox.information(self, "Τρέχον έντυπο", "Δεν υπάρχει διαθέσιμη τρέχουσα αναφορά."); return
             try:
-                path = create_shift_docx(self.store, shift, self._people_by_agms)
+                path = create_shift_pdf(self.store, shift, self._people_by_agms)
                 _open_path(path)
             except Exception as exc:
-                QMessageBox.critical(self, "Word", str(exc))
+                QMessageBox.critical(self, "PDF", str(exc))
 
         def _open_files(self):
             if not self.store:
@@ -2248,7 +2361,7 @@ def run(args=None) -> int:
                     QMessageBox.warning(dlg, "Αναφορές", "Επιλέξτε πρώτα μία βάρδια.")
                     return
                 try:
-                    path = archive_shift_docx(self.store, shift, self._people_by_agms)
+                    path = archive_shift_pdf(self.store, shift, self._people_by_agms)
                     _open_path(path)
                 except Exception as exc:
                     QMessageBox.critical(dlg, "Αναφορές", str(exc))
