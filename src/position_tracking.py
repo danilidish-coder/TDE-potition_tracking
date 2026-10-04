@@ -2028,7 +2028,7 @@ def build_shift_html(store: SharedEventStore, day: date, cutoff: str) -> str:
 
 def run(args=None) -> int:
     from PySide6.QtCore import Qt, QDate, QDateTime, QTime, QTimer, QRectF
-    from PySide6.QtGui import QColor, QFont, QPainter, QPen, QIcon, QPixmap, QPalette
+    from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen, QIcon, QPixmap, QPalette
     from PySide6.QtWidgets import (
         QApplication, QComboBox, QDateEdit, QFormLayout, QFrame, QHBoxLayout,
         QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout, QWidget,
@@ -2169,14 +2169,33 @@ def run(args=None) -> int:
         def __init__(self, parent=None):
             super().__init__(parent)
             self.active: dict[str, list[dict]] = {}
+            self._worker_text_width = 84
             self.setMinimumSize(760, 560)
+
+        @staticmethod
+        def _worker_display_name(item: dict) -> str:
+            surname = _clean(item.get("surname"))
+            given_name = _clean(item.get("given_name"))
+            full_name = _clean(item.get("full_name"))
+            return _clean(f"{surname} {given_name}") or full_name or "—"
 
         def set_active(self, items: list[dict]):
             grouped: dict[str, list[dict]] = {}
             for item in items:
                 grouped.setdefault(_clean(item.get("position")), []).append(item)
             self.active = grouped
+            font = QFont("Segoe UI", 8, QFont.Bold)
+            metrics = QFontMetrics(font)
+            self._worker_text_width = max(
+                [84] + [metrics.horizontalAdvance(self._worker_display_name(item)) for item in items]
+            )
             self.update()
+
+        def recommended_dialog_width(self) -> int:
+            # The closest booths are 6% of the map width apart. Size the map so
+            # the longest worker name fits without requiring manual stretching.
+            booth_target = min(max(self._worker_text_width + 20, 92), 190)
+            return max(1100, int(booth_target / 0.06) + 90)
 
         def paintEvent(self, event):
             painter = QPainter(self)
@@ -2207,7 +2226,9 @@ def run(args=None) -> int:
             painter.setPen(QColor("#f87171")); painter.drawText(QRectF(w*0.76,h*0.70,w*0.20,h*0.08),Qt.AlignCenter,"ΕΞΟΔΟΣ ↓")
 
             # booths
-            bw = max(54, int(w*0.075)); bh = max(46, int(h*0.075))
+            desired_name_width = min(max(self._worker_text_width + 20, 92), 190)
+            bw = max(54, min(int(w*0.075), desired_name_width))
+            bh = max(52, int(h*0.075))
             for pos,(xf,yf) in self.BOOTH_POS.items():
                 x=int(w*xf); y=int(h*yf)
                 r=QRectF(x,y,bw,bh)
@@ -2232,11 +2253,11 @@ def run(args=None) -> int:
                 if people:
                     names=[]
                     for item in people[:2]:
-                        surname=_clean(item.get("surname")) or _clean(item.get("full_name"))
+                        worker_name = self._worker_display_name(item)
                         ts=_clean(item.get("timestamp")).replace("T"," ")
                         hhmm=ts[11:16] if len(ts)>=16 else ""
                         direction=_clean(item.get("direction"))
-                        names.append(f"{surname}\n{direction} {hhmm}".strip())
+                        names.append(f"{worker_name}\n{direction} {hhmm}".strip())
                     if len(people)>2: names.append(f"+{len(people)-2} ακόμη")
                     painter.setFont(QFont("Segoe UI", 8, QFont.Bold))
                     painter.drawText(QRectF(r.x()+3,r.y()+19,r.width()-6,r.height()-21),Qt.AlignCenter|Qt.TextWordWrap,"\n".join(names))
@@ -2266,6 +2287,17 @@ def run(args=None) -> int:
         def refresh(self):
             items=self.store.active_all()
             self.map.set_active(items)
+            recommended = self.map.recommended_dialog_width()
+            screen = QApplication.primaryScreen()
+            if screen:
+                available = screen.availableGeometry()
+                target_width = min(recommended, max(1100, available.width() - 60))
+                target_height = min(760, max(650, available.height() - 80))
+            else:
+                target_width = min(recommended, 1600)
+                target_height = 760
+            if self.width() < target_width:
+                self.resize(target_width, target_height)
             other=[]
             for x in items:
                 pos=_clean(x.get("position"))
