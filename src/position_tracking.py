@@ -1604,6 +1604,16 @@ def run(args=None) -> int:
         "border": "#c4d5e5", "danger": "#b12f41", "ok": "#16795a", "input": "#ffffff",
     }
 
+    class ArrowComboBox(QComboBox):
+        """QComboBox with a permanently visible dropdown arrow."""
+        def paintEvent(self, event):
+            super().paintEvent(event)
+            painter = QPainter(self)
+            painter.setPen(self.palette().color(QPalette.Text))
+            arrow_rect = self.rect().adjusted(self.width() - 28, 0, -2, 0)
+            painter.drawText(arrow_rect, Qt.AlignCenter, "▼")
+            painter.end()
+
     def _theme_stylesheet(theme: str) -> str:
         t = THEME_DARK if _clean(theme).lower() == "dark" else THEME_LIGHT
         return f"""
@@ -1633,6 +1643,7 @@ def run(args=None) -> int:
                 width:28px; border-left:1px solid {t['border']}; background:{t['card2']};
                 border-top-right-radius:8px; border-bottom-right-radius:8px;
             }}
+            QComboBox::down-arrow {{ image:none; width:0px; height:0px; }}
             QComboBox QAbstractItemView {{
                 background:{t['card2']}; color:{t['text']}; border:2px solid {t['accent']};
                 selection-background-color:{t['accent']}; selection-color:white; outline:0; padding:4px;
@@ -1871,8 +1882,8 @@ def run(args=None) -> int:
             self.agms_input = QLineEdit(); self.agms_input.setPlaceholderText("Πληκτρολογήστε Α.Γ.Μ.Σ.")
             self.agms_input.setMinimumHeight(42); self.agms_input.textChanged.connect(self._agms_changed)
             self.person_name = QLabel("—"); self.person_name.setWordWrap(True); self.person_name.setStyleSheet("font-size:16px;font-weight:800")
-            self.direction = QComboBox(); self.direction.addItems(["ΕΙΣΟΔΟΣ","ΕΞΟΔΟΣ"]); self.direction.setMinimumHeight(42)
-            self.position = QComboBox(); self.position.setMinimumHeight(42); self.position.currentTextChanged.connect(self._position_changed)
+            self.direction = ArrowComboBox(); self.direction.addItems(["ΕΙΣΟΔΟΣ","ΕΞΟΔΟΣ"]); self.direction.setMinimumHeight(42)
+            self.position = ArrowComboBox(); self.position.setMinimumHeight(42); self.position.currentTextChanged.connect(self._position_changed)
             operator_form.addRow("Α.Γ.Μ.Σ.", self.agms_input)
             operator_form.addRow("Αστυνομικός", self.person_name)
             operator_form.addRow("ΚΑΤΕΥΘΥΝΣΗ", self.direction)
@@ -2544,11 +2555,11 @@ def run(args=None) -> int:
             person_edit = QLineEdit(); person_edit.setPlaceholderText("ΑΓΜΣ, επώνυμο ή όνομα — αρκεί και μόνο αυτό")
             from_edit = QLineEdit(); from_edit.setPlaceholderText("π.χ. 01/10/2026 (προαιρετικό)")
             to_edit = QLineEdit(); to_edit.setPlaceholderText("π.χ. 31/10/2026 (προαιρετικό)")
-            position_combo = QComboBox(); position_combo.addItem("ΟΛΕΣ")
+            position_combo = ArrowComboBox(); position_combo.addItem("ΟΛΕΣ")
             for pos in self.config.positions or []:
                 if _clean(pos):
                     position_combo.addItem(_clean(pos))
-            direction_combo = QComboBox(); direction_combo.addItems(["ΟΛΑ", "ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"])
+            direction_combo = ArrowComboBox(); direction_combo.addItems(["ΟΛΑ", "ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"])
             form.addRow("Άτομο", person_edit)
             form.addRow("Από ημερομηνία", from_edit)
             form.addRow("Έως ημερομηνία", to_edit)
