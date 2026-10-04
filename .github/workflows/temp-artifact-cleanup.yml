@@ -1,0 +1,27 @@
+name: Temporary artifact cleanup
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/temp-artifact-cleanup.yml'
+permissions:
+  actions: write
+  contents: read
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete all Actions artifacts in this repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ids="$(gh api --paginate "repos/$REPO/actions/artifacts?per_page=100" --jq '.artifacts[].id' || true)"
+          count=0
+          for id in $ids; do
+            gh api --method DELETE "repos/$REPO/actions/artifacts/$id"
+            count=$((count+1))
+          done
+          echo "DELETED_ARTIFACTS=$count"
