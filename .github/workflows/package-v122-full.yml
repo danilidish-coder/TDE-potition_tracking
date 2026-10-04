@@ -1,0 +1,53 @@
+name: Package v1.2.2 full backup
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/package-v122-full.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble full backup package
+        shell: pwsh
+        run: |
+          Remove-Item PACKAGE -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item TDE_KATAGRAFI_THESEON_v1.2.2_FULL.zip -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path PACKAGE | Out-Null
+          New-Item -ItemType Directory -Path PACKAGE\source | Out-Null
+
+          Copy-Item 'src' 'PACKAGE\source\src' -Recurse -Force
+          Copy-Item 'tests' 'PACKAGE\source\tests' -Recurse -Force
+          Copy-Item 'tools' 'PACKAGE\source\tools' -Recurse -Force
+          Copy-Item 'requirements.txt' 'PACKAGE\source\requirements.txt' -Force
+          Copy-Item 'VERSION.txt' 'PACKAGE\source\VERSION.txt' -Force
+          Copy-Item 'README.md' 'PACKAGE\source\README.md' -Force
+          Copy-Item 'DEVELOPMENT_RULES.md' 'PACKAGE\source\DEVELOPMENT_RULES.md' -Force
+
+          Copy-Item 'release\Καταγραφή Θέσεων.exe' 'PACKAGE\TDE_Katagrafi_Theseon.exe' -Force
+          $hash=(Get-FileHash 'PACKAGE\TDE_Katagrafi_Theseon.exe' -Algorithm SHA256).Hash
+          "$hash  TDE_Katagrafi_Theseon.exe" | Set-Content -Encoding ascii 'PACKAGE\TDE_Katagrafi_Theseon_v1.2.2.sha256.txt'
+
+          Compress-Archive -Path 'PACKAGE\*' -DestinationPath 'TDE_KATAGRAFI_THESEON_v1.2.2_FULL.zip' -CompressionLevel Optimal
+
+      - name: Verify packaged EXE hash
+        shell: pwsh
+        run: |
+          $hash=(Get-FileHash '.\PACKAGE\TDE_Katagrafi_Theseon.exe' -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne '550c5caa3364aeb45167e01000ab5f99b5b39e8279ff5d7c5bf9f9f5461e64d1') { throw "Unexpected EXE hash: $hash" }
+
+      - name: Upload full backup to current Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload v1.2.2 TDE_KATAGRAFI_THESEON_v1.2.2_FULL.zip --clobber --repo $env:GITHUB_REPOSITORY
+          if ($LASTEXITCODE -ne 0) { throw 'Release asset upload failed' }
