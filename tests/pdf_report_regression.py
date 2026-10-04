@@ -6,7 +6,6 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import importlib.util
 import sys
 import tempfile
-from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
@@ -39,15 +38,14 @@ shift = {
 with tempfile.TemporaryDirectory() as tmp:
     store = MOD.SharedEventStore(Path(tmp))
 
-    current = MOD.create_shift_pdf(store, shift, {})
-    assert current.is_file(), current
-    assert current.suffix.lower() == ".pdf", current
-    assert current.read_bytes()[:4] == b"%PDF", "Current report is not a PDF"
+    preview = MOD.create_shift_pdf(store, shift, {})
+    assert preview.is_file(), preview
+    assert preview.suffix.lower() == ".pdf", preview
+    assert preview.read_bytes()[:4] == b"%PDF", "Preview is not a PDF"
+    assert str(store.root) not in str(preview), "On-demand PDF must not be stored in TDE_DATA"
 
-    archived = MOD.archive_shift_pdf(store, shift, {})
-    assert archived.is_file(), archived
-    assert archived.suffix.lower() == ".pdf", archived
-    assert archived.read_bytes()[:4] == b"%PDF", "Archived report is not a PDF"
-    assert "2026" in archived.parts and "10" in archived.parts and "2026-10-04" in archived.parts
+    alias_preview = MOD.archive_shift_pdf(store, shift, {})
+    assert alias_preview == preview, (alias_preview, preview)
+    assert not list(store.archive.rglob("*.pdf")), "Archive must not accumulate permanent PDFs"
 
 print("PDF_REPORT_REGRESSION: PASS")
