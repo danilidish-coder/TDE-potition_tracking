@@ -512,13 +512,21 @@ class SharedEventStore:
             finally:
                 path.unlink(missing_ok=True)
 
+    @contextmanager
     def _shift_db_connect(self):
         con = sqlite3.connect(str(self.shift_db), timeout=10.0)
-        con.row_factory = sqlite3.Row
-        con.execute("PRAGMA journal_mode=DELETE")
-        con.execute("PRAGMA synchronous=FULL")
-        con.execute("PRAGMA busy_timeout=10000")
-        return con
+        try:
+            con.row_factory = sqlite3.Row
+            con.execute("PRAGMA journal_mode=DELETE")
+            con.execute("PRAGMA synchronous=FULL")
+            con.execute("PRAGMA busy_timeout=10000")
+            yield con
+            con.commit()
+        except Exception:
+            con.rollback()
+            raise
+        finally:
+            con.close()
 
     @staticmethod
     def _upsert_shift_con(con, shift: dict):
