@@ -2227,7 +2227,7 @@ def run(args=None) -> int:
         QApplication, QComboBox, QDateEdit, QFormLayout, QFrame, QHBoxLayout,
         QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout, QWidget,
         QInputDialog, QDialog, QDateTimeEdit, QSpinBox, QListWidget, QListWidgetItem, QFileDialog, QToolButton,
-        QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QCheckBox, QTimeEdit
+        QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QCheckBox, QTimeEdit, QPlainTextEdit
     )
 
     THEME_DARK = {
@@ -2509,6 +2509,10 @@ def run(args=None) -> int:
             self.store: SharedEventStore | None = None
             self._pending_prompt_active = False
             self._last_shift_signature = ""
+            self._force_exit = False
+            self._message_dialog_active = False
+            self._app_started_at = datetime.now().isoformat(timespec="seconds")
+            self.client_id = SharedEventStore.local_client_id()
             self.setWindowTitle("Τ.Δ.Ε. Κρυσταλλοπηγής - Καταγραφή Θέσεων")
             self.resize(1120, 690)
             self.setMinimumSize(980, 620)
@@ -2518,6 +2522,11 @@ def run(args=None) -> int:
             self.shift_timer = QTimer(self)
             self.shift_timer.timeout.connect(self._check_shift_updates)
             self.shift_timer.start(3000)
+            self.communication_timer = QTimer(self)
+            self.communication_timer.timeout.connect(self._communication_tick)
+            self.communication_timer.start(2500)
+            QApplication.instance().aboutToQuit.connect(self._cleanup_client)
+            self._communication_tick()
 
         def _build(self):
             self.root = QWidget(); self.root.setObjectName("rootPanel"); self.setCentralWidget(self.root)
@@ -2599,6 +2608,16 @@ def run(args=None) -> int:
             shift_buttons.addWidget(self.start_shift_btn); shift_buttons.addWidget(self.end_shift_btn)
             right.addLayout(shift_buttons)
 
+            self.comm_status = QLabel("ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ — αναμονή σύνδεσης")
+            self.comm_status.setObjectName("infoBox")
+            self.comm_status.setAlignment(Qt.AlignCenter)
+            self.comm_status.setWordWrap(True)
+            self.messages_btn = QPushButton("ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ")
+            self.messages_btn.setMinimumHeight(42)
+            self.messages_btn.clicked.connect(self._open_messages)
+            right.addWidget(self.comm_status)
+            right.addWidget(self.messages_btn)
+
             columns.addWidget(self.operator_card, 1); columns.addWidget(self.officer_card, 1)
             outer.addLayout(columns, 1)
 
@@ -2617,15 +2636,344 @@ def run(args=None) -> int:
             bottom2 = QHBoxLayout(); bottom2.setSpacing(10)
             self.active_positions_btn = QPushButton("ΕΝΕΡΓΕΣ ΘΕΣΕΙΣ ΕΡΓΑΣΙΑΣ")
             self.personnel_list_btn = QPushButton("ΕΠΙΛΟΓΗ ΛΙΣΤΑΣ ΠΡΟΣΩΠΙΚΟΥ")
-            for b in (self.active_positions_btn, self.personnel_list_btn):
+            self.exit_app_btn = QPushButton("ΕΞΟΔΟΣ ΑΠΟ ΤΟ ΠΡΟΓΡΑΜΜΑ")
+            for b in (self.active_positions_btn, self.personnel_list_btn, self.exit_app_btn):
                 b.setMinimumHeight(44)
                 bottom2.addWidget(b)
             self.active_positions_btn.clicked.connect(self._live_map)
             self.personnel_list_btn.clicked.connect(self._choose_personnel_list)
+            self.exit_app_btn.clicked.connect(self._request_real_exit)
             outer.addLayout(bottom2)
 
             self.info = QLabel(""); self.info.setObjectName("infoBox"); self.info.setAlignment(Qt.AlignCenter); self.info.setWordWrap(True)
             outer.addWidget(self.info)
+        def closeEvent(self, event):
+            if self._force_exit:
+                event.accept()
+                return
+            event.ignore()
+            self.showMinimized()
+
+        def _cleanup_client(self):
+            if self.store:
+                try:
+                    self.store.remove_client_heartbeat(self.client_id)
+                except Exception:
+                    pass
+
+        def _request_real_exit(self):
+            answer = QMessageBox.question(
+                self,
+                "Έξοδος από το πρόγραμμα",
+                "Να κλείσει πραγματικά η εφαρμογή;\n\n"
+                "Αν κλείσει, δεν θα λαμβάνει μηνύματα / οδηγίες του Αξιωματικού Υπηρεσίας.",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if answer != QMessageBox.Yes:
+                return
+            self._force_exit = True
+            self._cleanup_client()
+            QApplication.quit()
+
+        def _sender_payload(self) -> dict:
+            officer = self._officer_selected() if hasattr(self, "officer_agms") else None
+            if officer:
+                return SharedEventStore._person_payload(officer)
+            return {
+                "computer": socket.gethostname(),
+                "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+            }
+
+        def _client_worker_labels(self, clients: list[dict]) -> dict[str, str]:
+            active_by_computer: dict[str, list[dict]] = {}
+            if self.store:
+                for item in self.store.active_all():
+                    active_by_computer.setdefault(_clean(item.get("computer")).upper(), []).append(item)
+            labels = {}
+            for client in clients:
+                cid = _clean(client.get("client_id"))
+                computer = _clean(client.get("computer"))
+                user = _clean(client.get("user"))
+                people = active_by_computer.get(computer.upper(), [])
+                worker_text = ""
+                if people:
+                    names = []
+                    for item in people:
+                        name = _clean(
+                            f"{item.get('rank','')} {item.get('surname','')} {item.get('given_name','')}"
+                        ) or _clean(item.get("full_name"))
+                        pos = _clean(item.get("position"))
+                        direction = _clean(item.get("direction"))
+                        names.append(f"{name} — Θέση {pos} {direction}".strip())
+                    worker_text = " | " + " / ".join(names)
+                labels[cid] = f"{computer} — {user}{worker_text}"
+            return labels
+
+        def _communication_tick(self):
+            if not self.store:
+                return
+            if not _windows_session_is_active():
+                self._force_exit = True
+                self._cleanup_client()
+                QApplication.quit()
+                return
+            try:
+                state = "ΕΛΑΧΙΣΤΟΠΟΙΗΜΕΝΟ" if self.isMinimized() else "ΑΝΟΙΧΤΟ"
+                self.store.write_client_heartbeat(self.client_id, {
+                    "app_started_at": self._app_started_at,
+                    "window_state": state,
+                })
+                online = self.store.online_clients()
+                if hasattr(self, "comm_status"):
+                    self.comm_status.setText(f"ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ — ενεργοί σταθμοί: {len(online)}")
+            except Exception:
+                return
+
+            try:
+                commands = self.store.pending_commands(self.client_id)
+                if commands:
+                    command = commands[0]
+                    if _clean(command.get("type")).upper() == "CLOSE_APP":
+                        self.store.acknowledge_command(_clean(command.get("command_id")), self.client_id)
+                        self._force_exit = True
+                        self._cleanup_client()
+                        QApplication.quit()
+                        return
+            except Exception:
+                pass
+
+            if self._message_dialog_active:
+                return
+            try:
+                pending = self.store.pending_messages(self.client_id)
+            except Exception:
+                pending = []
+            if pending:
+                self._show_message_alarm(pending[0])
+
+        def _show_message_alarm(self, message: dict):
+            if not self.store:
+                return
+            self._message_dialog_active = True
+            try:
+                priority = _clean(message.get("priority")).upper() or "ΟΔΗΓΙΑ"
+                sender = message.get("sender") or {}
+                sender_name = _clean(
+                    f"{sender.get('rank','')} {sender.get('surname','')} {sender.get('given_name','')}"
+                ) or _clean(sender.get("full_name")) or _clean(sender.get("user")) or "Αξιωματικός Υπηρεσίας"
+                created = _clean(message.get("created_at")).replace("T", " ")
+                text_value = _clean(message.get("text"))
+
+                self.showNormal()
+                self.raise_()
+                self.activateWindow()
+                if priority in {"ΟΔΗΓΙΑ", "ΕΠΕΙΓΟΝ"}:
+                    QApplication.beep()
+
+                box = QMessageBox(self)
+                box.setWindowTitle(f"{priority} — ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ")
+                box.setIcon(QMessageBox.Warning if priority == "ΕΠΕΙΓΟΝ" else QMessageBox.Information)
+                box.setText(
+                    f"<b>{priority}</b><br><br>"
+                    f"<b>Από:</b> {_escape_html(sender_name)}<br>"
+                    f"<b>Ώρα:</b> {_escape_html(created)}<br><br>"
+                    f"{_escape_html(text_value)}"
+                )
+                box.setStandardButtons(QMessageBox.Ok)
+                ack_button = box.button(QMessageBox.Ok)
+                if ack_button:
+                    ack_button.setText("ΕΛΑΒΑ ΓΝΩΣΗ")
+                    ack_button.setMinimumWidth(180)
+                    ack_button.setMinimumHeight(44)
+                box.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+                box.exec()
+                self.store.acknowledge_message(_clean(message.get("message_id")), self.client_id)
+            finally:
+                self._message_dialog_active = False
+
+        def _resolve_message_targets(self, selector: str, online: list[dict]) -> list[str]:
+            selector = _clean(selector)
+            own = self.client_id
+            if selector == "ALL":
+                return [_clean(x.get("client_id")) for x in online if _clean(x.get("client_id")) != own]
+            if selector.startswith("CLIENT:"):
+                cid = selector.split(":", 1)[1]
+                return [cid] if cid and cid != own else []
+
+            wanted_computers: set[str] = set()
+            if self.store:
+                for item in self.store.active_all():
+                    match = False
+                    if selector.startswith("DIR:"):
+                        match = _clean(item.get("direction")).upper() == selector.split(":", 1)[1].upper()
+                    elif selector.startswith("POS:"):
+                        match = _clean(item.get("position")) == selector.split(":", 1)[1]
+                    if match:
+                        wanted_computers.add(_clean(item.get("computer")).upper())
+            return [
+                _clean(client.get("client_id"))
+                for client in online
+                if _clean(client.get("client_id")) != own
+                and _clean(client.get("computer")).upper() in wanted_computers
+            ]
+
+        def _open_messages(self):
+            if not self.store:
+                QMessageBox.warning(self, "Μηνύματα", "Δεν είναι διαθέσιμος ο κοινός φάκελος δεδομένων.")
+                return
+            officer = self._officer_selected()
+            if not officer:
+                QMessageBox.warning(self, "Μηνύματα", "Πληκτρολογήστε πρώτα έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας.")
+                return
+
+            dlg = QDialog(self)
+            dlg.setWindowTitle("ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ ΑΞΙΩΜΑΤΙΚΟΥ ΥΠΗΡΕΣΙΑΣ")
+            dlg.resize(900, 680)
+            lay = QVBoxLayout(dlg)
+            lay.setContentsMargins(20, 18, 20, 18)
+            lay.setSpacing(10)
+
+            online = self.store.online_clients()
+            labels = self._client_worker_labels(online)
+            recipient = ArrowComboBox()
+            recipient.addItem("ΟΛΟΙ ΟΙ ΕΝΕΡΓΟΙ ΣΤΑΘΜΟΙ", "ALL")
+            recipient.addItem("ΟΛΗ Η ΕΙΣΟΔΟΣ", "DIR:ΕΙΣΟΔΟΣ")
+            recipient.addItem("ΟΛΗ Η ΕΞΟΔΟΣ", "DIR:ΕΞΟΔΟΣ")
+            active_positions = sorted({_clean(x.get("position")) for x in self.store.active_all() if _clean(x.get("position"))})
+            for pos in active_positions:
+                recipient.addItem(f"ΘΕΣΗ {pos}", f"POS:{pos}")
+            for client in online:
+                cid = _clean(client.get("client_id"))
+                if cid and cid != self.client_id:
+                    recipient.addItem(labels.get(cid, cid), f"CLIENT:{cid}")
+
+            priority = ArrowComboBox()
+            priority.addItems(["ΟΔΗΓΙΑ", "ΕΠΕΙΓΟΝ", "ΕΝΗΜΕΡΩΣΗ"])
+            editor = QPlainTextEdit()
+            editor.setPlaceholderText("Γράψτε τι πρέπει να γνωρίζουν ή να κάνουν οι παραλήπτες...")
+            editor.setMaximumHeight(130)
+
+            form = QFormLayout()
+            form.addRow("Παραλήπτες", recipient)
+            form.addRow("Τύπος", priority)
+            form.addRow("Μήνυμα / οδηγία", editor)
+            lay.addLayout(form)
+
+            send_btn = QPushButton("ΑΠΟΣΤΟΛΗ")
+            send_btn.setMinimumHeight(44)
+            lay.addWidget(send_btn)
+
+            online_label = QLabel(f"Ενεργοί σταθμοί αυτή τη στιγμή: {len(online)}")
+            lay.addWidget(online_label)
+            sent_list = QListWidget()
+            lay.addWidget(sent_list, 1)
+
+            def refresh_sent():
+                sent_list.clear()
+                for msg in self.store.recent_sent_messages(20):
+                    targets = [_clean(x) for x in msg.get("targets", []) if _clean(x)]
+                    acks = msg.get("acknowledgements", [])
+                    created = _clean(msg.get("created_at")).replace("T", " ")
+                    target_label = _clean(msg.get("target_label")) or "—"
+                    body = _clean(msg.get("text"))
+                    if len(body) > 90:
+                        body = body[:87] + "..."
+                    sent_list.addItem(
+                        f"{created} | {msg.get('priority','')} | {target_label} | "
+                        f"ΕΛΑΒΑΝ {len(acks)}/{len(targets)} | {body}"
+                    )
+
+            def do_send():
+                target_ids = self._resolve_message_targets(_clean(recipient.currentData()), online)
+                try:
+                    self.store.send_message(
+                        SharedEventStore._person_payload(officer),
+                        target_ids,
+                        editor.toPlainText(),
+                        priority.currentText(),
+                        recipient.currentText(),
+                    )
+                    editor.clear()
+                    refresh_sent()
+                except Exception as exc:
+                    QMessageBox.warning(dlg, "Αποστολή", str(exc))
+
+            send_btn.clicked.connect(do_send)
+            refresh_sent()
+            dlg.exec()
+
+        def _close_remaining_clients_dialog(self):
+            if not self.store:
+                return
+            clients = [
+                c for c in self.store.online_clients()
+                if _clean(c.get("client_id")) and _clean(c.get("client_id")) != self.client_id
+            ]
+            if not clients:
+                QMessageBox.information(self, "Τερματικά", "Δεν υπάρχουν άλλα ενεργά τερματικά.")
+                return
+
+            labels = self._client_worker_labels(clients)
+            dlg = QDialog(self)
+            dlg.setWindowTitle("ΕΝΕΡΓΑ ΤΕΡΜΑΤΙΚΑ ΜΕΤΑ ΤΗ ΛΗΞΗ ΒΑΡΔΙΑΣ")
+            dlg.resize(820, 520)
+            lay = QVBoxLayout(dlg)
+            title = QLabel(
+                "Οι παρακάτω εφαρμογές παραμένουν ανοικτές.\n"
+                "Επιλέξτε ποιες θέλετε να κλείσετε ή κλείστε τες όλες."
+            )
+            title.setWordWrap(True)
+            lay.addWidget(title)
+            listing = QListWidget()
+            for client in clients:
+                cid = _clean(client.get("client_id"))
+                item = QListWidgetItem(labels.get(cid, cid))
+                item.setData(Qt.UserRole, cid)
+                item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+                item.setCheckState(Qt.Unchecked)
+                listing.addItem(item)
+            lay.addWidget(listing, 1)
+
+            buttons = QHBoxLayout()
+            selected_btn = QPushButton("ΚΛΕΙΣΕ ΕΠΙΛΕΓΜΕΝΟΥΣ")
+            all_btn = QPushButton("ΚΛΕΙΣΕ ΟΛΟΥΣ")
+            leave_btn = QPushButton("ΑΣΤΑ ΑΝΟΙΧΤΑ")
+            buttons.addWidget(selected_btn)
+            buttons.addWidget(all_btn)
+            buttons.addStretch()
+            buttons.addWidget(leave_btn)
+            lay.addLayout(buttons)
+
+            def send_to(ids: list[str]):
+                ids = [x for x in ids if x]
+                if not ids:
+                    QMessageBox.warning(dlg, "Τερματικά", "Δεν έχει επιλεγεί κανένα τερματικό.")
+                    return
+                sender = self._sender_payload()
+                for cid in ids:
+                    self.store.send_close_command(sender, cid, "Λήξη βάρδιας από Αξιωματικό Υπηρεσίας")
+                QMessageBox.information(
+                    dlg,
+                    "Τερματικά",
+                    f"Εστάλη εντολή κλεισίματος σε {len(ids)} τερματικά. "
+                    "Θα κλείσουν μόλις παραλάβουν την εντολή."
+                )
+                dlg.accept()
+
+            def close_selected():
+                ids = []
+                for i in range(listing.count()):
+                    item = listing.item(i)
+                    if item.checkState() == Qt.Checked:
+                        ids.append(_clean(item.data(Qt.UserRole)))
+                send_to(ids)
+
+            selected_btn.clicked.connect(close_selected)
+            all_btn.clicked.connect(lambda: send_to([_clean(x.get("client_id")) for x in clients]))
+            leave_btn.clicked.connect(dlg.reject)
+            dlg.exec()
+
         def _toggle_theme(self):
             self.config.theme = "light" if _clean(self.config.theme).lower() == "dark" else "dark"
             self.config.save()
@@ -2913,6 +3261,7 @@ def run(args=None) -> int:
                     "Λήξη βάρδιας",
                     "Η βάρδια ολοκληρώθηκε και αποθηκεύτηκε στο αρχείο αναφορών (SQLite)."
                 )
+                self._close_remaining_clients_dialog()
             except Exception as exc:
                 QMessageBox.critical(self,"Λήξη βάρδιας",str(exc))
 
