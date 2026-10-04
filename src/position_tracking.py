@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import base64
 import os
 import hashlib
 import shutil
 import re
+import sqlite3
 import subprocess
 import socket
 import sys
@@ -24,9 +26,36 @@ SETTINGS_NAME = "position_tracking.settings.json"
 DEFAULT_CUTOFF = "10:00"
 STATISTICS_PIN_SHA256 = "ca444860f0e1ddca9596007253ea43b3a5133780b0a566d9a096a53568c063fb"
 
+POLICE_EMBLEM_JPEG_B64 = """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"""
+
 
 def _clean(value: object) -> str:
     return " ".join(str(value or "").strip().split())
+
+
+def _norm_search(value: object) -> str:
+    raw = _clean(value).upper()
+    raw = "".join(ch for ch in unicodedata.normalize("NFD", raw) if unicodedata.category(ch) != "Mn")
+    return re.sub(r"\s+", " ", raw)
+
+
+def _windows_session_is_active() -> bool:
+    """True for the interactive Windows session; remains True when merely locked."""
+    if os.name != "nt":
+        return True
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        current_session = ctypes.c_ulong()
+        pid = kernel32.GetCurrentProcessId()
+        if not kernel32.ProcessIdToSessionId(pid, ctypes.byref(current_session)):
+            return True
+        active_session = kernel32.WTSGetActiveConsoleSessionId()
+        if active_session == 0xFFFFFFFF:
+            return True
+        return int(current_session.value) == int(active_session)
+    except Exception:
+        return True
 
 
 def _safe_name(value: str) -> str:
@@ -433,8 +462,21 @@ class SharedEventStore:
         self.current_docs = self.root / "current"
         self.archive = self.root / "archive"
         self.statistics = self.root / "statistics"
-        for p in (self.events, self.active, self.locks, self.reports, self.shifts, self.audit, self.backups, self.current_docs, self.archive, self.statistics):
+        self.communications = self.root / "communications"
+        self.comm_clients = self.communications / "clients"
+        self.comm_messages = self.communications / "messages"
+        self.comm_acks = self.communications / "acks"
+        self.comm_commands = self.communications / "commands"
+        self.comm_command_acks = self.communications / "command_acks"
+        self.shift_db = self.root / "shift_reports.sqlite3"
+        for p in (
+            self.events, self.active, self.locks, self.reports, self.shifts, self.audit,
+            self.backups, self.current_docs, self.archive, self.statistics,
+            self.communications, self.comm_clients, self.comm_messages, self.comm_acks,
+            self.comm_commands, self.comm_command_acks,
+        ):
             p.mkdir(parents=True, exist_ok=True)
+        self._init_shift_db()
 
     def _active_path(self, agms: str) -> Path:
         return self.active / f"{_safe_name(agms)}.json"
@@ -477,6 +519,572 @@ class SharedEventStore:
         temp = path.with_name(path.name + f".{uuid.uuid4().hex}.tmp")
         temp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         os.replace(temp, path)
+
+
+    @staticmethod
+    def local_client_id() -> str:
+        computer = _safe_name(socket.gethostname())
+        user = _safe_name(os.environ.get("USERNAME") or os.environ.get("USER") or "USER")
+        return f"{computer}__{user}"
+
+    def write_client_heartbeat(self, client_id: str, extra: dict | None = None) -> dict:
+        payload = {
+            "client_id": _clean(client_id),
+            "computer": socket.gethostname(),
+            "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+            "pid": os.getpid(),
+            "last_seen": datetime.now().isoformat(timespec="seconds"),
+        }
+        if extra:
+            payload.update(extra)
+        self._atomic_json(self.comm_clients / f"{_safe_name(client_id)}.json", payload)
+        return payload
+
+    def remove_client_heartbeat(self, client_id: str):
+        (self.comm_clients / f"{_safe_name(client_id)}.json").unlink(missing_ok=True)
+
+    def online_clients(self, max_age_seconds: int = 15) -> list[dict]:
+        now = datetime.now()
+        result = []
+        for path in self.comm_clients.glob("*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                seen = datetime.fromisoformat(_clean(data.get("last_seen")))
+                if (now - seen).total_seconds() <= max(3, int(max_age_seconds)):
+                    result.append(data)
+            except Exception:
+                continue
+        return sorted(result, key=lambda x: (_clean(x.get("computer")), _clean(x.get("user"))))
+
+    def send_message(
+        self,
+        sender: dict,
+        target_client_ids: list[str],
+        text: str,
+        priority: str = "ΟΔΗΓΙΑ",
+        target_label: str = "",
+    ) -> dict:
+        targets = sorted({_clean(x) for x in target_client_ids if _clean(x)})
+        text = _clean(text)
+        if not targets:
+            raise ValueError("Δεν βρέθηκε ενεργός παραλήπτης.")
+        if not text:
+            raise ValueError("Γράψτε το μήνυμα / οδηγία.")
+        message_id = uuid.uuid4().hex
+        payload = {
+            "message_id": message_id,
+            "created_at": datetime.now().isoformat(timespec="seconds"),
+            "sender": sender or {},
+            "targets": targets,
+            "target_label": _clean(target_label),
+            "priority": _clean(priority).upper() or "ΟΔΗΓΙΑ",
+            "text": text,
+        }
+        self._atomic_json(self.comm_messages / f"{message_id}.json", payload)
+        self.log_admin_action("MESSAGE_SENT", {
+            "message_id": message_id, "targets": targets, "priority": payload["priority"],
+            "target_label": payload["target_label"],
+        })
+        return payload
+
+    def acknowledge_message(self, message_id: str, client_id: str):
+        folder = self.comm_acks / _safe_name(message_id)
+        payload = {
+            "message_id": _clean(message_id),
+            "client_id": _clean(client_id),
+            "ack_at": datetime.now().isoformat(timespec="seconds"),
+            "computer": socket.gethostname(),
+            "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+        }
+        self._atomic_json(folder / f"{_safe_name(client_id)}.json", payload)
+
+    def pending_messages(self, client_id: str, max_age_days: int = 7) -> list[dict]:
+        client_id = _clean(client_id)
+        cutoff = datetime.now() - timedelta(days=max(1, int(max_age_days)))
+        result = []
+        for path in sorted(self.comm_messages.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                if client_id not in [_clean(x) for x in data.get("targets", [])]:
+                    continue
+                created = datetime.fromisoformat(_clean(data.get("created_at")))
+                if created < cutoff:
+                    continue
+                ack = self.comm_acks / _safe_name(data.get("message_id")) / f"{_safe_name(client_id)}.json"
+                if not ack.exists():
+                    result.append(data)
+            except Exception:
+                continue
+        return sorted(result, key=lambda x: _clean(x.get("created_at")))
+
+    def message_acknowledgements(self, message_id: str) -> list[dict]:
+        folder = self.comm_acks / _safe_name(message_id)
+        result = []
+        if folder.exists():
+            for path in folder.glob("*.json"):
+                try:
+                    result.append(json.loads(path.read_text(encoding="utf-8")))
+                except Exception:
+                    pass
+        return result
+
+    def recent_sent_messages(self, limit: int = 20) -> list[dict]:
+        result = []
+        for path in sorted(self.comm_messages.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                data["acknowledgements"] = self.message_acknowledgements(_clean(data.get("message_id")))
+                result.append(data)
+            except Exception:
+                continue
+            if len(result) >= max(1, int(limit)):
+                break
+        return result
+
+    def send_close_command(self, sender: dict, target_client_id: str, reason: str = "") -> dict:
+        target_client_id = _clean(target_client_id)
+        if not target_client_id:
+            raise ValueError("Δεν επιλέχθηκε τερματικό.")
+        command_id = uuid.uuid4().hex
+        payload = {
+            "command_id": command_id,
+            "type": "CLOSE_APP",
+            "created_at": datetime.now().isoformat(timespec="seconds"),
+            "sender": sender or {},
+            "target_client_id": target_client_id,
+            "reason": _clean(reason),
+        }
+        self._atomic_json(self.comm_commands / f"{command_id}.json", payload)
+        self.log_admin_action("REMOTE_CLOSE_SENT", {
+            "command_id": command_id, "target_client_id": target_client_id, "reason": _clean(reason)
+        })
+        return payload
+
+    def pending_commands(self, client_id: str) -> list[dict]:
+        client_id = _clean(client_id)
+        result = []
+        for path in sorted(self.comm_commands.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                if _clean(data.get("target_client_id")) != client_id:
+                    continue
+                ack = self.comm_command_acks / f"{_safe_name(data.get('command_id'))}.json"
+                if not ack.exists():
+                    result.append(data)
+            except Exception:
+                continue
+        return sorted(result, key=lambda x: _clean(x.get("created_at")))
+
+    def acknowledge_command(self, command_id: str, client_id: str):
+        payload = {
+            "command_id": _clean(command_id),
+            "client_id": _clean(client_id),
+            "ack_at": datetime.now().isoformat(timespec="seconds"),
+            "computer": socket.gethostname(),
+            "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+        }
+        self._atomic_json(self.comm_command_acks / f"{_safe_name(command_id)}.json", payload)
+
+    @contextmanager
+    def _shift_db_write_lock(self, timeout: float = 10.0):
+        """Serialize SQLite writes across the shared runtime folder."""
+        path = self.locks / "shift_reports.sqlite.lock"
+        deadline = time.monotonic() + timeout
+        fd = None
+        while True:
+            try:
+                fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(fd, f"{socket.gethostname()}|{time.time()}".encode("utf-8", "ignore"))
+                break
+            except FileExistsError:
+                try:
+                    if time.time() - path.stat().st_mtime > 60:
+                        path.unlink(missing_ok=True)
+                        continue
+                except OSError:
+                    pass
+                if time.monotonic() >= deadline:
+                    raise BusyError("Το αρχείο βαρδιών χρησιμοποιείται από άλλο σταθμό. Δοκιμάστε ξανά.")
+                time.sleep(0.15)
+        try:
+            yield
+        finally:
+            try:
+                if fd is not None:
+                    os.close(fd)
+            finally:
+                path.unlink(missing_ok=True)
+
+    @contextmanager
+    def _shift_db_connect(self):
+        con = sqlite3.connect(str(self.shift_db), timeout=10.0)
+        try:
+            con.row_factory = sqlite3.Row
+            con.execute("PRAGMA journal_mode=DELETE")
+            con.execute("PRAGMA synchronous=FULL")
+            con.execute("PRAGMA busy_timeout=10000")
+            yield con
+            con.commit()
+        except Exception:
+            con.rollback()
+            raise
+        finally:
+            con.close()
+
+    @staticmethod
+    def _upsert_shift_con(con, shift: dict):
+        shift_id = _clean(shift.get("shift_id"))
+        if not shift_id:
+            raise ValueError("Μη έγκυρη βάρδια.")
+        status = _clean(shift.get("status")).upper() or "DRAFT"
+        start_at = _clean(shift.get("start_at"))
+        end_at = _clean(shift.get("end_at")) or None
+        payload = json.dumps(shift, ensure_ascii=False, separators=(",", ":"))
+        con.execute(
+            """
+            INSERT INTO shifts (shift_id, status, start_at, end_at, data_json, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(shift_id) DO UPDATE SET
+                status=excluded.status,
+                start_at=excluded.start_at,
+                end_at=excluded.end_at,
+                data_json=excluded.data_json,
+                updated_at=excluded.updated_at
+            """,
+            (shift_id, status, start_at, end_at, payload, datetime.now().isoformat(timespec="seconds")),
+        )
+
+    @staticmethod
+    def _upsert_personnel_session_con(con, start: dict, end: dict):
+        start_event_id = _clean(start.get("event_id"))
+        end_event_id = _clean(end.get("event_id"))
+        if not start_event_id or not end_event_id:
+            return
+        try:
+            start_dt = datetime.fromisoformat(_clean(start.get("timestamp")))
+            end_dt = datetime.fromisoformat(_clean(end.get("timestamp")))
+        except Exception:
+            return
+        if end_dt < start_dt:
+            return
+        agms = _clean(start.get("agms") or end.get("agms"))
+        rank = _clean(start.get("rank") or end.get("rank"))
+        surname = _clean(start.get("surname") or end.get("surname"))
+        given_name = _clean(start.get("given_name") or end.get("given_name"))
+        full_name = _clean(start.get("full_name") or end.get("full_name") or f"{surname} {given_name}")
+        person_search = _norm_search(f"{agms} {rank} {surname} {given_name} {full_name}")
+        duration_seconds = max(0, int((end_dt - start_dt).total_seconds()))
+        con.execute(
+            """
+            INSERT INTO personnel_sessions (
+                session_id, start_event_id, end_event_id, agms, rank, surname, given_name,
+                full_name, person_search, position, direction, start_at, end_at,
+                duration_seconds, start_computer, start_user, end_computer, end_user
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(start_event_id) DO UPDATE SET
+                end_event_id=excluded.end_event_id,
+                agms=excluded.agms,
+                rank=excluded.rank,
+                surname=excluded.surname,
+                given_name=excluded.given_name,
+                full_name=excluded.full_name,
+                person_search=excluded.person_search,
+                position=excluded.position,
+                direction=excluded.direction,
+                start_at=excluded.start_at,
+                end_at=excluded.end_at,
+                duration_seconds=excluded.duration_seconds,
+                start_computer=excluded.start_computer,
+                start_user=excluded.start_user,
+                end_computer=excluded.end_computer,
+                end_user=excluded.end_user
+            """,
+            (
+                start_event_id, start_event_id, end_event_id, agms, rank, surname, given_name,
+                full_name, person_search, _clean(start.get("position")),
+                _clean(start.get("direction")).upper(),
+                start_dt.isoformat(timespec="seconds"), end_dt.isoformat(timespec="seconds"),
+                duration_seconds, _clean(start.get("computer")), _clean(start.get("user")),
+                _clean(end.get("computer")), _clean(end.get("user")),
+            ),
+        )
+
+    def _store_personnel_session(self, start: dict, end: dict):
+        with self._shift_db_write_lock():
+            with self._shift_db_connect() as con:
+                self._upsert_personnel_session_con(con, start, end)
+
+    @staticmethod
+    def _session_row_dict(row) -> dict:
+        return {
+            "session_id": _clean(row["session_id"]),
+            "start_event_id": _clean(row["start_event_id"]),
+            "end_event_id": _clean(row["end_event_id"]),
+            "agms": _clean(row["agms"]),
+            "rank": _clean(row["rank"]),
+            "surname": _clean(row["surname"]),
+            "given_name": _clean(row["given_name"]),
+            "full_name": _clean(row["full_name"]),
+            "position": _clean(row["position"]),
+            "direction": _clean(row["direction"]).upper(),
+            "start_at": _clean(row["start_at"]),
+            "end_at": _clean(row["end_at"]),
+            "duration_seconds": int(row["duration_seconds"] or 0),
+        }
+
+    @staticmethod
+    def _session_overlaps_clock_window(start_dt: datetime, end_dt: datetime, time_from: dtime, time_to: dtime) -> bool:
+        day = start_dt.date() - timedelta(days=1)
+        last = end_dt.date()
+        while day <= last:
+            window_start = datetime.combine(day, time_from)
+            window_end = datetime.combine(day, time_to)
+            if time_to <= time_from:
+                window_end += timedelta(days=1)
+            if start_dt < window_end and end_dt > window_start:
+                return True
+            day += timedelta(days=1)
+        return False
+
+    def search_personnel_sessions(
+        self,
+        person_query: str = "",
+        date_from: date | None = None,
+        date_to: date | None = None,
+        position: str = "",
+        direction: str = "",
+        time_from: dtime | None = None,
+        time_to: dtime | None = None,
+        moment: datetime | None = None,
+        min_duration_minutes: int = 0,
+        max_duration_minutes: int = 0,
+        limit: int | None = None,
+    ) -> list[dict]:
+        clauses = ["1=1"]
+        params: list[object] = []
+        query = _norm_search(person_query)
+        if query:
+            clauses.append("person_search LIKE ?")
+            params.append(f"%{query}%")
+        if date_from is not None:
+            clauses.append("end_at>=?")
+            params.append(f"{date_from:%Y-%m-%d}T00:00:00")
+        if date_to is not None:
+            clauses.append("start_at<=?")
+            params.append(f"{date_to:%Y-%m-%d}T23:59:59")
+        position = _clean(position)
+        if position and position != "ΟΛΕΣ":
+            clauses.append("position=?")
+            params.append(position)
+        direction = _clean(direction).upper()
+        if direction and direction != "ΟΛΑ":
+            clauses.append("direction=?")
+            params.append(direction)
+        if moment is not None:
+            stamp = moment.isoformat(timespec="seconds")
+            clauses.append("start_at<=?")
+            clauses.append("end_at>?")
+            params.extend([stamp, stamp])
+        if int(min_duration_minutes or 0) > 0:
+            clauses.append("duration_seconds>=?")
+            params.append(int(min_duration_minutes) * 60)
+        if int(max_duration_minutes or 0) > 0:
+            clauses.append("duration_seconds<=?")
+            params.append(int(max_duration_minutes) * 60)
+
+        sql = "SELECT * FROM personnel_sessions WHERE " + " AND ".join(clauses) + " ORDER BY start_at DESC"
+        if limit is not None and int(limit) > 0 and time_from is None and time_to is None:
+            sql += " LIMIT ?"
+            params.append(int(limit))
+
+        rows: list[dict] = []
+        try:
+            with self._shift_db_connect() as con:
+                db_rows = con.execute(sql, params).fetchall()
+            for row in db_rows:
+                item = self._session_row_dict(row)
+                if time_from is not None and time_to is not None:
+                    try:
+                        sdt = datetime.fromisoformat(item["start_at"])
+                        edt = datetime.fromisoformat(item["end_at"])
+                    except Exception:
+                        continue
+                    if not self._session_overlaps_clock_window(sdt, edt, time_from, time_to):
+                        continue
+                rows.append(item)
+                if limit is not None and int(limit) > 0 and len(rows) >= int(limit):
+                    break
+        except Exception:
+            return []
+        return rows
+
+    def list_personnel_workers(self) -> list[dict]:
+        result: list[dict] = []
+        seen: set[str] = set()
+        try:
+            with self._shift_db_connect() as con:
+                rows = con.execute(
+                    """
+                    SELECT agms, rank, surname, given_name, full_name
+                    FROM personnel_sessions
+                    ORDER BY start_at DESC
+                    """
+                ).fetchall()
+            for row in rows:
+                agms = _clean(row["agms"])
+                if not agms or agms in seen:
+                    continue
+                seen.add(agms)
+                result.append({
+                    "agms": agms,
+                    "rank": _clean(row["rank"]),
+                    "surname": _clean(row["surname"]),
+                    "given_name": _clean(row["given_name"]),
+                    "full_name": _clean(row["full_name"]),
+                })
+        except Exception:
+            return []
+        return sorted(result, key=lambda x: (_norm_search(x.get("surname")), _norm_search(x.get("given_name")), x.get("agms", "")))
+
+    def list_session_positions(self) -> list[str]:
+        try:
+            with self._shift_db_connect() as con:
+                rows = con.execute(
+                    "SELECT DISTINCT position FROM personnel_sessions WHERE position<>'' ORDER BY position"
+                ).fetchall()
+            return [_clean(row["position"]) for row in rows if _clean(row["position"])]
+        except Exception:
+            return []
+
+    def _init_shift_db(self):
+        self.shift_db.parent.mkdir(parents=True, exist_ok=True)
+        with self._shift_db_write_lock():
+            with self._shift_db_connect() as con:
+                con.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS shifts (
+                        shift_id TEXT PRIMARY KEY,
+                        status TEXT NOT NULL,
+                        start_at TEXT NOT NULL,
+                        end_at TEXT,
+                        data_json TEXT NOT NULL,
+                        updated_at TEXT NOT NULL
+                    )
+                    """
+                )
+                con.execute("CREATE INDEX IF NOT EXISTS idx_shifts_start_at ON shifts(start_at DESC)")
+                con.execute("CREATE INDEX IF NOT EXISTS idx_shifts_status ON shifts(status)")
+                con.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS meta (
+                        key TEXT PRIMARY KEY,
+                        value TEXT
+                    )
+                    """
+                )
+                con.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS personnel_sessions (
+                        session_id TEXT PRIMARY KEY,
+                        start_event_id TEXT UNIQUE NOT NULL,
+                        end_event_id TEXT NOT NULL,
+                        agms TEXT NOT NULL,
+                        rank TEXT,
+                        surname TEXT,
+                        given_name TEXT,
+                        full_name TEXT,
+                        person_search TEXT NOT NULL,
+                        position TEXT NOT NULL,
+                        direction TEXT NOT NULL,
+                        start_at TEXT NOT NULL,
+                        end_at TEXT NOT NULL,
+                        duration_seconds INTEGER NOT NULL,
+                        start_computer TEXT,
+                        start_user TEXT,
+                        end_computer TEXT,
+                        end_user TEXT
+                    )
+                    """
+                )
+                con.execute("CREATE INDEX IF NOT EXISTS idx_personnel_sessions_start ON personnel_sessions(start_at DESC)")
+                con.execute("CREATE INDEX IF NOT EXISTS idx_personnel_sessions_end ON personnel_sessions(end_at DESC)")
+                con.execute("CREATE INDEX IF NOT EXISTS idx_personnel_sessions_person ON personnel_sessions(person_search)")
+                con.execute("CREATE INDEX IF NOT EXISTS idx_personnel_sessions_position ON personnel_sessions(position, direction)")
+                migrated = con.execute(
+                    "SELECT value FROM meta WHERE key='legacy_shift_json_migrated_v1'"
+                ).fetchone()
+                if not migrated:
+                    newest = None
+                    for path in sorted(self.shifts.glob("SHIFT_*.json")):
+                        try:
+                            data = json.loads(path.read_text(encoding="utf-8"))
+                            if _clean(data.get("shift_id")):
+                                self._upsert_shift_con(con, data)
+                                newest = data
+                        except Exception:
+                            continue
+                    current_path = self._current_shift_path()
+                    try:
+                        current = json.loads(current_path.read_text(encoding="utf-8"))
+                        if _clean(current.get("shift_id")):
+                            self._upsert_shift_con(con, current)
+                            newest = current
+                    except Exception:
+                        pass
+                    if newest and _clean(newest.get("shift_id")):
+                        con.execute(
+                            "INSERT OR REPLACE INTO meta(key,value) VALUES('current_report_shift_id',?)",
+                            (_clean(newest.get("shift_id")),),
+                        )
+                    con.execute(
+                        "INSERT OR REPLACE INTO meta(key,value) VALUES('legacy_shift_json_migrated_v1','1')"
+                    )
+
+                personnel_migrated = con.execute(
+                    "SELECT value FROM meta WHERE key='legacy_personnel_sessions_migrated_v1'"
+                ).fetchone()
+                if not personnel_migrated:
+                    starts: dict[str, dict] = {}
+                    for event in self.iter_all_events():
+                        kind = _clean(event.get("kind")).upper()
+                        if kind == "START":
+                            starts[_clean(event.get("event_id"))] = event
+                        elif kind == "END":
+                            start = starts.get(_clean(event.get("start_event_id")))
+                            if start:
+                                self._upsert_personnel_session_con(con, start, event)
+                    con.execute(
+                        "INSERT OR REPLACE INTO meta(key,value) VALUES('legacy_personnel_sessions_migrated_v1','1')"
+                    )
+
+    def _store_shift_snapshot(self, shift: dict, make_current_report: bool = False):
+        with self._shift_db_write_lock():
+            with self._shift_db_connect() as con:
+                self._upsert_shift_con(con, shift)
+                if make_current_report:
+                    con.execute(
+                        "INSERT OR REPLACE INTO meta(key,value) VALUES('current_report_shift_id',?)",
+                        (_clean(shift.get("shift_id")),),
+                    )
+
+    def get_shift(self, shift_id: str) -> dict | None:
+        shift_id = _clean(shift_id)
+        if not shift_id:
+            return None
+        try:
+            with self._shift_db_connect() as con:
+                row = con.execute("SELECT data_json FROM shifts WHERE shift_id=?", (shift_id,)).fetchone()
+            return json.loads(row["data_json"]) if row else None
+        except Exception:
+            return None
+
+    def _current_report_shift_id(self) -> str:
+        try:
+            with self._shift_db_connect() as con:
+                row = con.execute("SELECT value FROM meta WHERE key='current_report_shift_id'").fetchone()
+            return _clean(row["value"]) if row else ""
+        except Exception:
+            return ""
 
     def get_active(self, agms: str) -> dict | None:
         path = self._active_path(agms)
@@ -558,6 +1166,7 @@ class SharedEventStore:
                 "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
             }
             self._write_event(event)
+            self._store_personnel_session(current, event)
             self._active_path(person.agms).unlink(missing_ok=True)
             return event
 
@@ -602,25 +1211,26 @@ class SharedEventStore:
         return sorted(result, key=lambda e: _clean(e.get("timestamp")))
 
     def completed_sessions_all(self) -> list[dict]:
-        starts: dict[str, dict] = {}
         sessions: list[dict] = []
-        for event in self.iter_all_events():
-            kind = _clean(event.get("kind")).upper()
-            if kind == "START":
-                starts[_clean(event.get("event_id"))] = event
-            elif kind == "END":
-                sid = _clean(event.get("start_event_id"))
-                start = starts.get(sid)
-                if not start:
-                    continue
-                try:
-                    start_dt = datetime.fromisoformat(_clean(start.get("timestamp")))
-                    end_dt = datetime.fromisoformat(_clean(event.get("timestamp")))
-                except Exception:
-                    continue
-                if end_dt < start_dt:
-                    continue
-                sessions.append({"start": start, "end": event, "start_dt": start_dt, "end_dt": end_dt})
+        for row in reversed(self.search_personnel_sessions()):
+            try:
+                start_dt = datetime.fromisoformat(row["start_at"])
+                end_dt = datetime.fromisoformat(row["end_at"])
+            except Exception:
+                continue
+            start = {
+                "event_id": row["start_event_id"], "kind": "START", "timestamp": row["start_at"],
+                "agms": row["agms"], "rank": row["rank"], "surname": row["surname"],
+                "given_name": row["given_name"], "full_name": row["full_name"],
+                "position": row["position"], "direction": row["direction"],
+            }
+            end = {
+                "event_id": row["end_event_id"], "kind": "END", "timestamp": row["end_at"],
+                "start_event_id": row["start_event_id"], "agms": row["agms"],
+                "rank": row["rank"], "surname": row["surname"], "given_name": row["given_name"],
+                "full_name": row["full_name"], "position": row["position"], "direction": row["direction"],
+            }
+            sessions.append({"start": start, "end": end, "start_dt": start_dt, "end_dt": end_dt})
         return sessions
 
     def save_shift(self, start_at: datetime, agms_list: list[str] | tuple[str, ...], lookback_minutes: int = 30, source_file: str = "") -> dict:
@@ -634,16 +1244,9 @@ class SharedEventStore:
             raise ValueError("Η βάρδια δεν έχει προσωπικό.")
         lookback = max(0, min(int(lookback_minutes), 180))
         shift_id = f"SHIFT_{start_at:%Y%m%d_%H%M%S}"
-        existing_path = self.shifts / f"{shift_id}.json"
-        if existing_path.exists():
-            try:
-                existing = json.loads(existing_path.read_text(encoding="utf-8"))
-                if _clean(existing.get("status")).upper() == "FINALIZED":
-                    raise ValueError("Η βάρδια έχει οριστικοποιηθεί και δεν μπορεί να αντικατασταθεί.")
-            except ValueError:
-                raise
-            except Exception:
-                pass
+        existing = self.get_shift(shift_id)
+        if existing and _clean(existing.get("status")).upper() == "FINALIZED":
+            raise ValueError("Η βάρδια έχει οριστικοποιηθεί και δεν μπορεί να αντικατασταθεί.")
         data = {
             "version": 1,
             "shift_id": shift_id,
@@ -657,7 +1260,7 @@ class SharedEventStore:
             "computer": socket.gethostname(),
             "status": "DRAFT",
         }
-        self._atomic_json(self.shifts / f"{shift_id}.json", data)
+        self._store_shift_snapshot(data)
         self.log_admin_action("SHIFT_SAVED", {"shift_id": shift_id, "people": len(unique), "lookback_minutes": lookback})
         return data
 
@@ -671,6 +1274,22 @@ class SharedEventStore:
             return data if _clean(data.get("status")).upper() == "ACTIVE" else None
         except Exception:
             return None
+
+    def current_report_shift(self) -> dict | None:
+        """Return the active/last shift; finalized history itself lives in SQLite."""
+        path = self._current_shift_path()
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if _clean(data.get("shift_id")) and _clean(data.get("status")).upper() in {"ACTIVE", "FINALIZED"}:
+                return data
+        except Exception:
+            pass
+        shift_id = self._current_report_shift_id()
+        if shift_id:
+            data = self.get_shift(shift_id)
+            if data and _clean(data.get("status")).upper() == "FINALIZED":
+                return data
+        return None
 
     @staticmethod
     def _person_payload(person: PersonnelRecord) -> dict:
@@ -793,9 +1412,10 @@ class SharedEventStore:
         shift["end_at"] = when.isoformat(timespec="seconds")
         shift["end_officer"] = self._person_payload(officer)
         shift["finalized_at"] = datetime.now().isoformat(timespec="seconds")
-        final_path = self.shifts / f"{shift['shift_id']}.json"
-        self._atomic_json(final_path, shift)
-        self._current_shift_path().unlink(missing_ok=True)
+        # Το ιστορικό βαρδιών αποθηκεύεται σε SQLite. Το CURRENT_SHIFT.json
+        # μένει μόνο ως ελαφρύ ζωντανό αρχείο συγχρονισμού μεταξύ σταθμών.
+        self._atomic_json(self._current_shift_path(), shift)
+        self._store_shift_snapshot(shift, make_current_report=True)
         self.log_admin_action("SHIFT_ENDED", {"shift_id": shift["shift_id"], "officer_agms": officer.agms, "approved": len(shift.get("approved", [])), "excluded": len(shift.get("excluded", []))})
         return shift
 
@@ -853,12 +1473,65 @@ class SharedEventStore:
         return sorted(sessions, key=lambda x: (_clean(x["start"].get("full_name")), x["start_dt"]))
 
     def list_shifts(self) -> list[dict]:
-        result = []
-        for path in sorted(self.shifts.glob("SHIFT_*.json"), reverse=True):
-            try:
-                result.append(json.loads(path.read_text(encoding="utf-8")))
-            except Exception:
-                pass
+        result: list[dict] = []
+        try:
+            with self._shift_db_connect() as con:
+                rows = con.execute("SELECT data_json FROM shifts ORDER BY start_at DESC").fetchall()
+            for row in rows:
+                try:
+                    result.append(json.loads(row["data_json"]))
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return result
+
+
+    def search_finalized_shifts(
+        self,
+        date_from: date | None = None,
+        date_to: date | None = None,
+        officer_query: str = "",
+        limit: int | None = None,
+    ) -> list[dict]:
+        clauses = ["status='FINALIZED'", "end_at IS NOT NULL", "end_at<>''"]
+        params: list[object] = []
+        if date_from is not None:
+            clauses.append("start_at>=?")
+            params.append(f"{date_from:%Y-%m-%d}T00:00:00")
+        if date_to is not None:
+            clauses.append("start_at<=?")
+            params.append(f"{date_to:%Y-%m-%d}T23:59:59")
+
+        sql = "SELECT data_json FROM shifts WHERE " + " AND ".join(clauses) + " ORDER BY start_at DESC"
+        if limit is not None and int(limit) > 0:
+            sql += " LIMIT ?"
+            params.append(int(limit))
+
+        result: list[dict] = []
+        try:
+            with self._shift_db_connect() as con:
+                rows = con.execute(sql, params).fetchall()
+            query = _clean(officer_query).upper()
+            if query:
+                query = "".join(ch for ch in unicodedata.normalize("NFD", query) if unicodedata.category(ch) != "Mn")
+            for row in rows:
+                try:
+                    shift = json.loads(row["data_json"])
+                except Exception:
+                    continue
+                if query:
+                    officer = shift.get("start_officer") or shift.get("end_officer") or {}
+                    haystack = _clean(
+                        f"{officer.get('rank','')} {officer.get('surname','')} "
+                        f"{officer.get('given_name','')} {officer.get('full_name','')} {officer.get('agms','')}"
+                    ).upper()
+                    haystack = "".join(ch for ch in unicodedata.normalize("NFD", haystack) if unicodedata.category(ch) != "Mn")
+                    if query not in haystack:
+                        continue
+                result.append(shift)
+        except Exception:
+            return []
         return result
 
     def roster_sessions(self, start_at: datetime, agms_list: list[str] | tuple[str, ...], lookback_minutes: int = 30, horizon_hours: int = 12) -> list[dict]:
@@ -928,11 +1601,9 @@ class SharedEventStore:
         shift_id = _clean(shift.get("shift_id"))
         if not shift_id:
             raise ValueError("Μη έγκυρη βάρδια.")
-        path = self.shifts / f"{shift_id}.json"
-        try:
-            current = json.loads(path.read_text(encoding="utf-8"))
-        except FileNotFoundError as exc:
-            raise ValueError("Δεν βρέθηκε η βάρδια για οριστικοποίηση.") from exc
+        current = self.get_shift(shift_id)
+        if not current:
+            raise ValueError("Δεν βρέθηκε η βάρδια για οριστικοποίηση.")
         if _clean(current.get("status")).upper() == "FINALIZED":
             return current
         current["status"] = "FINALIZED"
@@ -940,11 +1611,9 @@ class SharedEventStore:
         current["finalized_by"] = os.environ.get("USERNAME") or os.environ.get("USER") or ""
         current["finalized_computer"] = socket.gethostname()
         if report_text:
-            report_path = self.reports / f"FINAL_{shift_id}.txt"
-            report_path.write_text(report_text, encoding="utf-8")
-            current["final_report"] = str(report_path)
+            current["final_report_text"] = report_text
             current["final_report_sha256"] = hashlib.sha256(report_text.encode("utf-8")).hexdigest()
-        self._atomic_json(path, current)
+        self._store_shift_snapshot(current)
         self.log_admin_action("SHIFT_FINALIZED", {"shift_id": shift_id, "people": len(current.get("agms", []))})
         return current
 
@@ -1249,6 +1918,257 @@ def create_shift_docx(store: SharedEventStore, shift: dict, people_by_agms: dict
     return target
 
 
+def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[str, PersonnelRecord] | None = None, target: str | Path | None = None) -> Path:
+    """Create the shift report directly as an A4 PDF, without Word."""
+    try:
+        from PySide6.QtCore import QMarginsF
+        from PySide6.QtGui import QPageLayout, QPageSize, QTextDocument
+        from PySide6.QtPrintSupport import QPrinter
+    except Exception as exc:
+        raise RuntimeError("Δεν είναι διαθέσιμη η δημιουργία PDF.") from exc
+
+    people_by_agms = people_by_agms or {}
+    sessions = store.shift_sessions_v2(shift) if int(shift.get("version", 1)) >= 2 else store.roster_sessions(
+        datetime.fromisoformat(shift["start_at"]),
+        shift.get("agms", []),
+        int(shift.get("lookback_minutes", 30)),
+        int(shift.get("max_window_hours", 12)),
+    )
+    roster = [_clean(x) for x in (shift.get("approved", []) if int(shift.get("version", 1)) >= 2 else shift.get("agms", [])) if _clean(x)]
+    by_agms: dict[str, list[dict]] = {a: [] for a in roster}
+    for item in sessions:
+        by_agms.setdefault(_clean(item["start"].get("agms")), []).append(item)
+
+    start_at = datetime.fromisoformat(shift["start_at"])
+    end_at = datetime.fromisoformat(shift.get("end_at")) if shift.get("end_at") else None
+    if target is None:
+        preview_dir = Path(tempfile.gettempdir()) / "TDE_Krystallopigis" / "pdf_preview"
+        preview_dir.mkdir(parents=True, exist_ok=True)
+        target = preview_dir / "ΑΝΑΦΟΡΑ_ΒΑΡΔΙΑΣ.pdf"
+    target = Path(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    body_parts = [
+        "<div class='head'>ΕΛΛΗΝΙΚΗ ΑΣΤΥΝΟΜΙΑ</div>",
+        "<div class='subhead'>Τ.Δ.Ε. ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ</div>",
+        "<div class='subhead'>ΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ ΒΑΡΔΙΑΣ</div>",
+        "<div class='period'>" + _escape_html(
+            f"{start_at:%d/%m/%Y %H:%M}" + (f" - {end_at:%d/%m/%Y %H:%M}" if end_at else " - ΣΕ ΕΞΕΛΙΞΗ")
+        ) + "</div>",
+    ]
+
+    if not roster:
+        body_parts.append("<p class='empty'>Δεν υπάρχουν καταχωρίσεις στη βάρδια.</p>")
+
+    for agms in roster:
+        items = sorted(by_agms.get(agms, []), key=lambda x: x["start_dt"])
+        person = people_by_agms.get(agms)
+        if person:
+            name = _clean(f"{person.rank} {person.surname} {person.given_name}")
+        elif items:
+            st = items[0]["start"]
+            name = _clean(f"{st.get('rank','')} {st.get('full_name','')}") or f"ΑΓΜΣ {agms}"
+        else:
+            name = f"ΑΓΜΣ {agms}"
+
+        body_parts.append(f"<div class='person'>{_escape_html(name)}</div>")
+        if not items:
+            body_parts.append("<div class='row muted'>Χωρίς καταχώριση θέσης</div>")
+        for item in items:
+            st = item["start"]
+            sdt = item["start_dt"]
+            edt = item["end_dt"]
+            end_text = edt.strftime("%H:%M") if edt else "ΑΝΟΙΚΤΗ"
+            direction = _clean(st.get("direction")).upper()
+            details = f"ΘΕΣΗ {st.get('position','')}"
+            if direction:
+                details += f"   {direction}"
+            details += f"   {sdt:%H:%M} - {end_text}"
+            body_parts.append(f"<div class='row'>{_escape_html(details)}</div>")
+
+    officer = shift.get("start_officer") or shift.get("end_officer") or {}
+    officer_name = _clean(f"{officer.get('rank','')} {officer.get('full_name','')}")
+    place_date = f"Κρυσταλλοπηγή, την {end_at:%d/%m/%Y}" if end_at else "Κρυσταλλοπηγή, την __________"
+    body_parts.extend([
+        f"<div class='place'>{_escape_html(place_date)}</div>",
+        "<div class='signature'><b>Ο ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ</b><br><br>"
+        + _escape_html(officer_name)
+        + "<br><br>Υπογραφή: __________________________</div>",
+    ])
+
+    html = """<!doctype html><html><head><meta charset='utf-8'><style>
+        body { font-family: Arial, 'Segoe UI', sans-serif; font-size: 10.5pt; color: #000; }
+        .head { text-align:center; font-size:14pt; font-weight:700; margin-bottom:4px; }
+        .subhead { text-align:center; font-size:12.5pt; font-weight:700; margin-bottom:3px; }
+        .period { text-align:center; margin:10px 0 18px 0; }
+        .person { font-weight:700; margin-top:11px; margin-bottom:3px; }
+        .row { margin-left:14px; margin-bottom:2px; }
+        .muted { font-style:italic; }
+        .empty { margin-top:20px; }
+        .place { text-align:center; margin-top:28px; }
+        .signature { text-align:center; margin-top:12px; }
+    </style></head><body>""" + "".join(body_parts) + "</body></html>"
+
+    printer = QPrinter(QPrinter.HighResolution)
+    printer.setOutputFormat(QPrinter.PdfFormat)
+    printer.setOutputFileName(str(target))
+    printer.setPageSize(QPageSize(QPageSize.A4))
+    printer.setPageMargins(QMarginsF(15, 15, 15, 15), QPageLayout.Millimeter)
+
+    document = QTextDocument()
+    document.setHtml(html)
+    document.print_(printer)
+
+    if not target.is_file() or target.stat().st_size == 0:
+        raise RuntimeError("Δεν δημιουργήθηκε το PDF της αναφοράς.")
+    return target
+
+
+def _format_seconds(total_seconds: int) -> str:
+    total_minutes = max(0, int(total_seconds) // 60)
+    hours, minutes = divmod(total_minutes, 60)
+    return f"{hours:02d}:{minutes:02d}"
+
+
+def summarize_personnel_history(rows: list[dict]) -> dict:
+    total = 0
+    by_direction: dict[str, int] = {}
+    by_position: dict[str, int] = {}
+    by_direction_position: dict[tuple[str, str], int] = {}
+    people: set[str] = set()
+    for row in rows:
+        sec = max(0, int(row.get("duration_seconds") or 0))
+        total += sec
+        direction = _clean(row.get("direction")).upper() or "—"
+        position = _clean(row.get("position")) or "—"
+        agms = _clean(row.get("agms"))
+        if agms:
+            people.add(agms)
+        by_direction[direction] = by_direction.get(direction, 0) + sec
+        by_position[position] = by_position.get(position, 0) + sec
+        key = (direction, position)
+        by_direction_position[key] = by_direction_position.get(key, 0) + sec
+    return {
+        "total_seconds": total,
+        "people": len(people),
+        "by_direction": by_direction,
+        "by_position": by_position,
+        "by_direction_position": by_direction_position,
+    }
+
+
+def create_personnel_history_pdf(
+    rows: list[dict],
+    criteria: str,
+    summary: dict | None = None,
+    target: str | Path | None = None,
+) -> Path:
+    """Render the current personnel-history search as an on-demand PDF."""
+    try:
+        from PySide6.QtCore import QMarginsF
+        from PySide6.QtGui import QPageLayout, QPageSize, QTextDocument
+        from PySide6.QtPrintSupport import QPrinter
+    except Exception as exc:
+        raise RuntimeError("Δεν είναι διαθέσιμη η δημιουργία PDF.") from exc
+
+    if not rows:
+        raise ValueError("Δεν υπάρχουν αποτελέσματα για εξαγωγή σε PDF.")
+
+    summary = summary or summarize_personnel_history(rows)
+    if target is None:
+        preview_dir = Path(tempfile.gettempdir()) / "TDE_Krystallopigis" / "pdf_preview"
+        preview_dir.mkdir(parents=True, exist_ok=True)
+        target = preview_dir / "ΙΣΤΟΡΙΚΟ_ΠΡΟΣΩΠΙΚΟΥ.pdf"
+    target = Path(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    direction_lines = []
+    for direction in ("ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"):
+        seconds = int(summary.get("by_direction", {}).get(direction, 0))
+        if not seconds:
+            continue
+        positions = []
+        for (item_direction, position), sec in sorted(
+            summary.get("by_direction_position", {}).items(),
+            key=lambda x: (x[0][0], x[0][1]),
+        ):
+            if item_direction == direction and sec:
+                positions.append(f"Θέση {position}: {_format_seconds(sec)}")
+        detail = " · ".join(positions)
+        direction_lines.append(
+            f"<div><b>{_escape_html(direction)}:</b> {_format_seconds(seconds)}"
+            + (f" &nbsp; ({_escape_html(detail)})" if detail else "")
+            + "</div>"
+        )
+
+    body_rows = []
+    for row in rows:
+        try:
+            sdt = datetime.fromisoformat(_clean(row.get("start_at")))
+            edt = datetime.fromisoformat(_clean(row.get("end_at")))
+            date_text = sdt.strftime("%d/%m/%Y")
+            start_text = sdt.strftime("%H:%M:%S")
+            end_text = edt.strftime("%H:%M:%S")
+        except Exception:
+            date_text = _clean(row.get("start_at"))[:10]
+            start_text = _clean(row.get("start_at"))[11:19]
+            end_text = _clean(row.get("end_at"))[11:19]
+        name = _clean(f"{row.get('rank','')} {row.get('surname','')} {row.get('given_name','')}") or _clean(row.get("full_name"))
+        cells = [
+            date_text,
+            _clean(row.get("agms")),
+            name,
+            _clean(row.get("position")),
+            _clean(row.get("direction")),
+            start_text,
+            end_text,
+            _format_seconds(int(row.get("duration_seconds") or 0)),
+        ]
+        body_rows.append("<tr>" + "".join(f"<td>{_escape_html(str(v))}</td>" for v in cells) + "</tr>")
+
+    html = """<!doctype html><html><head><meta charset='utf-8'><style>
+        body { font-family: Arial, 'Segoe UI', sans-serif; font-size: 9pt; color:#000; }
+        h1 { text-align:center; font-size:14pt; margin:0 0 3px 0; }
+        h2 { text-align:center; font-size:12pt; margin:0 0 12px 0; }
+        .criteria { margin:8px 0 12px 0; padding:7px; border:1px solid #999; }
+        .summary { margin:8px 0 12px 0; line-height:1.45; }
+        table { width:100%; border-collapse:collapse; }
+        th, td { border:1px solid #777; padding:4px; }
+        th { font-weight:bold; background:#eee; }
+        .right { text-align:right; }
+    </style></head><body>
+    <h1>ΕΛΛΗΝΙΚΗ ΑΣΤΥΝΟΜΙΑ</h1>
+    <h2>Τ.Δ.Ε. ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ — ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ</h2>
+    <div class='criteria'><b>Κριτήρια:</b> """ + _escape_html(criteria or "Χωρίς πρόσθετα φίλτρα") + """</div>
+    <div class='summary'>
+      <div><b>Καταχωρίσεις:</b> """ + str(len(rows)) + """ &nbsp; <b>Άτομα:</b> """ + str(summary.get("people", 0)) + """</div>
+      <div><b>Συνολικός χρόνος:</b> """ + _format_seconds(int(summary.get("total_seconds", 0))) + """</div>
+      """ + "".join(direction_lines) + """
+    </div>
+    <table>
+      <tr><th>ΗΜΕΡΟΜΗΝΙΑ</th><th>ΑΓΜΣ</th><th>ΟΝΟΜΑ</th><th>ΘΕΣΗ</th><th>ΚΑΤΕΥΘΥΝΣΗ</th><th>ΕΝΑΡΞΗ</th><th>ΛΗΞΗ</th><th>ΔΙΑΡΚΕΙΑ</th></tr>
+      """ + "".join(body_rows) + """
+    </table></body></html>"""
+
+    printer = QPrinter(QPrinter.HighResolution)
+    printer.setOutputFormat(QPrinter.PdfFormat)
+    printer.setOutputFileName(str(target))
+    printer.setPageSize(QPageSize(QPageSize.A4))
+    printer.setPageOrientation(QPageLayout.Landscape)
+    printer.setPageMargins(QMarginsF(10, 10, 10, 10), QPageLayout.Millimeter)
+    document = QTextDocument()
+    document.setHtml(html)
+    document.print_(printer)
+    if not target.is_file() or target.stat().st_size == 0:
+        raise RuntimeError("Δεν δημιουργήθηκε το PDF του ιστορικού προσωπικού.")
+    return target
+
+
+def archive_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[str, PersonnelRecord] | None = None) -> Path:
+    """Compatibility alias: reports are rendered on demand, not stored in the archive."""
+    return create_shift_pdf(store, shift, people_by_agms)
+
+
 GREEK_MONTH_GENITIVE = {
     1: "Ιανουαρίου", 2: "Φεβρουαρίου", 3: "Μαρτίου", 4: "Απριλίου",
     5: "Μαΐου", 6: "Ιουνίου", 7: "Ιουλίου", 8: "Αυγούστου",
@@ -1304,13 +2224,13 @@ def build_shift_html(store: SharedEventStore, day: date, cutoff: str) -> str:
 
 
 def run(args=None) -> int:
-    from PySide6.QtCore import Qt, QDate, QDateTime, QTimer, QRectF
-    from PySide6.QtGui import QColor, QFont, QPainter, QPen, QIcon, QPixmap, QPalette
+    from PySide6.QtCore import Qt, QDate, QDateTime, QTime, QTimer, QRectF, QPointF
+    from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen, QIcon, QPixmap, QPalette, QPainterPath
     from PySide6.QtWidgets import (
         QApplication, QComboBox, QDateEdit, QFormLayout, QFrame, QHBoxLayout,
         QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout, QWidget,
         QInputDialog, QDialog, QDateTimeEdit, QSpinBox, QListWidget, QListWidgetItem, QFileDialog, QToolButton,
-        QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
+        QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QCheckBox, QTimeEdit, QPlainTextEdit
     )
 
     THEME_DARK = {
@@ -1319,33 +2239,148 @@ def run(args=None) -> int:
         "border": "#214565", "danger": "#b73a4a", "ok": "#1f9d70", "input": "#0a1726",
     }
     THEME_LIGHT = {
-        "window": "#eaf1f8", "panel": "#f6f9fc", "card": "#ffffff", "card2": "#eef5fb",
-        "text": "#0d2238", "muted": "#587086", "accent": "#0c68bd", "accent2": "#084d8c",
-        "border": "#c4d5e5", "danger": "#b12f41", "ok": "#16795a", "input": "#ffffff",
+        "window": "#eef3f7", "panel": "#f7fafc", "card": "#ffffff", "card2": "#e7eef3",
+        "text": "#153247", "muted": "#667b8b", "accent": "#173d5d", "accent2": "#0d2940",
+        "border": "#d4e0e8", "danger": "#a93646", "ok": "#177d72", "input": "#ffffff",
     }
 
+    def _police_emblem_pixmap(size: int = 82) -> QPixmap:
+        pixmap = QPixmap()
+        try:
+            pixmap.loadFromData(base64.b64decode(POLICE_EMBLEM_JPEG_B64))
+        except Exception:
+            return QPixmap()
+        return pixmap.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+
+    class GreeceMapWidget(QWidget):
+        """Small vector Greece silhouette for the common TDE service header."""
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self._dark = False
+            self.setFixedSize(86, 86)
+            self.setToolTip("ΕΛΛΑΔΑ")
+
+        def set_dark(self, dark: bool):
+            self._dark = bool(dark)
+            self.update()
+
+        def paintEvent(self, event):
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.Antialiasing)
+            rect = self.rect().adjusted(5, 4, -5, -4)
+            sx, sy = rect.width() / 100.0, rect.height() / 100.0
+            ox, oy = rect.left(), rect.top()
+
+            def point(x, y):
+                return QPointF(ox + x * sx, oy + y * sy)
+
+            def path_from(points):
+                p = QPainterPath()
+                p.moveTo(point(*points[0]))
+                for xy in points[1:]:
+                    p.lineTo(point(*xy))
+                p.closeSubpath()
+                return p
+
+            fill = QColor("#8fb6d1" if self._dark else "#173d5d")
+            edge = QColor("#d9ecf8" if self._dark else "#0d2940")
+            painter.setBrush(fill)
+            painter.setPen(QPen(edge, 1.25))
+
+            # Mainland + Chalkidiki/Epirus approximation.
+            mainland = [
+                (14,25),(20,18),(30,15),(39,14),(48,10),(57,12),(64,8),(73,11),
+                (82,8),(88,13),(86,20),(79,24),(72,24),(68,30),(63,27),(59,34),
+                (62,40),(57,46),(51,44),(47,51),(49,57),(44,62),(39,58),(35,61),
+                (31,56),(27,57),(24,51),(19,51),(17,45),(12,42),(13,35),(9,32)
+            ]
+            painter.drawPath(path_from(mainland))
+
+            # Peloponnese.
+            peloponnese = [
+                (33,58),(41,60),(48,65),(49,72),(45,80),(38,85),(31,82),(26,76),
+                (27,69),(23,66),(27,61)
+            ]
+            painter.drawPath(path_from(peloponnese))
+
+            # Evia.
+            painter.drawPath(path_from([(64,39),(68,35),(70,39),(68,48),(65,53),(63,49)]))
+
+            # Crete.
+            painter.drawPath(path_from([(35,91),(46,89),(57,91),(69,89),(78,91),(72,95),(59,95),(47,94),(38,96)]))
+
+            # Ionian and Aegean islands.
+            for x, y, rx, ry in [
+                (7,39,2.4,4.0),(12,55,1.8,2.7),(58,57,1.7,2.1),(65,53,1.6,2.0),
+                (71,48,1.8,2.3),(75,58,2.0,2.8),(69,66,1.5,2.0),(80,68,2.0,2.6),
+                (86,57,2.4,3.0),(88,76,2.0,3.8),(61,72,1.4,2.0),(74,77,1.4,1.8)
+            ]:
+                center = point(x, y)
+                painter.drawEllipse(center, rx * sx, ry * sy)
+            painter.end()
+
+
+    class ArrowComboBox(QComboBox):
+        """QComboBox with a permanently visible dropdown arrow."""
+        def paintEvent(self, event):
+            super().paintEvent(event)
+            painter = QPainter(self)
+            painter.setPen(self.palette().color(QPalette.Text))
+            arrow_rect = self.rect().adjusted(self.width() - 28, 0, -2, 0)
+            painter.drawText(arrow_rect, Qt.AlignCenter, "▼")
+            painter.end()
+
     def _theme_stylesheet(theme: str) -> str:
-        t = THEME_DARK if _clean(theme).lower() == "dark" else THEME_LIGHT
+        dark = _clean(theme).lower() == "dark"
+        t = THEME_DARK if dark else THEME_LIGHT
+        metal_top = "#294b66" if dark else "#ffffff"
+        metal_mid = "#18364f" if dark else "#d9e2e8"
+        metal_low = "#10283d" if dark else "#aebdc8"
+        metal_edge = "#355d7d" if dark else "#8298a8"
+        primary_top = "#3f6d8d" if dark else "#477495"
+        primary_mid = "#1b4a6d" if dark else "#173d5d"
+        primary_low = "#0b263b" if dark else "#0d2940"
+        header_bg = "#0d1b2b" if dark else "#ffffff"
         return f"""
             QMainWindow, QWidget#rootPanel {{ background: {t['window']}; color: {t['text']}; }}
             QWidget {{ color: {t['text']}; font-family:'Segoe UI'; font-size:10.5pt; }}
             QDialog {{ background: {t['window']}; color: {t['text']}; }}
             QDialog QLabel {{ color: {t['text']}; }}
 
+            QFrame#serviceHeader {{
+                background:{header_bg};
+                border:1px solid {t['border']};
+                border-bottom:3px solid {primary_low};
+                border-radius:18px;
+            }}
+            QLabel#serviceKicker {{
+                color:{t['accent']}; font-size:11px; font-weight:900; letter-spacing:1px;
+            }}
+            QLabel#serviceTitle {{
+                color:{t['text']}; font-size:19px; font-weight:900;
+            }}
+            QLabel#serviceDepartment {{
+                color:{t['text']}; font-size:14px; font-weight:850;
+            }}
+            QLabel#appSubtitle {{
+                color:{t['muted']}; font-size:11px; font-weight:800; letter-spacing:1px;
+            }}
+
             QFrame#card {{
                 background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['card2']},stop:0.10 {t['card']},stop:1 {t['card']});
-                border:1px solid {t['border']}; border-radius:16px;
+                border:1px solid {t['border']}; border-bottom:3px solid {metal_edge}; border-radius:16px;
             }}
             QLabel#statusBox, QLabel#infoBox {{
                 background:{t['card2']}; border:1px solid {t['border']}; border-radius:10px;
                 padding:9px; color:{t['muted']}; font-weight:700;
             }}
 
-            QLineEdit, QComboBox, QDateEdit, QDateTimeEdit, QSpinBox {{
+            QLineEdit, QComboBox, QDateEdit, QDateTimeEdit, QSpinBox, QTimeEdit, QPlainTextEdit {{
                 background:{t['input']}; color:{t['text']}; border:2px solid {t['border']};
                 border-radius:10px; min-height:36px; padding:4px 9px;
             }}
-            QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QDateTimeEdit:focus, QSpinBox:focus {{
+            QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QDateTimeEdit:focus, QSpinBox:focus, QTimeEdit:focus, QPlainTextEdit:focus {{
                 border:2px solid {t['accent']}; background:{t['card']};
             }}
             QComboBox {{ padding-right:28px; }}
@@ -1353,6 +2388,7 @@ def run(args=None) -> int:
                 width:28px; border-left:1px solid {t['border']}; background:{t['card2']};
                 border-top-right-radius:8px; border-bottom-right-radius:8px;
             }}
+            QComboBox::down-arrow {{ image:none; width:0px; height:0px; }}
             QComboBox QAbstractItemView {{
                 background:{t['card2']}; color:{t['text']}; border:2px solid {t['accent']};
                 selection-background-color:{t['accent']}; selection-color:white; outline:0; padding:4px;
@@ -1370,38 +2406,68 @@ def run(args=None) -> int:
             }}
 
             QPushButton {{
-                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['card2']},stop:1 {t['panel']});
-                color:{t['text']}; border:1px solid {t['border']}; border-bottom:3px solid {t['window']};
-                border-radius:12px; padding:7px 14px; font-weight:750;
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {metal_top}, stop:0.18 {metal_mid}, stop:0.78 {metal_mid}, stop:1 {metal_low});
+                color:{t['text']}; border:1px solid {metal_edge}; border-bottom:4px solid {primary_low};
+                border-radius:11px; padding:7px 14px; font-weight:800;
             }}
             QPushButton:hover {{
-                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['accent']},stop:1 {t['accent2']});
-                color:white; border-color:{t['accent']}; border-bottom-color:{t['window']};
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {primary_top}, stop:0.20 {primary_mid}, stop:1 {primary_low});
+                color:white; border-color:{primary_top}; border-bottom-color:#081b29;
             }}
             QPushButton:pressed {{
-                background:{t['accent2']}; border-bottom-width:1px; padding-top:9px;
+                background:{primary_low}; color:white; border-bottom-width:1px; padding-top:10px;
             }}
             QPushButton:disabled {{
                 color:{t['muted']}; background:{t['panel']}; border-color:{t['border']};
             }}
+
+            QPushButton#metalPrimary {{
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {primary_top}, stop:0.16 {primary_mid}, stop:0.78 {t['accent']}, stop:1 {primary_low});
+                color:white; border:1px solid {primary_top}; border-bottom:5px solid #081b29;
+                border-radius:12px; font-weight:900;
+            }}
+            QPushButton#metalPrimary:hover {{
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 #5685a4, stop:0.20 #2a5b7d, stop:1 {primary_low});
+            }}
+            QPushButton#metalPrimary:pressed {{
+                background:{primary_low}; border-bottom-width:1px; padding-top:11px;
+            }}
+
+            QPushButton#exitButton {{
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {metal_top}, stop:0.25 {metal_mid}, stop:1 {metal_low});
+                color:{t['danger']}; border:1px solid {t['danger']}; border-bottom:4px solid #6f1f2d;
+                font-weight:850;
+            }}
+            QPushButton#exitButton:hover {{ background:{t['danger']}; color:white; }}
+
             QToolButton {{
-                background:{t['card2']}; color:{t['text']}; border:1px solid {t['border']};
-                border-radius:12px; padding:8px 12px; font-weight:700;
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {metal_top},stop:1 {metal_low});
+                color:{t['text']}; border:1px solid {metal_edge}; border-bottom:3px solid {primary_low};
+                border-radius:10px; padding:7px 11px; font-weight:800;
             }}
             QToolButton:hover {{
                 background:{t['accent']}; color:white; border-color:{t['accent']};
             }}
+
             QPushButton#startButton {{
-                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['ok']},stop:1 #0d5f46);
-                color:white; border-color:{t['ok']}; border-bottom:3px solid {t['window']};
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #34a98d,stop:0.18 {t['ok']},stop:1 #0d5f46);
+                color:white; border:1px solid #3ab79a; border-bottom:5px solid #084b37;
                 font-size:17px; font-weight:900; text-align:center;
             }}
+            QPushButton#startButton:pressed {{ border-bottom-width:1px; padding-top:11px; }}
             QPushButton#endButton {{
-                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['danger']},stop:1 #6f1f2d);
-                color:white; border-color:{t['danger']}; border-bottom:3px solid {t['window']};
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #cf5b68,stop:0.18 {t['danger']},stop:1 #6f1f2d);
+                color:white; border:1px solid #d56a75; border-bottom:5px solid #541722;
                 font-size:17px; font-weight:900; text-align:center;
             }}
+            QPushButton#endButton:pressed {{ border-bottom-width:1px; padding-top:11px; }}
         """
+
 
     def _network_icon() -> QIcon:
         pixmap = QPixmap(256, 256)
@@ -1435,14 +2501,33 @@ def run(args=None) -> int:
         def __init__(self, parent=None):
             super().__init__(parent)
             self.active: dict[str, list[dict]] = {}
+            self._worker_text_width = 84
             self.setMinimumSize(760, 560)
+
+        @staticmethod
+        def _worker_display_name(item: dict) -> str:
+            surname = _clean(item.get("surname"))
+            given_name = _clean(item.get("given_name"))
+            full_name = _clean(item.get("full_name"))
+            return _clean(f"{surname} {given_name}") or full_name or "—"
 
         def set_active(self, items: list[dict]):
             grouped: dict[str, list[dict]] = {}
             for item in items:
                 grouped.setdefault(_clean(item.get("position")), []).append(item)
             self.active = grouped
+            font = QFont("Segoe UI", 8, QFont.Bold)
+            metrics = QFontMetrics(font)
+            self._worker_text_width = max(
+                [84] + [metrics.horizontalAdvance(self._worker_display_name(item)) for item in items]
+            )
             self.update()
+
+        def recommended_dialog_width(self) -> int:
+            # The closest booths are 6% of the map width apart. Size the map so
+            # the longest worker name fits without requiring manual stretching.
+            booth_target = min(max(self._worker_text_width + 20, 92), 190)
+            return max(1100, int(booth_target / 0.06) + 90)
 
         def paintEvent(self, event):
             painter = QPainter(self)
@@ -1473,7 +2558,9 @@ def run(args=None) -> int:
             painter.setPen(QColor("#f87171")); painter.drawText(QRectF(w*0.76,h*0.70,w*0.20,h*0.08),Qt.AlignCenter,"ΕΞΟΔΟΣ ↓")
 
             # booths
-            bw = max(54, int(w*0.075)); bh = max(46, int(h*0.075))
+            desired_name_width = min(max(self._worker_text_width + 20, 92), 190)
+            bw = max(54, min(int(w*0.075), desired_name_width))
+            bh = max(52, int(h*0.075))
             for pos,(xf,yf) in self.BOOTH_POS.items():
                 x=int(w*xf); y=int(h*yf)
                 r=QRectF(x,y,bw,bh)
@@ -1498,11 +2585,11 @@ def run(args=None) -> int:
                 if people:
                     names=[]
                     for item in people[:2]:
-                        surname=_clean(item.get("surname")) or _clean(item.get("full_name"))
+                        worker_name = self._worker_display_name(item)
                         ts=_clean(item.get("timestamp")).replace("T"," ")
                         hhmm=ts[11:16] if len(ts)>=16 else ""
                         direction=_clean(item.get("direction"))
-                        names.append(f"{surname}\n{direction} {hhmm}".strip())
+                        names.append(f"{worker_name}\n{direction} {hhmm}".strip())
                     if len(people)>2: names.append(f"+{len(people)-2} ακόμη")
                     painter.setFont(QFont("Segoe UI", 8, QFont.Bold))
                     painter.drawText(QRectF(r.x()+3,r.y()+19,r.width()-6,r.height()-21),Qt.AlignCenter|Qt.TextWordWrap,"\n".join(names))
@@ -1532,6 +2619,17 @@ def run(args=None) -> int:
         def refresh(self):
             items=self.store.active_all()
             self.map.set_active(items)
+            recommended = self.map.recommended_dialog_width()
+            screen = QApplication.primaryScreen()
+            if screen:
+                available = screen.availableGeometry()
+                target_width = min(recommended, max(1100, available.width() - 60))
+                target_height = min(760, max(650, available.height() - 80))
+            else:
+                target_width = min(recommended, 1600)
+                target_height = 760
+            if self.width() < target_width:
+                self.resize(target_width, target_height)
             other=[]
             for x in items:
                 pos=_clean(x.get("position"))
@@ -1549,35 +2647,70 @@ def run(args=None) -> int:
             self.store: SharedEventStore | None = None
             self._pending_prompt_active = False
             self._last_shift_signature = ""
+            self._force_exit = False
+            self._message_dialog_active = False
+            self._app_started_at = datetime.now().isoformat(timespec="seconds")
+            self.client_id = SharedEventStore.local_client_id()
             self.setWindowTitle("Τ.Δ.Ε. Κρυσταλλοπηγής - Καταγραφή Θέσεων")
-            self.resize(1120, 690)
-            self.setMinimumSize(980, 620)
+            emblem_icon = _police_emblem_pixmap(96)
+            if not emblem_icon.isNull():
+                self.setWindowIcon(QIcon(emblem_icon))
+            self.resize(1160, 720)
+            self.setMinimumSize(1000, 650)
             self._build()
             self._apply_config()
             self._apply_theme()
             self.shift_timer = QTimer(self)
             self.shift_timer.timeout.connect(self._check_shift_updates)
             self.shift_timer.start(3000)
+            self.communication_timer = QTimer(self)
+            self.communication_timer.timeout.connect(self._communication_tick)
+            self.communication_timer.start(2500)
+            QApplication.instance().aboutToQuit.connect(self._cleanup_client)
+            self._communication_tick()
 
         def _build(self):
             self.root = QWidget(); self.root.setObjectName("rootPanel"); self.setCentralWidget(self.root)
             outer = QVBoxLayout(self.root); outer.setContentsMargins(28,22,28,20); outer.setSpacing(14)
 
-            header = QHBoxLayout()
-            titles = QVBoxLayout(); titles.setSpacing(2)
-            self.title_label = QLabel("Τ.Δ.Ε. ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ")
-            self.title_label.setStyleSheet("font-size:25px;font-weight:900;letter-spacing:1px")
+            self.header_card = QFrame()
+            self.header_card.setObjectName("serviceHeader")
+            header = QHBoxLayout(self.header_card)
+            header.setContentsMargins(20, 12, 20, 12)
+            header.setSpacing(16)
+
+            self.police_logo = QLabel()
+            self.police_logo.setFixedSize(86, 86)
+            self.police_logo.setAlignment(Qt.AlignCenter)
+            emblem = _police_emblem_pixmap(78)
+            if not emblem.isNull():
+                self.police_logo.setPixmap(emblem)
+            header.addWidget(self.police_logo)
+
+            titles = QVBoxLayout()
+            titles.setSpacing(1)
+            self.police_title_label = QLabel("ΕΛΛΗΝΙΚΗ ΑΣΤΥΝΟΜΙΑ")
+            self.police_title_label.setObjectName("serviceKicker")
+            self.title_label = QLabel("ΔΙΕΥΘΥΝΣΗ ΑΣΤΥΝΟΜΙΑΣ ΦΛΩΡΙΝΑΣ")
+            self.title_label.setObjectName("serviceTitle")
+            self.department_label = QLabel("ΤΜΗΜΑ ΔΙΑΒΑΤΗΡΙΑΚΟΥ ΕΛΕΓΧΟΥ ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ")
+            self.department_label.setObjectName("serviceDepartment")
             self.subtitle_label = QLabel("ΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ")
-            self.subtitle_label.setStyleSheet("font-size:15px;font-weight:800;letter-spacing:2px")
-            titles.addWidget(self.title_label); titles.addWidget(self.subtitle_label)
-            header.addLayout(titles); header.addStretch()
+            self.subtitle_label.setObjectName("appSubtitle")
+            for label in (self.police_title_label, self.title_label, self.department_label, self.subtitle_label):
+                label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                titles.addWidget(label)
+            header.addLayout(titles, 1)
 
             self.theme_btn = QToolButton()
-            self.theme_btn.setMinimumWidth(112)
+            self.theme_btn.setMinimumWidth(108)
             self.theme_btn.setMinimumHeight(34)
             self.theme_btn.clicked.connect(self._toggle_theme)
-            header.addWidget(self.theme_btn)
-            outer.addLayout(header)
+            header.addWidget(self.theme_btn, 0, Qt.AlignTop)
+
+            self.greece_map = GreeceMapWidget()
+            header.addWidget(self.greece_map, 0, Qt.AlignRight | Qt.AlignVCenter)
+            outer.addWidget(self.header_card)
 
             columns = QHBoxLayout(); columns.setSpacing(16)
 
@@ -1591,8 +2724,8 @@ def run(args=None) -> int:
             self.agms_input = QLineEdit(); self.agms_input.setPlaceholderText("Πληκτρολογήστε Α.Γ.Μ.Σ.")
             self.agms_input.setMinimumHeight(42); self.agms_input.textChanged.connect(self._agms_changed)
             self.person_name = QLabel("—"); self.person_name.setWordWrap(True); self.person_name.setStyleSheet("font-size:16px;font-weight:800")
-            self.direction = QComboBox(); self.direction.addItems(["ΕΙΣΟΔΟΣ","ΕΞΟΔΟΣ"]); self.direction.setMinimumHeight(42)
-            self.position = QComboBox(); self.position.setMinimumHeight(42); self.position.currentTextChanged.connect(self._position_changed)
+            self.direction = ArrowComboBox(); self.direction.addItems(["ΕΙΣΟΔΟΣ","ΕΞΟΔΟΣ"]); self.direction.setMinimumHeight(42)
+            self.position = ArrowComboBox(); self.position.setMinimumHeight(42); self.position.currentTextChanged.connect(self._position_changed)
             operator_form.addRow("Α.Γ.Μ.Σ.", self.agms_input)
             operator_form.addRow("Αστυνομικός", self.person_name)
             operator_form.addRow("ΚΑΤΕΥΘΥΝΣΗ", self.direction)
@@ -1639,6 +2772,17 @@ def run(args=None) -> int:
             shift_buttons.addWidget(self.start_shift_btn); shift_buttons.addWidget(self.end_shift_btn)
             right.addLayout(shift_buttons)
 
+            self.comm_status = QLabel("ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ — αναμονή σύνδεσης")
+            self.comm_status.setObjectName("infoBox")
+            self.comm_status.setAlignment(Qt.AlignCenter)
+            self.comm_status.setWordWrap(True)
+            self.messages_btn = QPushButton("ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ")
+            self.messages_btn.setObjectName("metalPrimary")
+            self.messages_btn.setMinimumHeight(42)
+            self.messages_btn.clicked.connect(self._open_messages)
+            right.addWidget(self.comm_status)
+            right.addWidget(self.messages_btn)
+
             columns.addWidget(self.operator_card, 1); columns.addWidget(self.officer_card, 1)
             outer.addLayout(columns, 1)
 
@@ -1647,6 +2791,7 @@ def run(args=None) -> int:
             self.archive_btn = QPushButton("ΑΡΧΕΙΟ ΑΝΑΦΟΡΩΝ")
             self.history_btn = QPushButton("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ")
             for b in (self.print_btn, self.archive_btn, self.history_btn):
+                b.setObjectName("metalPrimary")
                 b.setMinimumHeight(44)
                 bottom.addWidget(b)
             self.print_btn.clicked.connect(self._report)
@@ -1657,18 +2802,346 @@ def run(args=None) -> int:
             bottom2 = QHBoxLayout(); bottom2.setSpacing(10)
             self.active_positions_btn = QPushButton("ΕΝΕΡΓΕΣ ΘΕΣΕΙΣ ΕΡΓΑΣΙΑΣ")
             self.personnel_list_btn = QPushButton("ΕΠΙΛΟΓΗ ΛΙΣΤΑΣ ΠΡΟΣΩΠΙΚΟΥ")
-            for b in (self.active_positions_btn, self.personnel_list_btn):
+            self.exit_app_btn = QPushButton("ΕΞΟΔΟΣ ΑΠΟ ΤΟ ΠΡΟΓΡΑΜΜΑ")
+            self.active_positions_btn.setObjectName("metalPrimary")
+            self.personnel_list_btn.setObjectName("metalPrimary")
+            self.exit_app_btn.setObjectName("exitButton")
+            for b in (self.active_positions_btn, self.personnel_list_btn, self.exit_app_btn):
                 b.setMinimumHeight(44)
                 bottom2.addWidget(b)
             self.active_positions_btn.clicked.connect(self._live_map)
             self.personnel_list_btn.clicked.connect(self._choose_personnel_list)
+            self.exit_app_btn.clicked.connect(self._request_real_exit)
             outer.addLayout(bottom2)
 
             self.info = QLabel(""); self.info.setObjectName("infoBox"); self.info.setAlignment(Qt.AlignCenter); self.info.setWordWrap(True)
             outer.addWidget(self.info)
-            self.credits = QLabel("ΑΝΘ/ΜΟΣ ΔΑΝΙΗΛΙΔΗΣ ΗΡΑΚΛΗΣ   •   ΑΝΘ/ΜΟΣ ΚΛΙΑΝΗΣ ΧΡΗΣΤΟΣ")
-            self.credits.setAlignment(Qt.AlignCenter)
-            outer.addWidget(self.credits)
+        def closeEvent(self, event):
+            if self._force_exit:
+                event.accept()
+                return
+            event.ignore()
+            self.showMinimized()
+
+        def _cleanup_client(self):
+            if self.store:
+                try:
+                    self.store.remove_client_heartbeat(self.client_id)
+                except Exception:
+                    pass
+
+        def _request_real_exit(self):
+            answer = QMessageBox.question(
+                self,
+                "Έξοδος από το πρόγραμμα",
+                "Να κλείσει πραγματικά η εφαρμογή;\n\n"
+                "Αν κλείσει, δεν θα λαμβάνει μηνύματα / οδηγίες του Αξιωματικού Υπηρεσίας.",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if answer != QMessageBox.Yes:
+                return
+            self._force_exit = True
+            self._cleanup_client()
+            QApplication.quit()
+
+        def _sender_payload(self) -> dict:
+            officer = self._officer_selected() if hasattr(self, "officer_agms") else None
+            if officer:
+                return SharedEventStore._person_payload(officer)
+            return {
+                "computer": socket.gethostname(),
+                "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+            }
+
+        def _client_worker_labels(self, clients: list[dict]) -> dict[str, str]:
+            active_by_computer: dict[str, list[dict]] = {}
+            if self.store:
+                for item in self.store.active_all():
+                    active_by_computer.setdefault(_clean(item.get("computer")).upper(), []).append(item)
+            labels = {}
+            for client in clients:
+                cid = _clean(client.get("client_id"))
+                computer = _clean(client.get("computer"))
+                user = _clean(client.get("user"))
+                people = active_by_computer.get(computer.upper(), [])
+                worker_text = ""
+                if people:
+                    names = []
+                    for item in people:
+                        name = _clean(
+                            f"{item.get('rank','')} {item.get('surname','')} {item.get('given_name','')}"
+                        ) or _clean(item.get("full_name"))
+                        pos = _clean(item.get("position"))
+                        direction = _clean(item.get("direction"))
+                        names.append(f"{name} — Θέση {pos} {direction}".strip())
+                    worker_text = " | " + " / ".join(names)
+                labels[cid] = f"{computer} — {user}{worker_text}"
+            return labels
+
+        def _communication_tick(self):
+            if not self.store:
+                return
+            if not _windows_session_is_active():
+                self._force_exit = True
+                self._cleanup_client()
+                QApplication.quit()
+                return
+            try:
+                state = "ΕΛΑΧΙΣΤΟΠΟΙΗΜΕΝΟ" if self.isMinimized() else "ΑΝΟΙΧΤΟ"
+                self.store.write_client_heartbeat(self.client_id, {
+                    "app_started_at": self._app_started_at,
+                    "window_state": state,
+                })
+                online = self.store.online_clients()
+                if hasattr(self, "comm_status"):
+                    self.comm_status.setText(f"ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ — ενεργοί σταθμοί: {len(online)}")
+            except Exception:
+                return
+
+            try:
+                commands = self.store.pending_commands(self.client_id)
+                if commands:
+                    command = commands[0]
+                    if _clean(command.get("type")).upper() == "CLOSE_APP":
+                        self.store.acknowledge_command(_clean(command.get("command_id")), self.client_id)
+                        self._force_exit = True
+                        self._cleanup_client()
+                        QApplication.quit()
+                        return
+            except Exception:
+                pass
+
+            if self._message_dialog_active:
+                return
+            try:
+                pending = self.store.pending_messages(self.client_id)
+            except Exception:
+                pending = []
+            if pending:
+                self._show_message_alarm(pending[0])
+
+        def _show_message_alarm(self, message: dict):
+            if not self.store:
+                return
+            self._message_dialog_active = True
+            try:
+                priority = _clean(message.get("priority")).upper() or "ΟΔΗΓΙΑ"
+                sender = message.get("sender") or {}
+                sender_name = _clean(
+                    f"{sender.get('rank','')} {sender.get('surname','')} {sender.get('given_name','')}"
+                ) or _clean(sender.get("full_name")) or _clean(sender.get("user")) or "Αξιωματικός Υπηρεσίας"
+                created = _clean(message.get("created_at")).replace("T", " ")
+                text_value = _clean(message.get("text"))
+
+                self.showNormal()
+                self.raise_()
+                self.activateWindow()
+                if priority in {"ΟΔΗΓΙΑ", "ΕΠΕΙΓΟΝ"}:
+                    QApplication.beep()
+
+                box = QMessageBox(self)
+                box.setWindowTitle(f"{priority} — ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ")
+                box.setIcon(QMessageBox.Warning if priority == "ΕΠΕΙΓΟΝ" else QMessageBox.Information)
+                box.setText(
+                    f"<b>{priority}</b><br><br>"
+                    f"<b>Από:</b> {_escape_html(sender_name)}<br>"
+                    f"<b>Ώρα:</b> {_escape_html(created)}<br><br>"
+                    f"{_escape_html(text_value)}"
+                )
+                box.setStandardButtons(QMessageBox.Ok)
+                ack_button = box.button(QMessageBox.Ok)
+                if ack_button:
+                    ack_button.setText("ΕΛΑΒΑ ΓΝΩΣΗ")
+                    ack_button.setMinimumWidth(180)
+                    ack_button.setMinimumHeight(44)
+                box.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+                box.exec()
+                self.store.acknowledge_message(_clean(message.get("message_id")), self.client_id)
+            finally:
+                self._message_dialog_active = False
+
+        def _resolve_message_targets(self, selector: str, online: list[dict]) -> list[str]:
+            selector = _clean(selector)
+            own = self.client_id
+            if selector == "ALL":
+                return [_clean(x.get("client_id")) for x in online if _clean(x.get("client_id")) != own]
+            if selector.startswith("CLIENT:"):
+                cid = selector.split(":", 1)[1]
+                return [cid] if cid and cid != own else []
+
+            wanted_computers: set[str] = set()
+            if self.store:
+                for item in self.store.active_all():
+                    match = False
+                    if selector.startswith("DIR:"):
+                        match = _clean(item.get("direction")).upper() == selector.split(":", 1)[1].upper()
+                    elif selector.startswith("POS:"):
+                        match = _clean(item.get("position")) == selector.split(":", 1)[1]
+                    if match:
+                        wanted_computers.add(_clean(item.get("computer")).upper())
+            return [
+                _clean(client.get("client_id"))
+                for client in online
+                if _clean(client.get("client_id")) != own
+                and _clean(client.get("computer")).upper() in wanted_computers
+            ]
+
+        def _open_messages(self):
+            if not self.store:
+                QMessageBox.warning(self, "Μηνύματα", "Δεν είναι διαθέσιμος ο κοινός φάκελος δεδομένων.")
+                return
+            officer = self._officer_selected()
+            if not officer:
+                QMessageBox.warning(self, "Μηνύματα", "Πληκτρολογήστε πρώτα έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας.")
+                return
+
+            dlg = QDialog(self)
+            dlg.setWindowTitle("ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ ΑΞΙΩΜΑΤΙΚΟΥ ΥΠΗΡΕΣΙΑΣ")
+            dlg.resize(900, 680)
+            lay = QVBoxLayout(dlg)
+            lay.setContentsMargins(20, 18, 20, 18)
+            lay.setSpacing(10)
+
+            online = self.store.online_clients()
+            labels = self._client_worker_labels(online)
+            recipient = ArrowComboBox()
+            recipient.addItem("ΟΛΟΙ ΟΙ ΕΝΕΡΓΟΙ ΣΤΑΘΜΟΙ", "ALL")
+            recipient.addItem("ΟΛΗ Η ΕΙΣΟΔΟΣ", "DIR:ΕΙΣΟΔΟΣ")
+            recipient.addItem("ΟΛΗ Η ΕΞΟΔΟΣ", "DIR:ΕΞΟΔΟΣ")
+            active_positions = sorted({_clean(x.get("position")) for x in self.store.active_all() if _clean(x.get("position"))})
+            for pos in active_positions:
+                recipient.addItem(f"ΘΕΣΗ {pos}", f"POS:{pos}")
+            for client in online:
+                cid = _clean(client.get("client_id"))
+                if cid and cid != self.client_id:
+                    recipient.addItem(labels.get(cid, cid), f"CLIENT:{cid}")
+
+            priority = ArrowComboBox()
+            priority.addItems(["ΟΔΗΓΙΑ", "ΕΠΕΙΓΟΝ", "ΕΝΗΜΕΡΩΣΗ"])
+            editor = QPlainTextEdit()
+            editor.setPlaceholderText("Γράψτε τι πρέπει να γνωρίζουν ή να κάνουν οι παραλήπτες...")
+            editor.setMaximumHeight(130)
+
+            form = QFormLayout()
+            form.addRow("Παραλήπτες", recipient)
+            form.addRow("Τύπος", priority)
+            form.addRow("Μήνυμα / οδηγία", editor)
+            lay.addLayout(form)
+
+            send_btn = QPushButton("ΑΠΟΣΤΟΛΗ")
+            send_btn.setMinimumHeight(44)
+            lay.addWidget(send_btn)
+
+            online_label = QLabel(f"Ενεργοί σταθμοί αυτή τη στιγμή: {len(online)}")
+            lay.addWidget(online_label)
+            sent_list = QListWidget()
+            lay.addWidget(sent_list, 1)
+
+            def refresh_sent():
+                sent_list.clear()
+                for msg in self.store.recent_sent_messages(20):
+                    targets = [_clean(x) for x in msg.get("targets", []) if _clean(x)]
+                    acks = msg.get("acknowledgements", [])
+                    created = _clean(msg.get("created_at")).replace("T", " ")
+                    target_label = _clean(msg.get("target_label")) or "—"
+                    body = _clean(msg.get("text"))
+                    if len(body) > 90:
+                        body = body[:87] + "..."
+                    sent_list.addItem(
+                        f"{created} | {msg.get('priority','')} | {target_label} | "
+                        f"ΕΛΑΒΑΝ {len(acks)}/{len(targets)} | {body}"
+                    )
+
+            def do_send():
+                target_ids = self._resolve_message_targets(_clean(recipient.currentData()), online)
+                try:
+                    self.store.send_message(
+                        SharedEventStore._person_payload(officer),
+                        target_ids,
+                        editor.toPlainText(),
+                        priority.currentText(),
+                        recipient.currentText(),
+                    )
+                    editor.clear()
+                    refresh_sent()
+                except Exception as exc:
+                    QMessageBox.warning(dlg, "Αποστολή", str(exc))
+
+            send_btn.clicked.connect(do_send)
+            refresh_sent()
+            dlg.exec()
+
+        def _close_remaining_clients_dialog(self):
+            if not self.store:
+                return
+            clients = [
+                c for c in self.store.online_clients()
+                if _clean(c.get("client_id")) and _clean(c.get("client_id")) != self.client_id
+            ]
+            if not clients:
+                QMessageBox.information(self, "Τερματικά", "Δεν υπάρχουν άλλα ενεργά τερματικά.")
+                return
+
+            labels = self._client_worker_labels(clients)
+            dlg = QDialog(self)
+            dlg.setWindowTitle("ΕΝΕΡΓΑ ΤΕΡΜΑΤΙΚΑ ΜΕΤΑ ΤΗ ΛΗΞΗ ΒΑΡΔΙΑΣ")
+            dlg.resize(820, 520)
+            lay = QVBoxLayout(dlg)
+            title = QLabel(
+                "Οι παρακάτω εφαρμογές παραμένουν ανοικτές.\n"
+                "Επιλέξτε ποιες θέλετε να κλείσετε ή κλείστε τες όλες."
+            )
+            title.setWordWrap(True)
+            lay.addWidget(title)
+            listing = QListWidget()
+            for client in clients:
+                cid = _clean(client.get("client_id"))
+                item = QListWidgetItem(labels.get(cid, cid))
+                item.setData(Qt.UserRole, cid)
+                item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+                item.setCheckState(Qt.Unchecked)
+                listing.addItem(item)
+            lay.addWidget(listing, 1)
+
+            buttons = QHBoxLayout()
+            selected_btn = QPushButton("ΚΛΕΙΣΕ ΕΠΙΛΕΓΜΕΝΟΥΣ")
+            all_btn = QPushButton("ΚΛΕΙΣΕ ΟΛΟΥΣ")
+            leave_btn = QPushButton("ΑΣΤΑ ΑΝΟΙΧΤΑ")
+            buttons.addWidget(selected_btn)
+            buttons.addWidget(all_btn)
+            buttons.addStretch()
+            buttons.addWidget(leave_btn)
+            lay.addLayout(buttons)
+
+            def send_to(ids: list[str]):
+                ids = [x for x in ids if x]
+                if not ids:
+                    QMessageBox.warning(dlg, "Τερματικά", "Δεν έχει επιλεγεί κανένα τερματικό.")
+                    return
+                sender = self._sender_payload()
+                for cid in ids:
+                    self.store.send_close_command(sender, cid, "Λήξη βάρδιας από Αξιωματικό Υπηρεσίας")
+                QMessageBox.information(
+                    dlg,
+                    "Τερματικά",
+                    f"Εστάλη εντολή κλεισίματος σε {len(ids)} τερματικά. "
+                    "Θα κλείσουν μόλις παραλάβουν την εντολή."
+                )
+                dlg.accept()
+
+            def close_selected():
+                ids = []
+                for i in range(listing.count()):
+                    item = listing.item(i)
+                    if item.checkState() == Qt.Checked:
+                        ids.append(_clean(item.data(Qt.UserRole)))
+                send_to(ids)
+
+            selected_btn.clicked.connect(close_selected)
+            all_btn.clicked.connect(lambda: send_to([_clean(x.get("client_id")) for x in clients]))
+            leave_btn.clicked.connect(dlg.reject)
+            dlg.exec()
 
         def _toggle_theme(self):
             self.config.theme = "light" if _clean(self.config.theme).lower() == "dark" else "dark"
@@ -1694,10 +3167,8 @@ def run(args=None) -> int:
 
                 self.setStyleSheet(_theme_stylesheet(self.config.theme))
                 self.theme_btn.setText("☀ ΦΩΤΕΙΝΟ" if dark else "☾ ΣΚΟΤΕΙΝΟ")
-                self.subtitle_label.setStyleSheet(
-                    f"font-size:15px;font-weight:800;letter-spacing:2px;color:{t['muted']}"
-                )
-                self.credits.setStyleSheet(f"color:{t['muted']};font-size:9px")
+                if hasattr(self, "greece_map"):
+                    self.greece_map.set_dark(dark)
                 self._agms_changed()
                 self._officer_changed()
             finally:
@@ -1952,10 +3423,13 @@ def run(args=None) -> int:
             if not ok: return
             try:
                 final=self.store.end_officer_shift(p)
-                archive=archive_shift_docx(self.store,final,self._people_by_agms)
-                create_shift_docx(self.store,final,self._people_by_agms)
                 self._refresh_shift_status()
-                QMessageBox.information(self,"Λήξη βάρδιας",f"Η βάρδια ολοκληρώθηκε.\nΑρχειοθετήθηκε: {archive}")
+                QMessageBox.information(
+                    self,
+                    "Λήξη βάρδιας",
+                    "Η βάρδια ολοκληρώθηκε και αποθηκεύτηκε στο αρχείο αναφορών (SQLite)."
+                )
+                self._close_remaining_clients_dialog()
             except Exception as exc:
                 QMessageBox.critical(self,"Λήξη βάρδιας",str(exc))
 
@@ -1964,7 +3438,20 @@ def run(args=None) -> int:
             shift=self.store.current_shift() if self.store else None
             p=self._officer_selected() if hasattr(self,"officer_agms") else None
             if not shift:
-                self.shift_status.setText("Δεν υπάρχει ενεργή βάρδια.")
+                report_shift = self.store.current_report_shift() if self.store else None
+                if report_shift and _clean(report_shift.get("status")).upper() == "FINALIZED":
+                    ended = _clean(report_shift.get("end_at"))
+                    try:
+                        ended_dt = datetime.fromisoformat(ended)
+                        ended_text = f"{ended_dt:%d/%m/%Y %H:%M}"
+                    except Exception:
+                        ended_text = ended.replace("T", " ") if ended else "—"
+                    self.shift_status.setText(
+                        f"Η προηγούμενη βάρδια έληξε {ended_text}.\n"
+                        "Η αναφορά της παραμένει ΤΡΕΧΟΥΣΑ μέχρι την έναρξη της επόμενης."
+                    )
+                else:
+                    self.shift_status.setText("Δεν υπάρχει ενεργή βάρδια.")
                 self.start_shift_btn.setEnabled(bool(p and self.store))
                 self.end_shift_btn.setEnabled(False)
                 return
@@ -2127,11 +3614,12 @@ def run(args=None) -> int:
                     QMessageBox.warning(dlg, "Έλεγχος", "Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."); return
                 try:
                     shift = self.store.end_officer_shift(p)
-                    archive = archive_shift_docx(self.store, shift, self._people_by_agms)
-                    current = create_shift_docx(self.store, shift, self._people_by_agms)
-                    QMessageBox.information(dlg, "Λήξη βάρδιας", f"Η βάρδια ολοκληρώθηκε.\nΑρχειοθετήθηκε: {archive}")
+                    QMessageBox.information(
+                        dlg,
+                        "Λήξη βάρδιας",
+                        "Η βάρδια ολοκληρώθηκε και αποθηκεύτηκε στο αρχείο αναφορών (SQLite)."
+                    )
                     refresh_members()
-                    _open_path(current)
                 except Exception as exc:
                     QMessageBox.critical(dlg, "Λήξη βάρδιας", str(exc))
 
@@ -2163,12 +3651,14 @@ def run(args=None) -> int:
                 QMessageBox.warning(self, "Έλεγχος", "Δεν είναι διαθέσιμο το .tde_runtime."); return
             shift = self.store.sync_active_shift()
             if not shift:
-                QMessageBox.information(self, "Τρέχον έντυπο", "Δεν υπάρχει ενεργή βάρδια."); return
+                shift = self.store.current_report_shift()
+            if not shift:
+                QMessageBox.information(self, "Τρέχον έντυπο", "Δεν υπάρχει διαθέσιμη τρέχουσα αναφορά."); return
             try:
-                path = create_shift_docx(self.store, shift, self._people_by_agms)
+                path = create_shift_pdf(self.store, shift, self._people_by_agms)
                 _open_path(path)
             except Exception as exc:
-                QMessageBox.critical(self, "Word", str(exc))
+                QMessageBox.critical(self, "PDF", str(exc))
 
         def _open_files(self):
             if not self.store:
@@ -2182,32 +3672,130 @@ def run(args=None) -> int:
             if not self.store:
                 QMessageBox.warning(self, "Έλεγχος", "Δεν είναι διαθέσιμο το .tde_runtime.")
                 return
-            shifts = [s for s in self.store.list_shifts() if _clean(s.get("status")).upper() == "FINALIZED" and _clean(s.get("end_at"))]
-            dlg = QDialog(self); dlg.setWindowTitle("ΑΡΧΕΙΟ ΑΝΑΦΟΡΩΝ ΒΑΡΔΙΑΣ"); dlg.resize(780, 560)
-            lay = QVBoxLayout(dlg); lay.setContentsMargins(20,18,20,18); lay.setSpacing(10)
-            title = QLabel("ΑΡΧΕΙΟ ΑΝΑΦΟΡΩΝ ΒΑΡΔΙΑΣ"); title.setStyleSheet("font-size:18px;font-weight:900")
+
+            dlg = QDialog(self)
+            dlg.setWindowTitle("ΑΡΧΕΙΟ ΑΝΑΦΟΡΩΝ ΒΑΡΔΙΑΣ")
+            dlg.resize(900, 650)
+            lay = QVBoxLayout(dlg)
+            lay.setContentsMargins(20, 18, 20, 18)
+            lay.setSpacing(10)
+
+            title = QLabel("ΑΡΧΕΙΟ ΑΝΑΦΟΡΩΝ ΒΑΡΔΙΑΣ")
+            title.setStyleSheet("font-size:18px;font-weight:900")
             lay.addWidget(title)
+
+            hint = QLabel(
+                "Εμφανίζονται αρχικά οι 20 πιο πρόσφατες βάρδιες. "
+                "Χρησιμοποιήστε ημερομηνίες ή/και Αξιωματικό Υπηρεσίας για παλαιότερη αναζήτηση."
+            )
+            hint.setWordWrap(True)
+            lay.addWidget(hint)
+
+            filters = QFormLayout()
+            date_filter = QCheckBox("Χρήση ημερομηνιών")
+            from_date = QDateEdit()
+            to_date = QDateEdit()
+            from_date.setCalendarPopup(True)
+            to_date.setCalendarPopup(True)
+            from_date.setDisplayFormat("dd/MM/yyyy")
+            to_date.setDisplayFormat("dd/MM/yyyy")
+            from_date.setDate(QDate.currentDate().addMonths(-1))
+            to_date.setDate(QDate.currentDate())
+            from_date.setEnabled(False)
+            to_date.setEnabled(False)
+            officer_edit = QLineEdit()
+            officer_edit.setPlaceholderText("Επώνυμο, όνομα ή Α.Γ.Μ.Σ. Αξιωματικού")
+            filters.addRow("", date_filter)
+            filters.addRow("Από", from_date)
+            filters.addRow("Έως", to_date)
+            filters.addRow("Αξιωματικός", officer_edit)
+            lay.addLayout(filters)
+
+            actions = QHBoxLayout()
+            search_btn = QPushButton("ΑΝΑΖΗΤΗΣΗ")
+            clear_btn = QPushButton("ΚΑΘΑΡΙΣΜΟΣ")
+            actions.addWidget(search_btn)
+            actions.addWidget(clear_btn)
+            actions.addStretch()
+            lay.addLayout(actions)
+
             listing = QListWidget()
-            for shift in shifts:
-                item = QListWidgetItem(shift_report_title(shift))
-                item.setData(Qt.UserRole, _clean(shift.get("shift_id")))
-                listing.addItem(item)
             lay.addWidget(listing, 1)
-            info = QLabel(f"Συνολικές ολοκληρωμένες βάρδιες: {len(shifts)}")
+            info = QLabel("")
             lay.addWidget(info)
+
             buttons = QHBoxLayout()
             open_btn = QPushButton("ΑΝΟΙΓΜΑ ΑΝΑΦΟΡΑΣ")
-            folder_btn = QPushButton("ΑΝΟΙΓΜΑ ΦΑΚΕΛΟΥ")
             close_btn = QPushButton("ΚΛΕΙΣΙΜΟ")
-            buttons.addWidget(open_btn); buttons.addWidget(folder_btn); buttons.addStretch(); buttons.addWidget(close_btn)
+            buttons.addWidget(open_btn)
+            buttons.addStretch()
+            buttons.addWidget(close_btn)
             lay.addLayout(buttons)
+
+            current_results: list[dict] = []
+
+            def shift_label(shift: dict) -> str:
+                try:
+                    start_at = datetime.fromisoformat(_clean(shift.get("start_at")))
+                    end_at = datetime.fromisoformat(_clean(shift.get("end_at")))
+                    period = f"{start_at:%d/%m/%Y %H:%M} – {end_at:%d/%m/%Y %H:%M}"
+                except Exception:
+                    period = _clean(shift.get("start_at")).replace("T", " ")
+                officer = shift.get("start_officer") or shift.get("end_officer") or {}
+                officer_name = _clean(
+                    f"{officer.get('rank','')} {officer.get('surname','')} {officer.get('given_name','')}"
+                ) or _clean(officer.get("full_name")) or "ΧΩΡΙΣ ΟΝΟΜΑ"
+                return f"{period}  |  {officer_name}"
+
+            def fill_results(shifts: list[dict], default_view: bool = False):
+                nonlocal current_results
+                current_results = shifts
+                listing.clear()
+                for shift in shifts:
+                    item = QListWidgetItem(shift_label(shift))
+                    item.setData(Qt.UserRole, _clean(shift.get("shift_id")))
+                    listing.addItem(item)
+                if default_view:
+                    info.setText(f"Τελευταίες ολοκληρωμένες βάρδιες: {len(shifts)}")
+                else:
+                    info.setText(f"Βρέθηκαν {len(shifts)} βάρδιες.")
+                if shifts:
+                    listing.setCurrentRow(0)
+
+            def show_recent():
+                fill_results(self.store.search_finalized_shifts(limit=20), default_view=True)
+
+            def do_search():
+                use_dates = date_filter.isChecked()
+                d_from = from_date.date().toPython() if use_dates else None
+                d_to = to_date.date().toPython() if use_dates else None
+                if d_from and d_to and d_from > d_to:
+                    QMessageBox.warning(dlg, "Αναφορές", "Η ημερομηνία «Από» είναι μετά την ημερομηνία «Έως».")
+                    return
+                officer_query = _clean(officer_edit.text())
+                if not use_dates and not officer_query:
+                    show_recent()
+                    return
+                shifts = self.store.search_finalized_shifts(
+                    date_from=d_from,
+                    date_to=d_to,
+                    officer_query=officer_query,
+                )
+                fill_results(shifts)
+
+            def clear_filters():
+                date_filter.setChecked(False)
+                from_date.setDate(QDate.currentDate().addMonths(-1))
+                to_date.setDate(QDate.currentDate())
+                officer_edit.clear()
+                show_recent()
 
             def selected_shift():
                 item = listing.currentItem()
                 if not item:
                     return None
                 sid = _clean(item.data(Qt.UserRole))
-                return next((s for s in shifts if _clean(s.get("shift_id")) == sid), None)
+                return next((s for s in current_results if _clean(s.get("shift_id")) == sid), None)
 
             def open_report():
                 shift = selected_shift()
@@ -2215,15 +3803,21 @@ def run(args=None) -> int:
                     QMessageBox.warning(dlg, "Αναφορές", "Επιλέξτε πρώτα μία βάρδια.")
                     return
                 try:
-                    path = archive_shift_docx(self.store, shift, self._people_by_agms)
+                    path = create_shift_pdf(self.store, shift, self._people_by_agms)
                     _open_path(path)
                 except Exception as exc:
                     QMessageBox.critical(dlg, "Αναφορές", str(exc))
 
+            date_filter.toggled.connect(from_date.setEnabled)
+            date_filter.toggled.connect(to_date.setEnabled)
+            search_btn.clicked.connect(do_search)
+            clear_btn.clicked.connect(clear_filters)
             open_btn.clicked.connect(open_report)
             listing.itemDoubleClicked.connect(lambda *_: open_report())
-            folder_btn.clicked.connect(lambda: _open_path(self.store.archive))
+            officer_edit.returnPressed.connect(do_search)
             close_btn.clicked.connect(dlg.accept)
+
+            show_recent()
             dlg.exec()
 
         def _personnel_history(self):
@@ -2237,37 +3831,131 @@ def run(args=None) -> int:
                 QMessageBox.warning(self, "Ιστορικό προσωπικού", "Λανθασμένος κωδικός.")
                 return
 
-            dlg = QDialog(self); dlg.setWindowTitle("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ"); dlg.resize(1100, 720)
-            lay = QVBoxLayout(dlg); lay.setContentsMargins(20,18,20,18); lay.setSpacing(10)
-            title = QLabel("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ"); title.setStyleSheet("font-size:18px;font-weight:900")
+            dlg = QDialog(self)
+            dlg.setWindowTitle("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ")
+            dlg.resize(1180, 780)
+            lay = QVBoxLayout(dlg)
+            lay.setContentsMargins(20, 18, 20, 18)
+            lay.setSpacing(9)
+
+            title = QLabel("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ")
+            title.setStyleSheet("font-size:18px;font-weight:900")
             lay.addWidget(title)
+            hint = QLabel(
+                "Βασικές αναζητήσεις: «ΠΟΥ/ΠΟΤΕ ΔΟΥΛΕΨΕ Ο ΤΑΔΕ;» ή «ΠΟΙΟΣ ΗΤΑΝ ΕΚΕΙ ΤΟΤΕ;». "
+                "Τα υπόλοιπα φίλτρα είναι προαιρετικά και συνδυάζονται μεταξύ τους."
+            )
+            hint.setWordWrap(True)
+            lay.addWidget(hint)
+
+            workers = self.store.list_personnel_workers()
+            person_combo = ArrowComboBox()
+            person_combo.setEditable(True)
+            person_combo.addItem("ΟΛΟΙ ΟΣΟΙ ΕΧΟΥΝ ΔΟΥΛΕΨΕΙ", "")
+            for worker in workers:
+                label = _clean(
+                    f"{worker.get('rank','')} {worker.get('surname','')} {worker.get('given_name','')} "
+                    f"(ΑΓΜΣ {worker.get('agms','')})"
+                )
+                person_combo.addItem(label, _clean(worker.get("agms")))
+
+            use_dates = QCheckBox("Φίλτρο ημερομηνιών")
+            from_date = QDateEdit()
+            to_date = QDateEdit()
+            from_date.setCalendarPopup(True)
+            to_date.setCalendarPopup(True)
+            from_date.setDisplayFormat("dd/MM/yyyy")
+            to_date.setDisplayFormat("dd/MM/yyyy")
+            from_date.setDate(QDate.currentDate().addMonths(-1))
+            to_date.setDate(QDate.currentDate())
+            from_date.setEnabled(False)
+            to_date.setEnabled(False)
+
+            positions = self.store.list_session_positions()
+            position_combo = ArrowComboBox()
+            position_combo.addItem("ΟΛΕΣ")
+            for pos in positions:
+                position_combo.addItem(pos)
+            direction_combo = ArrowComboBox()
+            direction_combo.addItems(["ΟΛΑ", "ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"])
+
+            use_clock = QCheckBox("Φίλτρο ώρας μέσα στην ημέρα")
+            time_from = QTimeEdit()
+            time_to = QTimeEdit()
+            time_from.setDisplayFormat("HH:mm")
+            time_to.setDisplayFormat("HH:mm")
+            time_from.setTime(QTime(0, 0))
+            time_to.setTime(QTime(23, 59))
+            time_from.setEnabled(False)
+            time_to.setEnabled(False)
+
+            exact_moment = QCheckBox("Στιγμιαία αναζήτηση — ποιος ήταν εκεί τότε")
+            moment_date = QDateEdit()
+            moment_time = QTimeEdit()
+            moment_date.setCalendarPopup(True)
+            moment_date.setDisplayFormat("dd/MM/yyyy")
+            moment_date.setDate(QDate.currentDate())
+            moment_time.setDisplayFormat("HH:mm")
+            moment_time.setTime(QTime.currentTime())
+            moment_date.setEnabled(False)
+            moment_time.setEnabled(False)
+
+            min_duration = QSpinBox()
+            max_duration = QSpinBox()
+            for box in (min_duration, max_duration):
+                box.setRange(0, 24 * 60)
+                box.setSuffix(" λεπτά")
+                box.setSpecialValueText("Χωρίς όριο")
+            min_duration.setToolTip("Ελάχιστη διάρκεια μίας συνεχόμενης παραμονής στη θέση")
+            max_duration.setToolTip("Μέγιστη διάρκεια μίας συνεχόμενης παραμονής στη θέση")
 
             form = QFormLayout()
-            person_edit = QLineEdit(); person_edit.setPlaceholderText("ΑΓΜΣ, επώνυμο ή όνομα — αρκεί και μόνο αυτό")
-            from_edit = QLineEdit(); from_edit.setPlaceholderText("π.χ. 01/10/2026 (προαιρετικό)")
-            to_edit = QLineEdit(); to_edit.setPlaceholderText("π.χ. 31/10/2026 (προαιρετικό)")
-            position_combo = QComboBox(); position_combo.addItem("ΟΛΕΣ")
-            for pos in self.config.positions or []:
-                if _clean(pos):
-                    position_combo.addItem(_clean(pos))
-            direction_combo = QComboBox(); direction_combo.addItems(["ΟΛΑ", "ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"])
-            form.addRow("Άτομο", person_edit)
-            form.addRow("Από ημερομηνία", from_edit)
-            form.addRow("Έως ημερομηνία", to_edit)
+            form.addRow("Άτομο", person_combo)
+            form.addRow("", use_dates)
+            form.addRow("Από ημερομηνία", from_date)
+            form.addRow("Έως ημερομηνία", to_date)
             form.addRow("Θέση", position_combo)
             form.addRow("Κατεύθυνση", direction_combo)
+            form.addRow("", use_clock)
+            form.addRow("Ώρα από", time_from)
+            form.addRow("Ώρα έως", time_to)
+            form.addRow("", exact_moment)
+            form.addRow("Ημερομηνία στιγμής", moment_date)
+            form.addRow("Ώρα στιγμής", moment_time)
+            form.addRow("Διάρκεια από", min_duration)
+            form.addRow("Διάρκεια έως", max_duration)
             lay.addLayout(form)
+
+            quick = QHBoxLayout()
+            person_mode_btn = QPushButton("ΠΟΥ / ΠΟΤΕ ΔΟΥΛΕΨΕ Ο ΤΑΔΕ;")
+            moment_mode_btn = QPushButton("ΠΟΙΟΣ ΗΤΑΝ ΕΚΕΙ ΤΟΤΕ;")
+            quick.addWidget(person_mode_btn)
+            quick.addWidget(moment_mode_btn)
+            quick.addStretch()
+            lay.addLayout(quick)
 
             actions = QHBoxLayout()
             search_btn = QPushButton("ΑΝΑΖΗΤΗΣΗ")
             clear_btn = QPushButton("ΚΑΘΑΡΙΣΜΟΣ")
-            actions.addWidget(search_btn); actions.addWidget(clear_btn); actions.addStretch()
+            pdf_btn = QPushButton("PDF ΑΠΟΤΕΛΕΣΜΑΤΩΝ")
+            actions.addWidget(search_btn)
+            actions.addWidget(clear_btn)
+            actions.addWidget(pdf_btn)
+            actions.addStretch()
             lay.addLayout(actions)
 
-            result_label = QLabel("Συμπληρώστε ένα ή περισσότερα κριτήρια.")
+            summary_box = QLabel("")
+            summary_box.setWordWrap(True)
+            summary_box.setObjectName("infoBox")
+            lay.addWidget(summary_box)
+
+            result_label = QLabel("")
             lay.addWidget(result_label)
+
             table = QTableWidget(0, 8)
-            table.setHorizontalHeaderLabels(["ΗΜΕΡΟΜΗΝΙΑ", "ΑΓΜΣ", "ΟΝΟΜΑ", "ΘΕΣΗ", "ΚΑΤΕΥΘΥΝΣΗ", "ΕΝΑΡΞΗ", "ΛΗΞΗ", "ΔΙΑΡΚΕΙΑ"])
+            table.setHorizontalHeaderLabels(
+                ["ΗΜΕΡΟΜΗΝΙΑ", "ΑΓΜΣ", "ΟΝΟΜΑ", "ΘΕΣΗ", "ΚΑΤΕΥΘΥΝΣΗ", "ΕΝΑΡΞΗ", "ΛΗΞΗ", "ΔΙΑΡΚΕΙΑ"]
+            )
             table.setAlternatingRowColors(True)
             table.setEditTriggers(QAbstractItemView.NoEditTriggers)
             table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -2275,92 +3963,211 @@ def run(args=None) -> int:
             table.horizontalHeader().setStretchLastSection(True)
             lay.addWidget(table, 1)
 
-            def norm(value):
-                raw = _clean(value).upper()
-                raw = "".join(ch for ch in unicodedata.normalize("NFD", raw) if unicodedata.category(ch) != "Mn")
-                return re.sub(r"\s+", " ", raw)
+            current_rows: list[dict] = []
+            current_criteria = ""
 
-            def parse_date(value):
-                value = _clean(value)
-                if not value:
-                    return None
-                for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d"):
-                    try:
-                        return datetime.strptime(value, fmt).date()
-                    except ValueError:
-                        pass
-                raise ValueError(f"Μη έγκυρη ημερομηνία: {value}")
+            def qtime_to_time(value: QTime) -> dtime:
+                return dtime(value.hour(), value.minute())
 
-            def do_search():
-                query = norm(person_edit.text())
+            def selected_person_query() -> str:
+                text_value = _clean(person_combo.currentText())
+                if _norm_search(text_value) == _norm_search("ΟΛΟΙ ΟΣΟΙ ΕΧΟΥΝ ΔΟΥΛΕΨΕΙ"):
+                    return ""
+                idx = person_combo.currentIndex()
+                if idx >= 0 and text_value == _clean(person_combo.itemText(idx)):
+                    data = person_combo.itemData(idx)
+                    if _clean(data):
+                        return _clean(data)
+                return text_value
+
+            def summary_text(rows: list[dict]) -> str:
+                summary = summarize_personnel_history(rows)
+                line1 = (
+                    f"Καταχωρίσεις: {len(rows)}   |   Άτομα: {summary['people']}   |   "
+                    f"Συνολικός χρόνος: {_format_seconds(summary['total_seconds'])}"
+                )
+                parts = [line1]
+                for direction in ("ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"):
+                    sec = int(summary["by_direction"].get(direction, 0))
+                    if not sec:
+                        continue
+                    pos_parts = []
+                    for (d, pos), psec in sorted(summary["by_direction_position"].items(), key=lambda x: (x[0][0], x[0][1])):
+                        if d == direction and psec:
+                            pos_parts.append(f"Θέση {pos}: {_format_seconds(psec)}")
+                    detail = " · ".join(pos_parts)
+                    parts.append(f"{direction}: {_format_seconds(sec)}" + (f"   |   {detail}" if detail else ""))
+                return "\n".join(parts)
+
+            def criteria_text() -> str:
+                bits = []
+                pq = selected_person_query()
+                if pq:
+                    bits.append(f"Άτομο: {person_combo.currentText()}")
+                else:
+                    bits.append("Άτομο: ΟΛΟΙ")
+                if exact_moment.isChecked():
+                    bits.append(
+                        f"Στιγμή: {moment_date.date().toString('dd/MM/yyyy')} {moment_time.time().toString('HH:mm')}"
+                    )
+                elif use_dates.isChecked():
+                    bits.append(
+                        f"Ημερομηνίες: {from_date.date().toString('dd/MM/yyyy')}–{to_date.date().toString('dd/MM/yyyy')}"
+                    )
                 pos = _clean(position_combo.currentText())
-                direction = _clean(direction_combo.currentText()).upper()
-                if not query and not _clean(from_edit.text()) and not _clean(to_edit.text()) and pos == "ΟΛΕΣ" and direction == "ΟΛΑ":
-                    QMessageBox.warning(dlg, "Ιστορικό", "Συμπληρώστε τουλάχιστον ένα κριτήριο.")
-                    return
-                try:
-                    date_from = parse_date(from_edit.text())
-                    date_to = parse_date(to_edit.text())
-                except ValueError as exc:
-                    QMessageBox.warning(dlg, "Ιστορικό", str(exc))
-                    return
-                if date_from and date_to and date_from > date_to:
-                    QMessageBox.warning(dlg, "Ιστορικό", "Η ημερομηνία «Από» είναι μετά την ημερομηνία «Έως».")
-                    return
+                direction = _clean(direction_combo.currentText())
+                if pos != "ΟΛΕΣ":
+                    bits.append(f"Θέση: {pos}")
+                if direction != "ΟΛΑ":
+                    bits.append(f"Κατεύθυνση: {direction}")
+                if use_clock.isChecked() and not exact_moment.isChecked():
+                    bits.append(f"Ώρες: {time_from.time().toString('HH:mm')}–{time_to.time().toString('HH:mm')}")
+                if min_duration.value():
+                    bits.append(f"Διάρκεια ≥ {min_duration.value()} λεπτά")
+                if max_duration.value():
+                    bits.append(f"Διάρκεια ≤ {max_duration.value()} λεπτά")
+                return " | ".join(bits)
 
-                rows = []
-                for session in self.store.completed_sessions_all():
-                    st = session["start"]
-                    sdt = session["start_dt"]; edt = session["end_dt"]
-                    agms = _clean(st.get("agms"))
-                    person = self._people_by_agms.get(agms)
-                    if person:
-                        name = _clean(f"{person.rank} {person.surname} {person.given_name}")
-                        hay = norm(f"{person.agms} {person.rank} {person.surname} {person.given_name} {person.full_name}")
-                    else:
-                        name = _clean(f"{st.get('rank','')} {st.get('full_name','')}")
-                        hay = norm(f"{agms} {name}")
-                    if query and query not in hay:
-                        continue
-                    if date_from and sdt.date() < date_from:
-                        continue
-                    if date_to and sdt.date() > date_to:
-                        continue
-                    position = _clean(st.get("position"))
-                    item_direction = _clean(st.get("direction")).upper()
-                    if pos != "ΟΛΕΣ" and position != pos:
-                        continue
-                    if direction != "ΟΛΑ" and item_direction != direction:
-                        continue
-                    minutes = max(0, int((edt - sdt).total_seconds() // 60))
-                    hours, mins = divmod(minutes, 60)
-                    rows.append((sdt, [
-                        sdt.strftime("%d/%m/%Y"), agms, name, position, item_direction,
-                        sdt.strftime("%H:%M"), edt.strftime("%H:%M"), f"{hours:02d}:{mins:02d}"
-                    ]))
-
-                rows.sort(key=lambda x: x[0], reverse=True)
+            def render_rows(rows: list[dict], label_prefix: str = "Βρέθηκαν"):
+                nonlocal current_rows, current_criteria
+                current_rows = rows
+                current_criteria = criteria_text()
                 table.setRowCount(len(rows))
-                for r, (_, values) in enumerate(rows):
+                for r, row in enumerate(rows):
+                    try:
+                        sdt = datetime.fromisoformat(row["start_at"])
+                        edt = datetime.fromisoformat(row["end_at"])
+                        date_text = sdt.strftime("%d/%m/%Y")
+                        start_text = sdt.strftime("%H:%M:%S")
+                        end_text = edt.strftime("%H:%M:%S")
+                    except Exception:
+                        date_text = _clean(row.get("start_at"))[:10]
+                        start_text = _clean(row.get("start_at"))[11:19]
+                        end_text = _clean(row.get("end_at"))[11:19]
+                    name = _clean(f"{row.get('rank','')} {row.get('surname','')} {row.get('given_name','')}") or _clean(row.get("full_name"))
+                    values = [
+                        date_text,
+                        _clean(row.get("agms")),
+                        name,
+                        _clean(row.get("position")),
+                        _clean(row.get("direction")),
+                        start_text,
+                        end_text,
+                        _format_seconds(int(row.get("duration_seconds") or 0)),
+                    ]
                     for col, value in enumerate(values):
                         table.setItem(r, col, QTableWidgetItem(str(value)))
-                result_label.setText(f"Βρέθηκαν {len(rows)} καταχωρίσεις.")
+                result_label.setText(f"{label_prefix} {len(rows)} καταχωρίσεις.")
+                summary_box.setText(summary_text(rows) if rows else "Δεν βρέθηκαν καταχωρίσεις με αυτά τα κριτήρια.")
+
+            def do_search():
+                d_from = from_date.date().toPython() if use_dates.isChecked() and not exact_moment.isChecked() else None
+                d_to = to_date.date().toPython() if use_dates.isChecked() and not exact_moment.isChecked() else None
+                if d_from and d_to and d_from > d_to:
+                    QMessageBox.warning(dlg, "Ιστορικό", "Η ημερομηνία «Από» είναι μετά την ημερομηνία «Έως».")
+                    return
+                moment = None
+                if exact_moment.isChecked():
+                    qd = moment_date.date()
+                    qt = moment_time.time()
+                    moment = datetime(qd.year(), qd.month(), qd.day(), qt.hour(), qt.minute())
+                tf = qtime_to_time(time_from.time()) if use_clock.isChecked() and not exact_moment.isChecked() else None
+                tt = qtime_to_time(time_to.time()) if use_clock.isChecked() and not exact_moment.isChecked() else None
+                if max_duration.value() and min_duration.value() and max_duration.value() < min_duration.value():
+                    QMessageBox.warning(dlg, "Ιστορικό", "Η μέγιστη διάρκεια είναι μικρότερη από την ελάχιστη.")
+                    return
+
+                rows = self.store.search_personnel_sessions(
+                    person_query=selected_person_query(),
+                    date_from=d_from,
+                    date_to=d_to,
+                    position=_clean(position_combo.currentText()),
+                    direction=_clean(direction_combo.currentText()),
+                    time_from=tf,
+                    time_to=tt,
+                    moment=moment,
+                    min_duration_minutes=min_duration.value(),
+                    max_duration_minutes=max_duration.value(),
+                )
+                render_rows(rows)
                 try:
                     self.store.log_admin_action("PERSONNEL_HISTORY_SEARCH", {
-                        "query": _clean(person_edit.text()), "from": _clean(from_edit.text()), "to": _clean(to_edit.text()),
-                        "position": pos, "direction": direction, "results": len(rows)
+                        "criteria": criteria_text(), "results": len(rows)
                     })
                 except Exception:
                     pass
 
             def clear_search():
-                person_edit.clear(); from_edit.clear(); to_edit.clear()
-                position_combo.setCurrentIndex(0); direction_combo.setCurrentIndex(0)
-                table.setRowCount(0); result_label.setText("Συμπληρώστε ένα ή περισσότερα κριτήρια.")
+                person_combo.setCurrentIndex(0)
+                use_dates.setChecked(False)
+                from_date.setDate(QDate.currentDate().addMonths(-1))
+                to_date.setDate(QDate.currentDate())
+                position_combo.setCurrentIndex(0)
+                direction_combo.setCurrentIndex(0)
+                use_clock.setChecked(False)
+                time_from.setTime(QTime(0, 0))
+                time_to.setTime(QTime(23, 59))
+                exact_moment.setChecked(False)
+                moment_date.setDate(QDate.currentDate())
+                moment_time.setTime(QTime.currentTime())
+                min_duration.setValue(0)
+                max_duration.setValue(0)
+                rows = self.store.search_personnel_sessions(limit=100)
+                render_rows(rows, "Τελευταίες")
 
+            def export_pdf():
+                if not current_rows:
+                    QMessageBox.warning(dlg, "PDF", "Δεν υπάρχουν αποτελέσματα για εξαγωγή.")
+                    return
+                try:
+                    path = create_personnel_history_pdf(
+                        current_rows,
+                        current_criteria,
+                        summarize_personnel_history(current_rows),
+                    )
+                    _open_path(path)
+                except Exception as exc:
+                    QMessageBox.critical(dlg, "PDF", str(exc))
+
+            def update_filter_states():
+                moment_on = exact_moment.isChecked()
+                date_on = use_dates.isChecked() and not moment_on
+                clock_on = use_clock.isChecked() and not moment_on
+                from_date.setEnabled(date_on)
+                to_date.setEnabled(date_on)
+                time_from.setEnabled(clock_on)
+                time_to.setEnabled(clock_on)
+                moment_date.setEnabled(moment_on)
+                moment_time.setEnabled(moment_on)
+                use_dates.setEnabled(not moment_on)
+                use_clock.setEnabled(not moment_on)
+
+            def choose_person_mode():
+                exact_moment.setChecked(False)
+                person_combo.setFocus()
+                if person_combo.lineEdit():
+                    person_combo.lineEdit().selectAll()
+
+            def choose_moment_mode():
+                person_combo.setCurrentIndex(0)
+                exact_moment.setChecked(True)
+                position_combo.setCurrentIndex(0)
+                direction_combo.setCurrentIndex(0)
+                moment_date.setFocus()
+
+            use_dates.toggled.connect(update_filter_states)
+            use_clock.toggled.connect(update_filter_states)
+            exact_moment.toggled.connect(update_filter_states)
             search_btn.clicked.connect(do_search)
             clear_btn.clicked.connect(clear_search)
-            person_edit.returnPressed.connect(do_search)
+            pdf_btn.clicked.connect(export_pdf)
+            person_mode_btn.clicked.connect(choose_person_mode)
+            moment_mode_btn.clicked.connect(choose_moment_mode)
+            person_combo.lineEdit().returnPressed.connect(do_search)
+
+            update_filter_states()
+            rows = self.store.search_personnel_sessions(limit=100)
+            render_rows(rows, "Τελευταίες")
             dlg.exec()
 
         def _snapshot(self):
