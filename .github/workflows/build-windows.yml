@@ -49,6 +49,7 @@ jobs:
           python "tests\stress_shift_membership_reversal.py"
           python "tests\report_archive_history_regression.py"
           python "tests\current_report_retention_regression.py"
+          python "tests\pdf_report_regression.py"
 
       - name: Generate network application icon
         shell: powershell
