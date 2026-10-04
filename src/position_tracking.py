@@ -2570,11 +2570,13 @@ def run(args=None) -> int:
                     painter.drawText(QRectF(r.x()+3,r.y()+19,r.width()-6,r.height()-21),Qt.AlignCenter|Qt.TextWordWrap,"\n".join(names))
 
     class LiveMapDialog(QDialog):
-        def __init__(self, store: SharedEventStore, parent=None):
+        def __init__(self, store: SharedEventStore, people_by_agms: dict[str, PersonnelRecord], officer_getter, parent=None):
             super().__init__(parent)
             self.store = store
+            self.people_by_agms = people_by_agms
+            self.officer_getter = officer_getter
             self.setWindowTitle("ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ - Ζωντανή εικόνα θέσεων")
-            self.resize(1100, 760)
+            self.resize(1100, 820)
             self.setStyleSheet("""
                 QDialog{background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #eef5f9,stop:1 #dfeaf1);}
                 QLabel{color:#193b50;}
@@ -2588,21 +2590,117 @@ def run(args=None) -> int:
             self.map=BoothMapWidget(); lay.addWidget(self.map,1)
             self.other=QLabel(""); self.other.setWordWrap(True); self.other.setStyleSheet("background:#ffffff;border:1px solid #cfdae2;padding:10px 12px;border-radius:12px;color:#36596f;font-weight:600")
             lay.addWidget(self.other)
+
+            action_row=QHBoxLayout()
+            self.active_person=QComboBox()
+            self.active_person.setMinimumHeight(40)
+            self.active_person.setMinimumWidth(520)
+            self.end_active_btn=QPushButton("ΛΗΞΗ ΕΝΕΡΓΗΣ ΘΕΣΗΣ")
+            self.end_active_btn.setMinimumHeight(40)
+            self.end_active_btn.setStyleSheet("font-weight:900")
+            self.end_active_btn.clicked.connect(self._end_selected_active)
+            action_row.addWidget(QLabel("Ενεργός αστυνομικός:"))
+            action_row.addWidget(self.active_person,1)
+            action_row.addWidget(self.end_active_btn)
+            lay.addLayout(action_row)
+
             self.timer=QTimer(self); self.timer.timeout.connect(self.refresh); self.timer.start(2000)
             self.refresh()
+
+        def _selected_active(self) -> dict | None:
+            agms=_clean(self.active_person.currentData())
+            if not agms:
+                return None
+            return self.store.get_active(agms)
+
+        def _end_selected_active(self):
+            officer=self.officer_getter() if callable(self.officer_getter) else None
+            if not officer:
+                QMessageBox.warning(
+                    self,
+                    "Αξιωματικός Υπηρεσίας",
+                    "Πληκτρολογήστε πρώτα έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας στο κύριο παράθυρο."
+                )
+                return
+            active=self._selected_active()
+            if not active:
+                QMessageBox.information(self,"Λήξη ενεργής θέσης","Η επιλεγμένη καταγραφή δεν είναι πλέον ενεργή.")
+                self.refresh()
+                return
+            agms=_clean(active.get("agms"))
+            person=self.people_by_agms.get(agms)
+            if not person:
+                person=PersonnelRecord(
+                    agms=agms,
+                    rank=_clean(active.get("rank")),
+                    surname=_clean(active.get("surname")),
+                    given_name=_clean(active.get("given_name")),
+                )
+            name=_clean(f"{person.rank} {person.surname} {person.given_name}") or f"ΑΓΜΣ {agms}"
+            pos=_clean(active.get("position"))
+            direction=_clean(active.get("direction"))
+            started=_clean(active.get("timestamp")).replace("T"," ")
+            confirm=QMessageBox.question(
+                self,
+                "Επιβεβαίωση λήξης ενεργής θέσης",
+                f"{name}\nΘέση {pos} — {direction}\nΈναρξη: {started}\n\n"
+                "Να καταχωριστεί ΛΗΞΗ από τον Αξιωματικό Υπηρεσίας;",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if confirm != QMessageBox.Yes:
+                return
+            try:
+                event=self.store.end(person)
+                self.store.log_admin_action("ACTIVE_POSITION_ENDED_BY_OFFICER", {
+                    "officer_agms": officer.agms,
+                    "officer_name": officer.full_name,
+                    "target_agms": agms,
+                    "target_name": person.full_name,
+                    "position": pos,
+                    "direction": direction,
+                    "start_at": _clean(active.get("timestamp")),
+                    "end_at": _clean(event.get("timestamp")),
+                })
+                QMessageBox.information(
+                    self,
+                    "Λήξη ενεργής θέσης",
+                    f"Η θέση του {name} έκλεισε στις {_clean(event.get('timestamp')).replace('T',' ')}."
+                )
+                self.refresh()
+            except Exception as exc:
+                QMessageBox.critical(self,"Δεν καταχωρίστηκε",str(exc))
 
         def refresh(self):
             items=self.store.active_all()
             self.map.set_active(items)
+            current_agms=_clean(self.active_person.currentData())
+            self.active_person.blockSignals(True)
+            self.active_person.clear()
+            for item in items:
+                agms=_clean(item.get("agms"))
+                label=_clean(
+                    f"{item.get('rank','')} {item.get('surname','')} {item.get('given_name','')}"
+                ) or _clean(item.get("full_name")) or f"ΑΓΜΣ {agms}"
+                pos=_clean(item.get("position"))
+                direction=_clean(item.get("direction"))
+                self.active_person.addItem(f"{label} — Θέση {pos} {direction}",agms)
+            if current_agms:
+                idx=self.active_person.findData(current_agms)
+                if idx >= 0:
+                    self.active_person.setCurrentIndex(idx)
+            self.active_person.blockSignals(False)
+            self.end_active_btn.setEnabled(bool(items))
+
             recommended = self.map.recommended_dialog_width()
             screen = QApplication.primaryScreen()
             if screen:
                 available = screen.availableGeometry()
                 target_width = min(recommended, max(1100, available.width() - 60))
-                target_height = min(760, max(650, available.height() - 80))
+                target_height = min(820, max(700, available.height() - 80))
             else:
                 target_width = min(recommended, 1600)
-                target_height = 760
+                target_height = 820
             if self.width() < target_width:
                 self.resize(target_width, target_height)
             other=[]
@@ -3462,7 +3560,7 @@ def run(args=None) -> int:
         def _live_map(self):
             if not self.store:
                 QMessageBox.warning(self,"Έλεγχος","Δεν είναι διαθέσιμος ο φάκελος δεδομένων."); return
-            LiveMapDialog(self.store,self).exec()
+            LiveMapDialog(self.store, self._people_by_agms, self._officer_selected, self).exec()
 
         def _shift_admin(self):
             pass
@@ -3608,7 +3706,7 @@ def run(args=None) -> int:
             if not self.store:
                 QMessageBox.warning(self, "Έλεγχος", "Ορίστε πρώτα κεντρικό φάκελο δεδομένων.")
                 return
-            LiveMapDialog(self.store, self).exec()
+            LiveMapDialog(self.store, self._people_by_agms, self._officer_selected, self).exec()
 
         def _shift_admin(self):
             self._admin()
