@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   publish:
@@ -40,17 +41,54 @@ jobs:
         run: |
           cp "release/Καταγραφή Θέσεων.exe" "TDE_Katagrafi_Theseon.exe"
 
-      - name: Publish GitHub Release
+      - name: Publish current release and clean superseded data
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
+          REPO: ${{ github.repository }}
         shell: bash
         run: |
+          set -euo pipefail
           TITLE="Καταγραφή Θέσεων $TAG"
-          NOTES="Έτοιμη έκδοση Windows για λήψη και χρήση. Κατέβασε το αρχείο TDE_Katagrafi_Theseon.exe από τα Assets."
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release delete-asset "$TAG" "default.exe" -y >/dev/null 2>&1 || true
-            gh release upload "$TAG" "TDE_Katagrafi_Theseon.exe" --clobber
+          NOTES="Έτοιμη λειτουργική έκδοση Windows. Κατέβασε μόνο το TDE_Katagrafi_Theseon.exe από τα Assets."
+
+          if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
+            gh release delete-asset "$TAG" "default.exe" -R "$REPO" -y >/dev/null 2>&1 || true
+            gh release upload "$TAG" "TDE_Katagrafi_Theseon.exe" -R "$REPO" --clobber
+            gh release edit "$TAG" -R "$REPO" --title "$TITLE" --notes "$NOTES" --latest
           else
-            gh release create "$TAG" "TDE_Katagrafi_Theseon.exe" --title "$TITLE" --notes "$NOTES" --latest
+            gh release create "$TAG" "TDE_Katagrafi_Theseon.exe" -R "$REPO" --title "$TITLE" --notes "$NOTES" --latest
           fi
+
+          echo "Removing superseded releases and their tags..."
+          gh release list -R "$REPO" --limit 100 --json tagName --jq '.[].tagName' | while read -r old_tag; do
+            [ -z "$old_tag" ] && continue
+            if [ "$old_tag" != "$TAG" ]; then
+              gh release delete "$old_tag" -R "$REPO" --cleanup-tag -y
+            fi
+          done
+
+          echo "Removing non-current tags..."
+          gh api --paginate "repos/$REPO/git/matching-refs/tags/" --jq '.[].ref' | while read -r ref; do
+            [ -z "$ref" ] && continue
+            tag="${ref#refs/tags/}"
+            if [ "$tag" != "$TAG" ]; then
+              gh api -X DELETE "repos/$REPO/git/refs/tags/$tag" >/dev/null 2>&1 || true
+            fi
+          done
+
+          echo "Removing temporary branches..."
+          gh api --paginate "repos/$REPO/branches?per_page=100" --jq '.[].name' | while read -r branch; do
+            [ -z "$branch" ] && continue
+            if [ "$branch" != "main" ]; then
+              gh api -X DELETE "repos/$REPO/git/refs/heads/$branch" >/dev/null 2>&1 || true
+            fi
+          done
+
+          echo "Removing old Actions artifacts..."
+          gh api --paginate "repos/$REPO/actions/artifacts?per_page=100" --jq '.artifacts[].id' | while read -r artifact_id; do
+            [ -z "$artifact_id" ] && continue
+            gh api -X DELETE "repos/$REPO/actions/artifacts/$artifact_id" >/dev/null 2>&1 || true
+          done
+
+          echo "Repository cleanup complete. Current functional version: $TAG"
