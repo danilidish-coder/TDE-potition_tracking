@@ -3224,12 +3224,14 @@ def run(args=None) -> int:
                 return dtime(value.hour(), value.minute())
 
             def selected_person_query() -> str:
-                data = person_combo.currentData()
-                if _clean(data):
-                    return _clean(data)
                 text_value = _clean(person_combo.currentText())
                 if _norm_search(text_value) == _norm_search("ΟΛΟΙ ΟΣΟΙ ΕΧΟΥΝ ΔΟΥΛΕΨΕΙ"):
                     return ""
+                idx = person_combo.currentIndex()
+                if idx >= 0 and text_value == _clean(person_combo.itemText(idx)):
+                    data = person_combo.itemData(idx)
+                    if _clean(data):
+                        return _clean(data)
                 return text_value
 
             def summary_text(rows: list[dict]) -> str:
