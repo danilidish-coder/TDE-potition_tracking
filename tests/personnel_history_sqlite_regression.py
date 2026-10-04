@@ -75,11 +75,9 @@ with tempfile.TemporaryDirectory() as tmp:
     assert len(morning_window) == 3
 
     long_sessions = store.search_personnel_sessions(min_duration_minutes=100)
-    assert {r["start_event_id"] for r in long_sessions} == {
-        all_rows[1]["start_event_id"] if all_rows[1]["duration_seconds"] == 7200 else all_rows[0]["start_event_id"],
-        next(r["start_event_id"] for r in all_rows if r["agms"] == "100002"),
-    } or len(long_sessions) == 2
     assert len(long_sessions) == 2
+    assert {r["agms"] for r in long_sessions} == {"100001", "100002"}
+    assert {r["position"] for r in long_sessions} == {"1", "9"}
 
     pdf = MOD.create_personnel_history_pdf(
         a_rows,
