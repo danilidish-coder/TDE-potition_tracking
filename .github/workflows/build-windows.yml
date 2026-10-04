@@ -85,6 +85,7 @@ jobs:
           python "tests\visual_flicker_windows.py" --exe "dist\PositionTracking_TEST.exe" --out "visual_flicker"
 
       - name: Upload visual flicker evidence
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: POSITION_TRACKING_VISUAL_FLICKER
@@ -112,6 +113,7 @@ jobs:
           }
 
       - name: Upload Windows test EXE
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: POSITION_TRACKING_WINDOWS_TEST
