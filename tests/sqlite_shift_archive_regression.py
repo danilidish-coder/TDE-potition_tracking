@@ -54,8 +54,11 @@ with tempfile.TemporaryDirectory() as tmp:
     assert current is not None
     assert current["shift_id"] == legacy_shift["shift_id"]
 
-    with sqlite3.connect(store.shift_db) as con:
+    con = sqlite3.connect(store.shift_db)
+    try:
         count = con.execute("SELECT COUNT(*) FROM shifts WHERE shift_id=?", (legacy_shift["shift_id"],)).fetchone()[0]
+    finally:
+        con.close()
     assert count == 1
 
 print("SQLITE_SHIFT_ARCHIVE_REGRESSION: PASS")
