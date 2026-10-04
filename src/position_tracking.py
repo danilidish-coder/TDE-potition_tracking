@@ -30,6 +30,12 @@ def _clean(value: object) -> str:
     return " ".join(str(value or "").strip().split())
 
 
+def _norm_search(value: object) -> str:
+    raw = _clean(value).upper()
+    raw = "".join(ch for ch in unicodedata.normalize("NFD", raw) if unicodedata.category(ch) != "Mn")
+    return re.sub(r"\s+", " ", raw)
+
+
 def _safe_name(value: str) -> str:
     v = re.sub(r"[^0-9A-Za-zΑ-Ωα-ω_-]+", "_", _clean(value))
     return v or "UNKNOWN"
@@ -551,6 +557,208 @@ class SharedEventStore:
             (shift_id, status, start_at, end_at, payload, datetime.now().isoformat(timespec="seconds")),
         )
 
+    @staticmethod
+    def _upsert_personnel_session_con(con, start: dict, end: dict):
+        start_event_id = _clean(start.get("event_id"))
+        end_event_id = _clean(end.get("event_id"))
+        if not start_event_id or not end_event_id:
+            return
+        try:
+            start_dt = datetime.fromisoformat(_clean(start.get("timestamp")))
+            end_dt = datetime.fromisoformat(_clean(end.get("timestamp")))
+        except Exception:
+            return
+        if end_dt < start_dt:
+            return
+        agms = _clean(start.get("agms") or end.get("agms"))
+        rank = _clean(start.get("rank") or end.get("rank"))
+        surname = _clean(start.get("surname") or end.get("surname"))
+        given_name = _clean(start.get("given_name") or end.get("given_name"))
+        full_name = _clean(start.get("full_name") or end.get("full_name") or f"{surname} {given_name}")
+        person_search = _norm_search(f"{agms} {rank} {surname} {given_name} {full_name}")
+        duration_seconds = max(0, int((end_dt - start_dt).total_seconds()))
+        con.execute(
+            """
+            INSERT INTO personnel_sessions (
+                session_id, start_event_id, end_event_id, agms, rank, surname, given_name,
+                full_name, person_search, position, direction, start_at, end_at,
+                duration_seconds, start_computer, start_user, end_computer, end_user
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(start_event_id) DO UPDATE SET
+                end_event_id=excluded.end_event_id,
+                agms=excluded.agms,
+                rank=excluded.rank,
+                surname=excluded.surname,
+                given_name=excluded.given_name,
+                full_name=excluded.full_name,
+                person_search=excluded.person_search,
+                position=excluded.position,
+                direction=excluded.direction,
+                start_at=excluded.start_at,
+                end_at=excluded.end_at,
+                duration_seconds=excluded.duration_seconds,
+                start_computer=excluded.start_computer,
+                start_user=excluded.start_user,
+                end_computer=excluded.end_computer,
+                end_user=excluded.end_user
+            """,
+            (
+                start_event_id, start_event_id, end_event_id, agms, rank, surname, given_name,
+                full_name, person_search, _clean(start.get("position")),
+                _clean(start.get("direction")).upper(),
+                start_dt.isoformat(timespec="seconds"), end_dt.isoformat(timespec="seconds"),
+                duration_seconds, _clean(start.get("computer")), _clean(start.get("user")),
+                _clean(end.get("computer")), _clean(end.get("user")),
+            ),
+        )
+
+    def _store_personnel_session(self, start: dict, end: dict):
+        with self._shift_db_write_lock():
+            with self._shift_db_connect() as con:
+                self._upsert_personnel_session_con(con, start, end)
+
+    @staticmethod
+    def _session_row_dict(row) -> dict:
+        return {
+            "session_id": _clean(row["session_id"]),
+            "start_event_id": _clean(row["start_event_id"]),
+            "end_event_id": _clean(row["end_event_id"]),
+            "agms": _clean(row["agms"]),
+            "rank": _clean(row["rank"]),
+            "surname": _clean(row["surname"]),
+            "given_name": _clean(row["given_name"]),
+            "full_name": _clean(row["full_name"]),
+            "position": _clean(row["position"]),
+            "direction": _clean(row["direction"]).upper(),
+            "start_at": _clean(row["start_at"]),
+            "end_at": _clean(row["end_at"]),
+            "duration_seconds": int(row["duration_seconds"] or 0),
+        }
+
+    @staticmethod
+    def _session_overlaps_clock_window(start_dt: datetime, end_dt: datetime, time_from: dtime, time_to: dtime) -> bool:
+        day = start_dt.date() - timedelta(days=1)
+        last = end_dt.date()
+        while day <= last:
+            window_start = datetime.combine(day, time_from)
+            window_end = datetime.combine(day, time_to)
+            if time_to <= time_from:
+                window_end += timedelta(days=1)
+            if start_dt < window_end and end_dt > window_start:
+                return True
+            day += timedelta(days=1)
+        return False
+
+    def search_personnel_sessions(
+        self,
+        person_query: str = "",
+        date_from: date | None = None,
+        date_to: date | None = None,
+        position: str = "",
+        direction: str = "",
+        time_from: dtime | None = None,
+        time_to: dtime | None = None,
+        moment: datetime | None = None,
+        min_duration_minutes: int = 0,
+        max_duration_minutes: int = 0,
+        limit: int | None = None,
+    ) -> list[dict]:
+        clauses = ["1=1"]
+        params: list[object] = []
+        query = _norm_search(person_query)
+        if query:
+            clauses.append("person_search LIKE ?")
+            params.append(f"%{query}%")
+        if date_from is not None:
+            clauses.append("end_at>=?")
+            params.append(f"{date_from:%Y-%m-%d}T00:00:00")
+        if date_to is not None:
+            clauses.append("start_at<=?")
+            params.append(f"{date_to:%Y-%m-%d}T23:59:59")
+        position = _clean(position)
+        if position and position != "ΟΛΕΣ":
+            clauses.append("position=?")
+            params.append(position)
+        direction = _clean(direction).upper()
+        if direction and direction != "ΟΛΑ":
+            clauses.append("direction=?")
+            params.append(direction)
+        if moment is not None:
+            stamp = moment.isoformat(timespec="seconds")
+            clauses.append("start_at<=?")
+            clauses.append("end_at>?")
+            params.extend([stamp, stamp])
+        if int(min_duration_minutes or 0) > 0:
+            clauses.append("duration_seconds>=?")
+            params.append(int(min_duration_minutes) * 60)
+        if int(max_duration_minutes or 0) > 0:
+            clauses.append("duration_seconds<=?")
+            params.append(int(max_duration_minutes) * 60)
+
+        sql = "SELECT * FROM personnel_sessions WHERE " + " AND ".join(clauses) + " ORDER BY start_at DESC"
+        if limit is not None and int(limit) > 0 and time_from is None and time_to is None:
+            sql += " LIMIT ?"
+            params.append(int(limit))
+
+        rows: list[dict] = []
+        try:
+            with self._shift_db_connect() as con:
+                db_rows = con.execute(sql, params).fetchall()
+            for row in db_rows:
+                item = self._session_row_dict(row)
+                if time_from is not None and time_to is not None:
+                    try:
+                        sdt = datetime.fromisoformat(item["start_at"])
+                        edt = datetime.fromisoformat(item["end_at"])
+                    except Exception:
+                        continue
+                    if not self._session_overlaps_clock_window(sdt, edt, time_from, time_to):
+                        continue
+                rows.append(item)
+                if limit is not None and int(limit) > 0 and len(rows) >= int(limit):
+                    break
+        except Exception:
+            return []
+        return rows
+
+    def list_personnel_workers(self) -> list[dict]:
+        result: list[dict] = []
+        seen: set[str] = set()
+        try:
+            with self._shift_db_connect() as con:
+                rows = con.execute(
+                    """
+                    SELECT agms, rank, surname, given_name, full_name
+                    FROM personnel_sessions
+                    ORDER BY start_at DESC
+                    """
+                ).fetchall()
+            for row in rows:
+                agms = _clean(row["agms"])
+                if not agms or agms in seen:
+                    continue
+                seen.add(agms)
+                result.append({
+                    "agms": agms,
+                    "rank": _clean(row["rank"]),
+                    "surname": _clean(row["surname"]),
+                    "given_name": _clean(row["given_name"]),
+                    "full_name": _clean(row["full_name"]),
+                })
+        except Exception:
+            return []
+        return sorted(result, key=lambda x: (_norm_search(x.get("surname")), _norm_search(x.get("given_name")), x.get("agms", "")))
+
+    def list_session_positions(self) -> list[str]:
+        try:
+            with self._shift_db_connect() as con:
+                rows = con.execute(
+                    "SELECT DISTINCT position FROM personnel_sessions WHERE position<>'' ORDER BY position"
+                ).fetchall()
+            return [_clean(row["position"]) for row in rows if _clean(row["position"])]
+        except Exception:
+            return []
+
     def _init_shift_db(self):
         self.shift_db.parent.mkdir(parents=True, exist_ok=True)
         with self._shift_db_write_lock():
@@ -577,6 +785,34 @@ class SharedEventStore:
                     )
                     """
                 )
+                con.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS personnel_sessions (
+                        session_id TEXT PRIMARY KEY,
+                        start_event_id TEXT UNIQUE NOT NULL,
+                        end_event_id TEXT NOT NULL,
+                        agms TEXT NOT NULL,
+                        rank TEXT,
+                        surname TEXT,
+                        given_name TEXT,
+                        full_name TEXT,
+                        person_search TEXT NOT NULL,
+                        position TEXT NOT NULL,
+                        direction TEXT NOT NULL,
+                        start_at TEXT NOT NULL,
+                        end_at TEXT NOT NULL,
+                        duration_seconds INTEGER NOT NULL,
+                        start_computer TEXT,
+                        start_user TEXT,
+                        end_computer TEXT,
+                        end_user TEXT
+                    )
+                    """
+                )
+                con.execute("CREATE INDEX IF NOT EXISTS idx_personnel_sessions_start ON personnel_sessions(start_at DESC)")
+                con.execute("CREATE INDEX IF NOT EXISTS idx_personnel_sessions_end ON personnel_sessions(end_at DESC)")
+                con.execute("CREATE INDEX IF NOT EXISTS idx_personnel_sessions_person ON personnel_sessions(person_search)")
+                con.execute("CREATE INDEX IF NOT EXISTS idx_personnel_sessions_position ON personnel_sessions(position, direction)")
                 migrated = con.execute(
                     "SELECT value FROM meta WHERE key='legacy_shift_json_migrated_v1'"
                 ).fetchone()
@@ -605,6 +841,23 @@ class SharedEventStore:
                         )
                     con.execute(
                         "INSERT OR REPLACE INTO meta(key,value) VALUES('legacy_shift_json_migrated_v1','1')"
+                    )
+
+                personnel_migrated = con.execute(
+                    "SELECT value FROM meta WHERE key='legacy_personnel_sessions_migrated_v1'"
+                ).fetchone()
+                if not personnel_migrated:
+                    starts: dict[str, dict] = {}
+                    for event in self.iter_all_events():
+                        kind = _clean(event.get("kind")).upper()
+                        if kind == "START":
+                            starts[_clean(event.get("event_id"))] = event
+                        elif kind == "END":
+                            start = starts.get(_clean(event.get("start_event_id")))
+                            if start:
+                                self._upsert_personnel_session_con(con, start, event)
+                    con.execute(
+                        "INSERT OR REPLACE INTO meta(key,value) VALUES('legacy_personnel_sessions_migrated_v1','1')"
                     )
 
     def _store_shift_snapshot(self, shift: dict, make_current_report: bool = False):
@@ -716,6 +969,7 @@ class SharedEventStore:
                 "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
             }
             self._write_event(event)
+            self._store_personnel_session(current, event)
             self._active_path(person.agms).unlink(missing_ok=True)
             return event
 
@@ -760,25 +1014,26 @@ class SharedEventStore:
         return sorted(result, key=lambda e: _clean(e.get("timestamp")))
 
     def completed_sessions_all(self) -> list[dict]:
-        starts: dict[str, dict] = {}
         sessions: list[dict] = []
-        for event in self.iter_all_events():
-            kind = _clean(event.get("kind")).upper()
-            if kind == "START":
-                starts[_clean(event.get("event_id"))] = event
-            elif kind == "END":
-                sid = _clean(event.get("start_event_id"))
-                start = starts.get(sid)
-                if not start:
-                    continue
-                try:
-                    start_dt = datetime.fromisoformat(_clean(start.get("timestamp")))
-                    end_dt = datetime.fromisoformat(_clean(event.get("timestamp")))
-                except Exception:
-                    continue
-                if end_dt < start_dt:
-                    continue
-                sessions.append({"start": start, "end": event, "start_dt": start_dt, "end_dt": end_dt})
+        for row in reversed(self.search_personnel_sessions()):
+            try:
+                start_dt = datetime.fromisoformat(row["start_at"])
+                end_dt = datetime.fromisoformat(row["end_at"])
+            except Exception:
+                continue
+            start = {
+                "event_id": row["start_event_id"], "kind": "START", "timestamp": row["start_at"],
+                "agms": row["agms"], "rank": row["rank"], "surname": row["surname"],
+                "given_name": row["given_name"], "full_name": row["full_name"],
+                "position": row["position"], "direction": row["direction"],
+            }
+            end = {
+                "event_id": row["end_event_id"], "kind": "END", "timestamp": row["end_at"],
+                "start_event_id": row["start_event_id"], "agms": row["agms"],
+                "rank": row["rank"], "surname": row["surname"], "given_name": row["given_name"],
+                "full_name": row["full_name"], "position": row["position"], "direction": row["direction"],
+            }
+            sessions.append({"start": start, "end": end, "start_dt": start_dt, "end_dt": end_dt})
         return sessions
 
     def save_shift(self, start_at: datetime, agms_list: list[str] | tuple[str, ...], lookback_minutes: int = 30, source_file: str = "") -> dict:
@@ -1632,13 +1887,13 @@ def build_shift_html(store: SharedEventStore, day: date, cutoff: str) -> str:
 
 
 def run(args=None) -> int:
-    from PySide6.QtCore import Qt, QDate, QDateTime, QTimer, QRectF
+    from PySide6.QtCore import Qt, QDate, QDateTime, QTime, QTimer, QRectF
     from PySide6.QtGui import QColor, QFont, QPainter, QPen, QIcon, QPixmap, QPalette
     from PySide6.QtWidgets import (
         QApplication, QComboBox, QDateEdit, QFormLayout, QFrame, QHBoxLayout,
         QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout, QWidget,
         QInputDialog, QDialog, QDateTimeEdit, QSpinBox, QListWidget, QListWidgetItem, QFileDialog, QToolButton,
-        QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QCheckBox
+        QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QCheckBox, QTimeEdit
     )
 
     THEME_DARK = {
