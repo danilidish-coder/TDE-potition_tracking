@@ -36,6 +36,25 @@ def _norm_search(value: object) -> str:
     return re.sub(r"\s+", " ", raw)
 
 
+def _windows_session_is_active() -> bool:
+    """True for the interactive Windows session; remains True when merely locked."""
+    if os.name != "nt":
+        return True
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        current_session = ctypes.c_ulong()
+        pid = kernel32.GetCurrentProcessId()
+        if not kernel32.ProcessIdToSessionId(pid, ctypes.byref(current_session)):
+            return True
+        active_session = kernel32.WTSGetActiveConsoleSessionId()
+        if active_session == 0xFFFFFFFF:
+            return True
+        return int(current_session.value) == int(active_session)
+    except Exception:
+        return True
+
+
 def _safe_name(value: str) -> str:
     v = re.sub(r"[^0-9A-Za-zΑ-Ωα-ω_-]+", "_", _clean(value))
     return v or "UNKNOWN"
@@ -440,8 +459,19 @@ class SharedEventStore:
         self.current_docs = self.root / "current"
         self.archive = self.root / "archive"
         self.statistics = self.root / "statistics"
+        self.communications = self.root / "communications"
+        self.comm_clients = self.communications / "clients"
+        self.comm_messages = self.communications / "messages"
+        self.comm_acks = self.communications / "acks"
+        self.comm_commands = self.communications / "commands"
+        self.comm_command_acks = self.communications / "command_acks"
         self.shift_db = self.root / "shift_reports.sqlite3"
-        for p in (self.events, self.active, self.locks, self.reports, self.shifts, self.audit, self.backups, self.current_docs, self.archive, self.statistics):
+        for p in (
+            self.events, self.active, self.locks, self.reports, self.shifts, self.audit,
+            self.backups, self.current_docs, self.archive, self.statistics,
+            self.communications, self.comm_clients, self.comm_messages, self.comm_acks,
+            self.comm_commands, self.comm_command_acks,
+        ):
             p.mkdir(parents=True, exist_ok=True)
         self._init_shift_db()
 
@@ -487,6 +517,170 @@ class SharedEventStore:
         temp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         os.replace(temp, path)
 
+
+    @staticmethod
+    def local_client_id() -> str:
+        computer = _safe_name(socket.gethostname())
+        user = _safe_name(os.environ.get("USERNAME") or os.environ.get("USER") or "USER")
+        return f"{computer}__{user}"
+
+    def write_client_heartbeat(self, client_id: str, extra: dict | None = None) -> dict:
+        payload = {
+            "client_id": _clean(client_id),
+            "computer": socket.gethostname(),
+            "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+            "pid": os.getpid(),
+            "last_seen": datetime.now().isoformat(timespec="seconds"),
+        }
+        if extra:
+            payload.update(extra)
+        self._atomic_json(self.comm_clients / f"{_safe_name(client_id)}.json", payload)
+        return payload
+
+    def remove_client_heartbeat(self, client_id: str):
+        (self.comm_clients / f"{_safe_name(client_id)}.json").unlink(missing_ok=True)
+
+    def online_clients(self, max_age_seconds: int = 15) -> list[dict]:
+        now = datetime.now()
+        result = []
+        for path in self.comm_clients.glob("*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                seen = datetime.fromisoformat(_clean(data.get("last_seen")))
+                if (now - seen).total_seconds() <= max(3, int(max_age_seconds)):
+                    result.append(data)
+            except Exception:
+                continue
+        return sorted(result, key=lambda x: (_clean(x.get("computer")), _clean(x.get("user"))))
+
+    def send_message(
+        self,
+        sender: dict,
+        target_client_ids: list[str],
+        text: str,
+        priority: str = "ΟΔΗΓΙΑ",
+        target_label: str = "",
+    ) -> dict:
+        targets = sorted({_clean(x) for x in target_client_ids if _clean(x)})
+        text = _clean(text)
+        if not targets:
+            raise ValueError("Δεν βρέθηκε ενεργός παραλήπτης.")
+        if not text:
+            raise ValueError("Γράψτε το μήνυμα / οδηγία.")
+        message_id = uuid.uuid4().hex
+        payload = {
+            "message_id": message_id,
+            "created_at": datetime.now().isoformat(timespec="seconds"),
+            "sender": sender or {},
+            "targets": targets,
+            "target_label": _clean(target_label),
+            "priority": _clean(priority).upper() or "ΟΔΗΓΙΑ",
+            "text": text,
+        }
+        self._atomic_json(self.comm_messages / f"{message_id}.json", payload)
+        self.log_admin_action("MESSAGE_SENT", {
+            "message_id": message_id, "targets": targets, "priority": payload["priority"],
+            "target_label": payload["target_label"],
+        })
+        return payload
+
+    def acknowledge_message(self, message_id: str, client_id: str):
+        folder = self.comm_acks / _safe_name(message_id)
+        payload = {
+            "message_id": _clean(message_id),
+            "client_id": _clean(client_id),
+            "ack_at": datetime.now().isoformat(timespec="seconds"),
+            "computer": socket.gethostname(),
+            "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+        }
+        self._atomic_json(folder / f"{_safe_name(client_id)}.json", payload)
+
+    def pending_messages(self, client_id: str, max_age_days: int = 7) -> list[dict]:
+        client_id = _clean(client_id)
+        cutoff = datetime.now() - timedelta(days=max(1, int(max_age_days)))
+        result = []
+        for path in sorted(self.comm_messages.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                if client_id not in [_clean(x) for x in data.get("targets", [])]:
+                    continue
+                created = datetime.fromisoformat(_clean(data.get("created_at")))
+                if created < cutoff:
+                    continue
+                ack = self.comm_acks / _safe_name(data.get("message_id")) / f"{_safe_name(client_id)}.json"
+                if not ack.exists():
+                    result.append(data)
+            except Exception:
+                continue
+        return sorted(result, key=lambda x: _clean(x.get("created_at")))
+
+    def message_acknowledgements(self, message_id: str) -> list[dict]:
+        folder = self.comm_acks / _safe_name(message_id)
+        result = []
+        if folder.exists():
+            for path in folder.glob("*.json"):
+                try:
+                    result.append(json.loads(path.read_text(encoding="utf-8")))
+                except Exception:
+                    pass
+        return result
+
+    def recent_sent_messages(self, limit: int = 20) -> list[dict]:
+        result = []
+        for path in sorted(self.comm_messages.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                data["acknowledgements"] = self.message_acknowledgements(_clean(data.get("message_id")))
+                result.append(data)
+            except Exception:
+                continue
+            if len(result) >= max(1, int(limit)):
+                break
+        return result
+
+    def send_close_command(self, sender: dict, target_client_id: str, reason: str = "") -> dict:
+        target_client_id = _clean(target_client_id)
+        if not target_client_id:
+            raise ValueError("Δεν επιλέχθηκε τερματικό.")
+        command_id = uuid.uuid4().hex
+        payload = {
+            "command_id": command_id,
+            "type": "CLOSE_APP",
+            "created_at": datetime.now().isoformat(timespec="seconds"),
+            "sender": sender or {},
+            "target_client_id": target_client_id,
+            "reason": _clean(reason),
+        }
+        self._atomic_json(self.comm_commands / f"{command_id}.json", payload)
+        self.log_admin_action("REMOTE_CLOSE_SENT", {
+            "command_id": command_id, "target_client_id": target_client_id, "reason": _clean(reason)
+        })
+        return payload
+
+    def pending_commands(self, client_id: str) -> list[dict]:
+        client_id = _clean(client_id)
+        result = []
+        for path in sorted(self.comm_commands.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                if _clean(data.get("target_client_id")) != client_id:
+                    continue
+                ack = self.comm_command_acks / f"{_safe_name(data.get('command_id'))}.json"
+                if not ack.exists():
+                    result.append(data)
+            except Exception:
+                continue
+        return sorted(result, key=lambda x: _clean(x.get("created_at")))
+
+    def acknowledge_command(self, command_id: str, client_id: str):
+        payload = {
+            "command_id": _clean(command_id),
+            "client_id": _clean(client_id),
+            "ack_at": datetime.now().isoformat(timespec="seconds"),
+            "computer": socket.gethostname(),
+            "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+        }
+        self._atomic_json(self.comm_command_acks / f"{_safe_name(command_id)}.json", payload)
 
     @contextmanager
     def _shift_db_write_lock(self, timeout: float = 10.0):
