@@ -38,6 +38,8 @@ with tempfile.TemporaryDirectory() as tmp:
 
     archived_ids = {s.get("shift_id") for s in store.list_shifts()}
     assert first_id in archived_ids, "Ended shift must still be present in shift archive"
+    assert store.shift_db.is_file(), "SQLite archive must exist"
+    assert not list(store.shifts.glob("SHIFT_*.json")), "New shifts must not create per-shift JSON archive files"
 
     second = store.start_officer_shift(officer, when=datetime(2026, 10, 5, 10, 0, 0))
     assert second["shift_id"] != first_id
