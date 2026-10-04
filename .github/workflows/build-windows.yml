@@ -96,7 +96,6 @@ jobs:
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
-          Copy-Item "dist\PositionTracking_TEST.exe" "release\PositionTracking_TEST.exe" -Force
           $greekName = -join @(
             [char]0x039A,[char]0x03B1,[char]0x03C4,[char]0x03B1,[char]0x03B3,[char]0x03C1,[char]0x03B1,[char]0x03C6,[char]0x03AE,
             [char]0x0020,[char]0x0398,[char]0x03AD,[char]0x03C3,[char]0x03B5,[char]0x03C9,[char]0x03BD
