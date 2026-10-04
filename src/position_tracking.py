@@ -3104,8 +3104,8 @@ def run(args=None) -> int:
             title.setStyleSheet("font-size:18px;font-weight:900")
             lay.addWidget(title)
             hint = QLabel(
-                "Επιλέξτε άτομο ή αφήστε «ΟΛΟΙ». Τα φίλτρα συνδυάζονται μεταξύ τους. "
-                "Η στιγμιαία αναζήτηση απαντά ποιος βρισκόταν σε συγκεκριμένη θέση/κατεύθυνση σε συγκεκριμένη ώρα."
+                "Βασικές αναζητήσεις: «ΠΟΥ/ΠΟΤΕ ΔΟΥΛΕΨΕ Ο ΤΑΔΕ;» ή «ΠΟΙΟΣ ΗΤΑΝ ΕΚΕΙ ΤΟΤΕ;». "
+                "Τα υπόλοιπα φίλτρα είναι προαιρετικά και συνδυάζονται μεταξύ τους."
             )
             hint.setWordWrap(True)
             lay.addWidget(hint)
@@ -3187,6 +3187,14 @@ def run(args=None) -> int:
             form.addRow("Διάρκεια από", min_duration)
             form.addRow("Διάρκεια έως", max_duration)
             lay.addLayout(form)
+
+            quick = QHBoxLayout()
+            person_mode_btn = QPushButton("ΠΟΥ / ΠΟΤΕ ΔΟΥΛΕΨΕ Ο ΤΑΔΕ;")
+            moment_mode_btn = QPushButton("ΠΟΙΟΣ ΗΤΑΝ ΕΚΕΙ ΤΟΤΕ;")
+            quick.addWidget(person_mode_btn)
+            quick.addWidget(moment_mode_btn)
+            quick.addStretch()
+            lay.addLayout(quick)
 
             actions = QHBoxLayout()
             search_btn = QPushButton("ΑΝΑΖΗΤΗΣΗ")
@@ -3396,12 +3404,27 @@ def run(args=None) -> int:
                 use_dates.setEnabled(not moment_on)
                 use_clock.setEnabled(not moment_on)
 
+            def choose_person_mode():
+                exact_moment.setChecked(False)
+                person_combo.setFocus()
+                if person_combo.lineEdit():
+                    person_combo.lineEdit().selectAll()
+
+            def choose_moment_mode():
+                person_combo.setCurrentIndex(0)
+                exact_moment.setChecked(True)
+                position_combo.setCurrentIndex(0)
+                direction_combo.setCurrentIndex(0)
+                moment_date.setFocus()
+
             use_dates.toggled.connect(update_filter_states)
             use_clock.toggled.connect(update_filter_states)
             exact_moment.toggled.connect(update_filter_states)
             search_btn.clicked.connect(do_search)
             clear_btn.clicked.connect(clear_search)
             pdf_btn.clicked.connect(export_pdf)
+            person_mode_btn.clicked.connect(choose_person_mode)
+            moment_mode_btn.clicked.connect(choose_moment_mode)
             person_combo.lineEdit().returnPressed.connect(do_search)
 
             update_filter_states()
