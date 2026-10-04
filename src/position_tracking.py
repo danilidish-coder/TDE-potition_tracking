@@ -1827,6 +1827,146 @@ def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[
     return target
 
 
+def _format_seconds(total_seconds: int) -> str:
+    total_minutes = max(0, int(total_seconds) // 60)
+    hours, minutes = divmod(total_minutes, 60)
+    return f"{hours:02d}:{minutes:02d}"
+
+
+def summarize_personnel_history(rows: list[dict]) -> dict:
+    total = 0
+    by_direction: dict[str, int] = {}
+    by_position: dict[str, int] = {}
+    by_direction_position: dict[tuple[str, str], int] = {}
+    people: set[str] = set()
+    for row in rows:
+        sec = max(0, int(row.get("duration_seconds") or 0))
+        total += sec
+        direction = _clean(row.get("direction")).upper() or "—"
+        position = _clean(row.get("position")) or "—"
+        agms = _clean(row.get("agms"))
+        if agms:
+            people.add(agms)
+        by_direction[direction] = by_direction.get(direction, 0) + sec
+        by_position[position] = by_position.get(position, 0) + sec
+        key = (direction, position)
+        by_direction_position[key] = by_direction_position.get(key, 0) + sec
+    return {
+        "total_seconds": total,
+        "people": len(people),
+        "by_direction": by_direction,
+        "by_position": by_position,
+        "by_direction_position": by_direction_position,
+    }
+
+
+def create_personnel_history_pdf(
+    rows: list[dict],
+    criteria: str,
+    summary: dict | None = None,
+    target: str | Path | None = None,
+) -> Path:
+    """Render the current personnel-history search as an on-demand PDF."""
+    try:
+        from PySide6.QtCore import QMarginsF
+        from PySide6.QtGui import QPageLayout, QPageSize, QTextDocument
+        from PySide6.QtPrintSupport import QPrinter
+    except Exception as exc:
+        raise RuntimeError("Δεν είναι διαθέσιμη η δημιουργία PDF.") from exc
+
+    if not rows:
+        raise ValueError("Δεν υπάρχουν αποτελέσματα για εξαγωγή σε PDF.")
+
+    summary = summary or summarize_personnel_history(rows)
+    if target is None:
+        preview_dir = Path(tempfile.gettempdir()) / "TDE_Krystallopigis" / "pdf_preview"
+        preview_dir.mkdir(parents=True, exist_ok=True)
+        target = preview_dir / "ΙΣΤΟΡΙΚΟ_ΠΡΟΣΩΠΙΚΟΥ.pdf"
+    target = Path(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    direction_lines = []
+    for direction in ("ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"):
+        seconds = int(summary.get("by_direction", {}).get(direction, 0))
+        if not seconds:
+            continue
+        positions = []
+        for (item_direction, position), sec in sorted(
+            summary.get("by_direction_position", {}).items(),
+            key=lambda x: (x[0][0], x[0][1]),
+        ):
+            if item_direction == direction and sec:
+                positions.append(f"Θέση {position}: {_format_seconds(sec)}")
+        detail = " · ".join(positions)
+        direction_lines.append(
+            f"<div><b>{_escape_html(direction)}:</b> {_format_seconds(seconds)}"
+            + (f" &nbsp; ({_escape_html(detail)})" if detail else "")
+            + "</div>"
+        )
+
+    body_rows = []
+    for row in rows:
+        try:
+            sdt = datetime.fromisoformat(_clean(row.get("start_at")))
+            edt = datetime.fromisoformat(_clean(row.get("end_at")))
+            date_text = sdt.strftime("%d/%m/%Y")
+            start_text = sdt.strftime("%H:%M:%S")
+            end_text = edt.strftime("%H:%M:%S")
+        except Exception:
+            date_text = _clean(row.get("start_at"))[:10]
+            start_text = _clean(row.get("start_at"))[11:19]
+            end_text = _clean(row.get("end_at"))[11:19]
+        name = _clean(f"{row.get('rank','')} {row.get('surname','')} {row.get('given_name','')}") or _clean(row.get("full_name"))
+        cells = [
+            date_text,
+            _clean(row.get("agms")),
+            name,
+            _clean(row.get("position")),
+            _clean(row.get("direction")),
+            start_text,
+            end_text,
+            _format_seconds(int(row.get("duration_seconds") or 0)),
+        ]
+        body_rows.append("<tr>" + "".join(f"<td>{_escape_html(str(v))}</td>" for v in cells) + "</tr>")
+
+    html = """<!doctype html><html><head><meta charset='utf-8'><style>
+        body { font-family: Arial, 'Segoe UI', sans-serif; font-size: 9pt; color:#000; }
+        h1 { text-align:center; font-size:14pt; margin:0 0 3px 0; }
+        h2 { text-align:center; font-size:12pt; margin:0 0 12px 0; }
+        .criteria { margin:8px 0 12px 0; padding:7px; border:1px solid #999; }
+        .summary { margin:8px 0 12px 0; line-height:1.45; }
+        table { width:100%; border-collapse:collapse; }
+        th, td { border:1px solid #777; padding:4px; }
+        th { font-weight:bold; background:#eee; }
+        .right { text-align:right; }
+    </style></head><body>
+    <h1>ΕΛΛΗΝΙΚΗ ΑΣΤΥΝΟΜΙΑ</h1>
+    <h2>Τ.Δ.Ε. ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ — ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ</h2>
+    <div class='criteria'><b>Κριτήρια:</b> """ + _escape_html(criteria or "Χωρίς πρόσθετα φίλτρα") + """</div>
+    <div class='summary'>
+      <div><b>Καταχωρίσεις:</b> """ + str(len(rows)) + """ &nbsp; <b>Άτομα:</b> """ + str(summary.get("people", 0)) + """</div>
+      <div><b>Συνολικός χρόνος:</b> """ + _format_seconds(int(summary.get("total_seconds", 0))) + """</div>
+      """ + "".join(direction_lines) + """
+    </div>
+    <table>
+      <tr><th>ΗΜΕΡΟΜΗΝΙΑ</th><th>ΑΓΜΣ</th><th>ΟΝΟΜΑ</th><th>ΘΕΣΗ</th><th>ΚΑΤΕΥΘΥΝΣΗ</th><th>ΕΝΑΡΞΗ</th><th>ΛΗΞΗ</th><th>ΔΙΑΡΚΕΙΑ</th></tr>
+      """ + "".join(body_rows) + """
+    </table></body></html>"""
+
+    printer = QPrinter(QPrinter.HighResolution)
+    printer.setOutputFormat(QPrinter.PdfFormat)
+    printer.setOutputFileName(str(target))
+    printer.setPageSize(QPageSize(QPageSize.A4))
+    printer.setPageOrientation(QPageLayout.Landscape)
+    printer.setPageMargins(QMarginsF(10, 10, 10, 10), QPageLayout.Millimeter)
+    document = QTextDocument()
+    document.setHtml(html)
+    document.print_(printer)
+    if not target.is_file() or target.stat().st_size == 0:
+        raise RuntimeError("Δεν δημιουργήθηκε το PDF του ιστορικού προσωπικού.")
+    return target
+
+
 def archive_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[str, PersonnelRecord] | None = None) -> Path:
     """Compatibility alias: reports are rendered on demand, not stored in the archive."""
     return create_shift_pdf(store, shift, people_by_agms)
@@ -2953,37 +3093,123 @@ def run(args=None) -> int:
                 QMessageBox.warning(self, "Ιστορικό προσωπικού", "Λανθασμένος κωδικός.")
                 return
 
-            dlg = QDialog(self); dlg.setWindowTitle("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ"); dlg.resize(1100, 720)
-            lay = QVBoxLayout(dlg); lay.setContentsMargins(20,18,20,18); lay.setSpacing(10)
-            title = QLabel("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ"); title.setStyleSheet("font-size:18px;font-weight:900")
+            dlg = QDialog(self)
+            dlg.setWindowTitle("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ")
+            dlg.resize(1180, 780)
+            lay = QVBoxLayout(dlg)
+            lay.setContentsMargins(20, 18, 20, 18)
+            lay.setSpacing(9)
+
+            title = QLabel("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ")
+            title.setStyleSheet("font-size:18px;font-weight:900")
             lay.addWidget(title)
+            hint = QLabel(
+                "Επιλέξτε άτομο ή αφήστε «ΟΛΟΙ». Τα φίλτρα συνδυάζονται μεταξύ τους. "
+                "Η στιγμιαία αναζήτηση απαντά ποιος βρισκόταν σε συγκεκριμένη θέση/κατεύθυνση σε συγκεκριμένη ώρα."
+            )
+            hint.setWordWrap(True)
+            lay.addWidget(hint)
+
+            workers = self.store.list_personnel_workers()
+            person_combo = ArrowComboBox()
+            person_combo.setEditable(True)
+            person_combo.addItem("ΟΛΟΙ ΟΣΟΙ ΕΧΟΥΝ ΔΟΥΛΕΨΕΙ", "")
+            for worker in workers:
+                label = _clean(
+                    f"{worker.get('rank','')} {worker.get('surname','')} {worker.get('given_name','')} "
+                    f"(ΑΓΜΣ {worker.get('agms','')})"
+                )
+                person_combo.addItem(label, _clean(worker.get("agms")))
+
+            use_dates = QCheckBox("Φίλτρο ημερομηνιών")
+            from_date = QDateEdit()
+            to_date = QDateEdit()
+            from_date.setCalendarPopup(True)
+            to_date.setCalendarPopup(True)
+            from_date.setDisplayFormat("dd/MM/yyyy")
+            to_date.setDisplayFormat("dd/MM/yyyy")
+            from_date.setDate(QDate.currentDate().addMonths(-1))
+            to_date.setDate(QDate.currentDate())
+            from_date.setEnabled(False)
+            to_date.setEnabled(False)
+
+            positions = self.store.list_session_positions()
+            position_combo = ArrowComboBox()
+            position_combo.addItem("ΟΛΕΣ")
+            for pos in positions:
+                position_combo.addItem(pos)
+            direction_combo = ArrowComboBox()
+            direction_combo.addItems(["ΟΛΑ", "ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"])
+
+            use_clock = QCheckBox("Φίλτρο ώρας μέσα στην ημέρα")
+            time_from = QTimeEdit()
+            time_to = QTimeEdit()
+            time_from.setDisplayFormat("HH:mm")
+            time_to.setDisplayFormat("HH:mm")
+            time_from.setTime(QTime(0, 0))
+            time_to.setTime(QTime(23, 59))
+            time_from.setEnabled(False)
+            time_to.setEnabled(False)
+
+            exact_moment = QCheckBox("Στιγμιαία αναζήτηση — ποιος ήταν εκεί τότε")
+            moment_date = QDateEdit()
+            moment_time = QTimeEdit()
+            moment_date.setCalendarPopup(True)
+            moment_date.setDisplayFormat("dd/MM/yyyy")
+            moment_date.setDate(QDate.currentDate())
+            moment_time.setDisplayFormat("HH:mm")
+            moment_time.setTime(QTime.currentTime())
+            moment_date.setEnabled(False)
+            moment_time.setEnabled(False)
+
+            min_duration = QSpinBox()
+            max_duration = QSpinBox()
+            for box in (min_duration, max_duration):
+                box.setRange(0, 24 * 60)
+                box.setSuffix(" λεπτά")
+                box.setSpecialValueText("Χωρίς όριο")
+            min_duration.setToolTip("Ελάχιστη διάρκεια μίας συνεχόμενης παραμονής στη θέση")
+            max_duration.setToolTip("Μέγιστη διάρκεια μίας συνεχόμενης παραμονής στη θέση")
 
             form = QFormLayout()
-            person_edit = QLineEdit(); person_edit.setPlaceholderText("ΑΓΜΣ, επώνυμο ή όνομα — αρκεί και μόνο αυτό")
-            from_edit = QLineEdit(); from_edit.setPlaceholderText("π.χ. 01/10/2026 (προαιρετικό)")
-            to_edit = QLineEdit(); to_edit.setPlaceholderText("π.χ. 31/10/2026 (προαιρετικό)")
-            position_combo = ArrowComboBox(); position_combo.addItem("ΟΛΕΣ")
-            for pos in self.config.positions or []:
-                if _clean(pos):
-                    position_combo.addItem(_clean(pos))
-            direction_combo = ArrowComboBox(); direction_combo.addItems(["ΟΛΑ", "ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"])
-            form.addRow("Άτομο", person_edit)
-            form.addRow("Από ημερομηνία", from_edit)
-            form.addRow("Έως ημερομηνία", to_edit)
+            form.addRow("Άτομο", person_combo)
+            form.addRow("", use_dates)
+            form.addRow("Από ημερομηνία", from_date)
+            form.addRow("Έως ημερομηνία", to_date)
             form.addRow("Θέση", position_combo)
             form.addRow("Κατεύθυνση", direction_combo)
+            form.addRow("", use_clock)
+            form.addRow("Ώρα από", time_from)
+            form.addRow("Ώρα έως", time_to)
+            form.addRow("", exact_moment)
+            form.addRow("Ημερομηνία στιγμής", moment_date)
+            form.addRow("Ώρα στιγμής", moment_time)
+            form.addRow("Διάρκεια από", min_duration)
+            form.addRow("Διάρκεια έως", max_duration)
             lay.addLayout(form)
 
             actions = QHBoxLayout()
             search_btn = QPushButton("ΑΝΑΖΗΤΗΣΗ")
             clear_btn = QPushButton("ΚΑΘΑΡΙΣΜΟΣ")
-            actions.addWidget(search_btn); actions.addWidget(clear_btn); actions.addStretch()
+            pdf_btn = QPushButton("PDF ΑΠΟΤΕΛΕΣΜΑΤΩΝ")
+            actions.addWidget(search_btn)
+            actions.addWidget(clear_btn)
+            actions.addWidget(pdf_btn)
+            actions.addStretch()
             lay.addLayout(actions)
 
-            result_label = QLabel("Συμπληρώστε ένα ή περισσότερα κριτήρια.")
+            summary_box = QLabel("")
+            summary_box.setWordWrap(True)
+            summary_box.setObjectName("infoBox")
+            lay.addWidget(summary_box)
+
+            result_label = QLabel("")
             lay.addWidget(result_label)
+
             table = QTableWidget(0, 8)
-            table.setHorizontalHeaderLabels(["ΗΜΕΡΟΜΗΝΙΑ", "ΑΓΜΣ", "ΟΝΟΜΑ", "ΘΕΣΗ", "ΚΑΤΕΥΘΥΝΣΗ", "ΕΝΑΡΞΗ", "ΛΗΞΗ", "ΔΙΑΡΚΕΙΑ"])
+            table.setHorizontalHeaderLabels(
+                ["ΗΜΕΡΟΜΗΝΙΑ", "ΑΓΜΣ", "ΟΝΟΜΑ", "ΘΕΣΗ", "ΚΑΤΕΥΘΥΝΣΗ", "ΕΝΑΡΞΗ", "ΛΗΞΗ", "ΔΙΑΡΚΕΙΑ"]
+            )
             table.setAlternatingRowColors(True)
             table.setEditTriggers(QAbstractItemView.NoEditTriggers)
             table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -2991,92 +3217,194 @@ def run(args=None) -> int:
             table.horizontalHeader().setStretchLastSection(True)
             lay.addWidget(table, 1)
 
-            def norm(value):
-                raw = _clean(value).upper()
-                raw = "".join(ch for ch in unicodedata.normalize("NFD", raw) if unicodedata.category(ch) != "Mn")
-                return re.sub(r"\s+", " ", raw)
+            current_rows: list[dict] = []
+            current_criteria = ""
 
-            def parse_date(value):
-                value = _clean(value)
-                if not value:
-                    return None
-                for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d"):
-                    try:
-                        return datetime.strptime(value, fmt).date()
-                    except ValueError:
-                        pass
-                raise ValueError(f"Μη έγκυρη ημερομηνία: {value}")
+            def qtime_to_time(value: QTime) -> dtime:
+                return dtime(value.hour(), value.minute())
 
-            def do_search():
-                query = norm(person_edit.text())
+            def selected_person_query() -> str:
+                data = person_combo.currentData()
+                if _clean(data):
+                    return _clean(data)
+                text_value = _clean(person_combo.currentText())
+                if _norm_search(text_value) == _norm_search("ΟΛΟΙ ΟΣΟΙ ΕΧΟΥΝ ΔΟΥΛΕΨΕΙ"):
+                    return ""
+                return text_value
+
+            def summary_text(rows: list[dict]) -> str:
+                summary = summarize_personnel_history(rows)
+                line1 = (
+                    f"Καταχωρίσεις: {len(rows)}   |   Άτομα: {summary['people']}   |   "
+                    f"Συνολικός χρόνος: {_format_seconds(summary['total_seconds'])}"
+                )
+                parts = [line1]
+                for direction in ("ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"):
+                    sec = int(summary["by_direction"].get(direction, 0))
+                    if not sec:
+                        continue
+                    pos_parts = []
+                    for (d, pos), psec in sorted(summary["by_direction_position"].items(), key=lambda x: (x[0][0], x[0][1])):
+                        if d == direction and psec:
+                            pos_parts.append(f"Θέση {pos}: {_format_seconds(psec)}")
+                    detail = " · ".join(pos_parts)
+                    parts.append(f"{direction}: {_format_seconds(sec)}" + (f"   |   {detail}" if detail else ""))
+                return "\n".join(parts)
+
+            def criteria_text() -> str:
+                bits = []
+                pq = selected_person_query()
+                if pq:
+                    bits.append(f"Άτομο: {person_combo.currentText()}")
+                else:
+                    bits.append("Άτομο: ΟΛΟΙ")
+                if exact_moment.isChecked():
+                    bits.append(
+                        f"Στιγμή: {moment_date.date().toString('dd/MM/yyyy')} {moment_time.time().toString('HH:mm')}"
+                    )
+                elif use_dates.isChecked():
+                    bits.append(
+                        f"Ημερομηνίες: {from_date.date().toString('dd/MM/yyyy')}–{to_date.date().toString('dd/MM/yyyy')}"
+                    )
                 pos = _clean(position_combo.currentText())
-                direction = _clean(direction_combo.currentText()).upper()
-                if not query and not _clean(from_edit.text()) and not _clean(to_edit.text()) and pos == "ΟΛΕΣ" and direction == "ΟΛΑ":
-                    QMessageBox.warning(dlg, "Ιστορικό", "Συμπληρώστε τουλάχιστον ένα κριτήριο.")
-                    return
-                try:
-                    date_from = parse_date(from_edit.text())
-                    date_to = parse_date(to_edit.text())
-                except ValueError as exc:
-                    QMessageBox.warning(dlg, "Ιστορικό", str(exc))
-                    return
-                if date_from and date_to and date_from > date_to:
-                    QMessageBox.warning(dlg, "Ιστορικό", "Η ημερομηνία «Από» είναι μετά την ημερομηνία «Έως».")
-                    return
+                direction = _clean(direction_combo.currentText())
+                if pos != "ΟΛΕΣ":
+                    bits.append(f"Θέση: {pos}")
+                if direction != "ΟΛΑ":
+                    bits.append(f"Κατεύθυνση: {direction}")
+                if use_clock.isChecked() and not exact_moment.isChecked():
+                    bits.append(f"Ώρες: {time_from.time().toString('HH:mm')}–{time_to.time().toString('HH:mm')}")
+                if min_duration.value():
+                    bits.append(f"Διάρκεια ≥ {min_duration.value()} λεπτά")
+                if max_duration.value():
+                    bits.append(f"Διάρκεια ≤ {max_duration.value()} λεπτά")
+                return " | ".join(bits)
 
-                rows = []
-                for session in self.store.completed_sessions_all():
-                    st = session["start"]
-                    sdt = session["start_dt"]; edt = session["end_dt"]
-                    agms = _clean(st.get("agms"))
-                    person = self._people_by_agms.get(agms)
-                    if person:
-                        name = _clean(f"{person.rank} {person.surname} {person.given_name}")
-                        hay = norm(f"{person.agms} {person.rank} {person.surname} {person.given_name} {person.full_name}")
-                    else:
-                        name = _clean(f"{st.get('rank','')} {st.get('full_name','')}")
-                        hay = norm(f"{agms} {name}")
-                    if query and query not in hay:
-                        continue
-                    if date_from and sdt.date() < date_from:
-                        continue
-                    if date_to and sdt.date() > date_to:
-                        continue
-                    position = _clean(st.get("position"))
-                    item_direction = _clean(st.get("direction")).upper()
-                    if pos != "ΟΛΕΣ" and position != pos:
-                        continue
-                    if direction != "ΟΛΑ" and item_direction != direction:
-                        continue
-                    minutes = max(0, int((edt - sdt).total_seconds() // 60))
-                    hours, mins = divmod(minutes, 60)
-                    rows.append((sdt, [
-                        sdt.strftime("%d/%m/%Y"), agms, name, position, item_direction,
-                        sdt.strftime("%H:%M"), edt.strftime("%H:%M"), f"{hours:02d}:{mins:02d}"
-                    ]))
-
-                rows.sort(key=lambda x: x[0], reverse=True)
+            def render_rows(rows: list[dict], label_prefix: str = "Βρέθηκαν"):
+                nonlocal current_rows, current_criteria
+                current_rows = rows
+                current_criteria = criteria_text()
                 table.setRowCount(len(rows))
-                for r, (_, values) in enumerate(rows):
+                for r, row in enumerate(rows):
+                    try:
+                        sdt = datetime.fromisoformat(row["start_at"])
+                        edt = datetime.fromisoformat(row["end_at"])
+                        date_text = sdt.strftime("%d/%m/%Y")
+                        start_text = sdt.strftime("%H:%M:%S")
+                        end_text = edt.strftime("%H:%M:%S")
+                    except Exception:
+                        date_text = _clean(row.get("start_at"))[:10]
+                        start_text = _clean(row.get("start_at"))[11:19]
+                        end_text = _clean(row.get("end_at"))[11:19]
+                    name = _clean(f"{row.get('rank','')} {row.get('surname','')} {row.get('given_name','')}") or _clean(row.get("full_name"))
+                    values = [
+                        date_text,
+                        _clean(row.get("agms")),
+                        name,
+                        _clean(row.get("position")),
+                        _clean(row.get("direction")),
+                        start_text,
+                        end_text,
+                        _format_seconds(int(row.get("duration_seconds") or 0)),
+                    ]
                     for col, value in enumerate(values):
                         table.setItem(r, col, QTableWidgetItem(str(value)))
-                result_label.setText(f"Βρέθηκαν {len(rows)} καταχωρίσεις.")
+                result_label.setText(f"{label_prefix} {len(rows)} καταχωρίσεις.")
+                summary_box.setText(summary_text(rows) if rows else "Δεν βρέθηκαν καταχωρίσεις με αυτά τα κριτήρια.")
+
+            def do_search():
+                d_from = from_date.date().toPython() if use_dates.isChecked() and not exact_moment.isChecked() else None
+                d_to = to_date.date().toPython() if use_dates.isChecked() and not exact_moment.isChecked() else None
+                if d_from and d_to and d_from > d_to:
+                    QMessageBox.warning(dlg, "Ιστορικό", "Η ημερομηνία «Από» είναι μετά την ημερομηνία «Έως».")
+                    return
+                moment = None
+                if exact_moment.isChecked():
+                    qd = moment_date.date()
+                    qt = moment_time.time()
+                    moment = datetime(qd.year(), qd.month(), qd.day(), qt.hour(), qt.minute())
+                tf = qtime_to_time(time_from.time()) if use_clock.isChecked() and not exact_moment.isChecked() else None
+                tt = qtime_to_time(time_to.time()) if use_clock.isChecked() and not exact_moment.isChecked() else None
+                if max_duration.value() and min_duration.value() and max_duration.value() < min_duration.value():
+                    QMessageBox.warning(dlg, "Ιστορικό", "Η μέγιστη διάρκεια είναι μικρότερη από την ελάχιστη.")
+                    return
+
+                rows = self.store.search_personnel_sessions(
+                    person_query=selected_person_query(),
+                    date_from=d_from,
+                    date_to=d_to,
+                    position=_clean(position_combo.currentText()),
+                    direction=_clean(direction_combo.currentText()),
+                    time_from=tf,
+                    time_to=tt,
+                    moment=moment,
+                    min_duration_minutes=min_duration.value(),
+                    max_duration_minutes=max_duration.value(),
+                )
+                render_rows(rows)
                 try:
                     self.store.log_admin_action("PERSONNEL_HISTORY_SEARCH", {
-                        "query": _clean(person_edit.text()), "from": _clean(from_edit.text()), "to": _clean(to_edit.text()),
-                        "position": pos, "direction": direction, "results": len(rows)
+                        "criteria": criteria_text(), "results": len(rows)
                     })
                 except Exception:
                     pass
 
             def clear_search():
-                person_edit.clear(); from_edit.clear(); to_edit.clear()
-                position_combo.setCurrentIndex(0); direction_combo.setCurrentIndex(0)
-                table.setRowCount(0); result_label.setText("Συμπληρώστε ένα ή περισσότερα κριτήρια.")
+                person_combo.setCurrentIndex(0)
+                use_dates.setChecked(False)
+                from_date.setDate(QDate.currentDate().addMonths(-1))
+                to_date.setDate(QDate.currentDate())
+                position_combo.setCurrentIndex(0)
+                direction_combo.setCurrentIndex(0)
+                use_clock.setChecked(False)
+                time_from.setTime(QTime(0, 0))
+                time_to.setTime(QTime(23, 59))
+                exact_moment.setChecked(False)
+                moment_date.setDate(QDate.currentDate())
+                moment_time.setTime(QTime.currentTime())
+                min_duration.setValue(0)
+                max_duration.setValue(0)
+                rows = self.store.search_personnel_sessions(limit=100)
+                render_rows(rows, "Τελευταίες")
 
+            def export_pdf():
+                if not current_rows:
+                    QMessageBox.warning(dlg, "PDF", "Δεν υπάρχουν αποτελέσματα για εξαγωγή.")
+                    return
+                try:
+                    path = create_personnel_history_pdf(
+                        current_rows,
+                        current_criteria,
+                        summarize_personnel_history(current_rows),
+                    )
+                    _open_path(path)
+                except Exception as exc:
+                    QMessageBox.critical(dlg, "PDF", str(exc))
+
+            def update_filter_states():
+                moment_on = exact_moment.isChecked()
+                date_on = use_dates.isChecked() and not moment_on
+                clock_on = use_clock.isChecked() and not moment_on
+                from_date.setEnabled(date_on)
+                to_date.setEnabled(date_on)
+                time_from.setEnabled(clock_on)
+                time_to.setEnabled(clock_on)
+                moment_date.setEnabled(moment_on)
+                moment_time.setEnabled(moment_on)
+                use_dates.setEnabled(not moment_on)
+                use_clock.setEnabled(not moment_on)
+
+            use_dates.toggled.connect(update_filter_states)
+            use_clock.toggled.connect(update_filter_states)
+            exact_moment.toggled.connect(update_filter_states)
             search_btn.clicked.connect(do_search)
             clear_btn.clicked.connect(clear_search)
-            person_edit.returnPressed.connect(do_search)
+            pdf_btn.clicked.connect(export_pdf)
+            person_combo.lineEdit().returnPressed.connect(do_search)
+
+            update_filter_states()
+            rows = self.store.search_personnel_sessions(limit=100)
+            render_rows(rows, "Τελευταίες")
             dlg.exec()
 
         def _snapshot(self):
