@@ -50,6 +50,7 @@ jobs:
           python "tests\report_archive_history_regression.py"
           python "tests\current_report_retention_regression.py"
           python "tests\pdf_report_regression.py"
+          python "tests\sqlite_shift_archive_regression.py"
 
       - name: Generate network application icon
         shell: powershell
