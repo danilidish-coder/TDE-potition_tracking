@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import base64
 import os
 import hashlib
 import shutil
@@ -24,6 +25,8 @@ APP_NAME = "TDE Krystallopigis - Katagrafi Theseon"
 SETTINGS_NAME = "position_tracking.settings.json"
 DEFAULT_CUTOFF = "10:00"
 STATISTICS_PIN_SHA256 = "ca444860f0e1ddca9596007253ea43b3a5133780b0a566d9a096a53568c063fb"
+
+POLICE_EMBLEM_JPEG_B64 = """/9j/4AAQSkZJRgABAQEA3ADcAAD/4QBaRXhpZgAASUkqAAgAAAAFAAEDBQABAAAASgAAAAMDAQABAAAAAAAAABBRAQABAAAAAQAAABFRBAABAAAA1SEAABJRBAABAAAA1SEAAAAAAACghgEAj7EAAP/bAEMAAgEBAQEBAgEBAQICAgICBAMCAgICBQQEAwQGBQYGBgUGBgYHCQgGBwkHBgYICwgJCgoKCgoGCAsMCwoMCQoKCv/bAEMBAgICAgICBQMDBQoHBgcKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCv/AABEIAHEAbAMBIgACEQEDEQH/xAAfAAABBQEBAQEBAQAAAAAAAAAAAQIDBAUGBwgJCgv/xAC1EAACAQMDAgQDBQUEBAAAAX0BAgMABBEFEiExQQYTUWEHInEUMoGRoQgjQrHBFVLR8CQzYnKCCQoWFxgZGiUmJygpKjQ1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4eLj5OXm5+jp6vHy8/T19vf4+fr/xAAfAQADAQEBAQEBAQEBAAAAAAAAAQIDBAUGBwgJCgv/xAC1EQACAQIEBAMEBwUEBAABAncAAQIDEQQFITEGEkFRB2FxEyIygQgUQpGhscEJIzNS8BVictEKFiQ04SXxFxgZGiYnKCkqNTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqCg4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2dri4+Tl5ufo6ery8/T19vf4+fr/2gAMAwEAAhEDEQA/AP38Gcc9fakkDFfkPIPHNLRQAmD3P/1qUADpWP498f8Ag34X+E7zxx4+8Q2+l6VYx77i7uXwBk4VVA5d2JCqigszEAAkgV+c/wAbv+DjD4eeHfiD4g+Cnw++A3iDTdX05bq3/t7xbcW9tHYTIisJpbQvvZcEkR71kYhUCbmKrlVr0qPxM5q+LoYZfvGffXxb/aI+EHwONta/ELxZ5N9exNJYaNp9lNe6hdqpALRW1ujyuoJALBcAkZIrxz4i/wDBUH4U+DNBl1vR/hX411ALqS2EB1DTYdIje5YIRE32+WKVXKyKRH5ZkYEFUYEE/lP48/4KAaZ8WNU0/W1+I3h3w8+vpIl9428VONQ1W/Ihmt5UuYYFmGnqyTSrGssVzEolzHsUBa1f2df2Ff2of+Ck2s2njzQYPGdj4Q1LUpj4g+K/ju623lzYqFX7HpcLMqTKxjXbcJBbgAbGOAynz3jMRVlamjxXmeMrz5aMfTq/mfd/hX/gtT4H8TfsqfFn4+a94Et7DUvht4hl0q20u11G5u7HUZiubZBfQ22wNIyMpZQVUtHk4cVofBT/AILW+BPi1qtp4Uf9mjxna6x9hiu7uxttS02d/s7gbbi3je4jmu4juBVo4yzA8LkEV8GfEr4P+JfAsfiH9ivVf2P/AIxeGvAGneLJrXw/rPhzwHPr0F7AFCSagU3wRzXc7oriZxKIkCpEq4LN5lY/ssftM/DLQ7nT/FX7GHxN8T/DvSNVS68NeJ9X8Fywa7pdmJZcQiFSs6xEyGUpFLEElO/OGZWzeKxS26eRlLH5hHbpvpufuZ8HP2w/gN8bdYi8LeF/E11Ya9NbvOvh3xHpVxp16yJIY3KR3CKJQrKQTGXA7nmvUefX6V+CUX7W/wAOvhxdyWvwp/aOHidobVPK0f4oabNpeqaHOryXr3VtqD/cnS4uLmNBtkO5gWdkANfWnwM/4OOfhNdeAdN8L/Fr4c6pqHji10/Sre6bQ7m3NvrF9PIkUhiYsqQ4B8wiQoA2U4wGPTRx0XdVdGd2FzaErxr6Nden6n6c0gXBwFGMV59+zf8AtQfB39qvwL/wnvwg8QSXMMUgiv7C8t2gu7GUqG8uaJuVJUghhlHUhlZgQa9AfcGBTHX5sjkjB4Fd8ZRlG61R7EJwqRUou6YqqABtOABwB0qJ7OCRvMa2hLH7xaME5+tSqpXgEYxwMdKZJbW87bpEyRxnJplElY/xB8deG/hh4E1n4keMb8Wuk6BpdxqGpXDEDy4IY2kduSB91T3rYr45/wCCrP7Rnwy8SfsJeMvD/wAO/HOj64uo+M9L8HeIX07UopF06STUIFuoZ8EhGESuhVsD5xnjNZ1aip03LyMcRWjQpSk3smz5e+O3x917x8nh/wCPPx18VvZeIviZZy6v8OtGiF5eW3w68LRRq8979nt1yb6aHg3RA2NL8rIsbVvf8Ewv+CPf7O/x4+DvhX9tj9pjQtf1Pxt4j8RyeI1tdTvzJbTWYnY2kE8NwshmieIRud53sCBux18Csrbxj/wU7+LGpeHfgt4Tumbxm9tYXOp6V4ruTD4K8H2022OC6hhVLaGWaES4jaSZ3a4kwqgc/Hknxw/bi+I99c/EX4aftZ+LPCkCeJNR0iz8LaP4m12G00yytUgWC3ghsDthiEb7RkAttYkk5rp4ZyKfEOOnT5uW0b3avfVL9T57CKNXEOpUV1+b01P6NZf2GP2LJrs3z/sk/DbziVLSr4JsQzFTlSSIucEd69PsbCy0uyh03TbOK3t7eNY4IIIwqRoBgKoHAAHAAr+YSz+Jf/BVe6VrTw3+378SMwqHcw654zJwoHy4Fu2MY6e/HBrd/Zv/AGgP+ClevftYfC/4HfEj9vf4xz6N458bQeH7240vxTr9nPGsjhWeN7+BEDLnd0Y8cgA19tV4BxGHi5e1jZbuzPbhWpRfuxsf0x0V8xXX/BMezn8Kx6Db/t5/tMW96iEPrkfxfne4kJGCSkkbQ/lGK/OT/gsj8Ov2+P8Agn54s8Gj9mn/AIKV/F/U9M8Taddm5i8aeMpZ7mOaB49oQ21oEKESD7xByfTmvBwGUYfMsQqFGv77vZcr1t/wDedSUFdo/Zfxb8JPhX4+1O11zxx8NtB1e+sc/Yr3U9Ihnmt85/1bupZOp6EV+dv/AAVh/wCCMn7OafAP4lftXfArwtq1l8RbCdvE7PDq8hhlEZV7mNIvuqDGsjgDnfjBxxX5aQ/8FDP+C0lnbGex/bx15EaPO281MZYdcg3FsOT2x1x35Ncv8Yf+CoP/AAVmuLR/BXxM/bZ1e/07VQbHUNOgmtWV4pE2ujx+SpYYJBJUjrz3r1qnh/jarcXNW72f9ficdf6vXg0469z7u/Zk+MHiv4BfEvwt4r+C3ibT7OHxNDb6v4SttQ8RGR9RgeNjJ4e1AQhEV5zPBJa5tx5BeYglY2J/ZD4NfFnwp8cfhP4d+MHgu8WXSvEejwajaEyqxRJEDbWKkjcpJU+hU1+EOnfs7/ED4F+B9C+FPxe8Q69p3h7x74T0bXfgp47utbji0zTNTe2W4Ns85iPlSieR0Rd0Y8u6kZieMfoP/wAE3P2sPh7+yh+xFf6t+1v4o0rwBp1n8Qbq20jSpzKYdKS7tIdRj09QqEr5fnSKeMFgcAbgK/N8JN0Krpyeh5mV13h6rpTdo2vroff2G6DGPWjIXjH5CqPh3xJofi/QLHxT4V1a31DTtStY7mwvrWQPFPDIoZHVh1BUggj1q/Xq7n0iaZ4X/wAFG/2pNT/ZE/ZM8SfFPwpbRXHiWdYtL8JWszALLqVy4ihJzwQm4yEdxGe2SPyO/aE/4JreJfhP8UfhJ8N/hjPeeKfF/i/w/Nf3dn/a5Ww1zxPA0lxcGaNtqoqG4tn3MwUw2zofmdTX6Jf8FDraw8cft3/s3/DTxzZtP4YsH8Q+K5LVbWScXOoafaIbfdEv3/L8xpFABbPA6182ePf27fjV4c+J/wDwnGkWsPjjxVB8S/GfgX4e6DYR24ks7xp5UtbmeTaCqwwxlWjJbbFIJJGBkUjysY1OpaWy0/zPncylGpWaneyaSt8m3+P4H3l/wT8+B037P/7KWg6X4j+Flt4W8YajYjUPHNpHfi7kudVZf3sslxuYSs2AeDtUHauAAK/nNm/suT4BLr9/rX9m6xL8UvErTw3N5piQzqE084CXd5AwwzNkorjGM4xz/R9+w/P8RJP2WtOtPi38YV8ea9ZT6haaj4pEKRR3bxXEqEIY+HRMeWJcDeE3YGcV/P58OdD8Y6n+zXe6l8NdD8UNer8TfEYS68NQa3JbyAQ6bgONNdY1YDf8z8tkcY5H6L4euEc100Xs3+cTslyqnSUVZcv+XY8y0DxXpukT21xa+KNBmW8XN19uPhxhCqkLjDyTHbhv64O3Ndx+xtZaPoH/AAUi/Z7ttI1vSr4/8LcsWI09dOJ2tIvzbrSNTtO5iBuZeD3rIl0v46a54fskn8NeLbZY4/Ja+vbTxEkkjFwc4e+CkbRj7o+nHHW/sefDn4t6r/wUd+AGq3nhvxBdJa/FPTppo57O8kWGFXV3dvPvLkoqgZDELkcluMD9czJweX1bPoxQ+NH9NVfj3/wdTaF4x1rVfgknhXw+NQTzdWS6RtEFztybUghzaTFeFYFQwJyPkbFfsJX5Mf8ABzlqOg2d/wDCBNdtrKeMnVCI7+PTZAOIOUS8uomY5AzsRgeAWBwD+OcGX/1ipW7S/wDSWehiP4TPyFudJ8f/AGO7tZ/Aq28sSgGVvCd04QgEN93TBjA54wARn2HE/EjSvGlneaFH4m0eQCS9AhnOj3kLNkf9N7eIOM5AAJ6V6CYfAVxevNqNtoVt9ui3eUkXhog87uS1w/lE49Aecex4L4l6fpHh3VNHls7jT5riW9Ut/Zy6WPLRQNoP2HJBB65649a/b6ktEnpqvzPNsf1OfCb4LfDT47/8E4/A/wAGvir4Mh1nw9rPwm0a3vdLIyWH9nQlTGx5WRWAZHyCrANkEV+D3we+Dv7SWv8A7eui/sx/GK58QWJ8HXbazc+FvEN20mI7LTzJbTyRMRHNKIIraMOF+ZVHUZz+1Hx0/a81r9jv/gm58PPi98P/AAnZa1q2p6R4X0bQLHUp3itjNeQwojSFAW2hc8KMk4HFfBehfHbwZ+1h+3D4o+O1x4DsrrX5fhBo2lX00Frc2lno9xNerBPL1ErK6tH5UmeFkjLAoX2/yrmEqfPbr+hz5pKj7sftJdunr/W591/8EY/iDq/iD9jfRfA/ie6We90K1hube/ivUnjvLG+33UDgoqqpRnltiqqFBtsLxjH1yBgYzX5+f8Ef9cjvNO+Fl9b63dyz6t8GLyDUmvr6KWa7SyvbE2heOIlLYRpfTGOIYKxTpuBbJr9AVkRyQhztODj1rpwknKgl2PSy2bnhIp9NP8vwPlL/AIKoeGPEPgzQPh7+214N0CbUbv4IeLG1nXbS0kKzT6BPA9vqIUgc7EZJip4xC1fG3hP4oaZrmsWHhnwj4kuJrvx78YvF+m+Dns/BtpqC2Ueq367NRR1ZGihFmbh/Mch3LklTGq12/wDwWX+If7Q/xK/aouv2O/DnxauNA+GZ+Bp8ReMdKsHit7nVN+rG0aKKd1IErfuRGkhEbEMhK+YWHzR/wSRf4t/EvV7298IfELW59Vu7Cw8E+FNJ1T7QU0ecQwW+oapGiMsLC10+2QkMCfMMSkjK+ZwYqXNiOVHj5hNVMZyRT8/Xy+4/Xn9jnTtHs/2dWsNB8M22kaYniHxBDp+mWYCRwwJql3EoAXhd2zdheBuwOlfI/wDwbH6Uth+wV4uu1iCLd/GXWnRA2dqrb2SYz9VavvTwd4E8KfCD4WWXw/8AB2niz0nQdIFtaQxKMhET7x/vOTliT95iSeTX4d/8Eq/+Cx2gf8E6v2S9R8BeK/gNfeKLXW/ibrd9Y39r4y02wMTFLZTEYruRXI+XdvA2jdjk19PlOAxeNU6GHjzS5FovKUbntRSoypxl0i1+R+89FfmLD/wdGfssf8I9Dc3P7OPjk6tLBvNhaeIfD80Ctzx5w1ENjg8mMH26V137NH/Bxj+zJ+0h8efBX7OVr8CPHeieIfG+s/2bYXF1eaTc2cEhQsGeS3vWfHGP9XnJ712VOHM7owc50Gkt9v8AM6VWpN6M/QymvFFLjzI1bByNwzinV89ftr/8FKfgd+whrWiaB8WfA/jvWLnX7WS4sR4P8N/blVUcIQ7GRAjZIwPTmvLw2GxGLrKlRi5SfRFykoq7PdpPC/hmW5a9l8O2DTOCHla0Qsw9zjJrzH9sz4e/Dy//AGUviVe6r4D0m5e0+H+sy27vpcTvEy2MxDISuVYY4Iwc18pP/wAHJn7F0c0Vs/7PXx782XpEPh1GWHJAyPtXfHb1Fcj+0z/wcT/sS698EfFfw0b4ZfF3R9V8VeFtT0rRH8Q+AzaQSXU1pIiKXM2cbmXJUMQDmvaw+R59DEQbozWqM3UpNbnV/wDBSbQdQ17/AIICaRrVrayyXuh+BvBerRywKXe38qTTzJMO/wAsbSEn0Br5r8J698Of2Z/jDF4Z1bTzpng+w1BtV8I+JbYR6U9/4Y1F/NMKFUd7uC3vnS4MmSIrWPHy7nUfqX+z74Q8O/Eb9iHwN4G8VaVDdaXrXwt0uyv7OWMPHJDLp0SOhByCCCRX4rfty/A/4p/s9/DfxB+xz8S49I05fhNaw6v4X8ZWGq3MOoeI/Dt7O1myhNpSTy1e2SZQAdtsvEihcfF5jBqpzo8HNKUlyVVtZf1/XY+3/wDghX8NfGN5aXXj3xDptxp2k/D/AEq58H6Tpj2C20Yu5Zrea8kiTeztHtt7Y+ZId0kss7BUXag/RyMmRd4ldQf4WAyK/Fz/AIN5fCvxd0b4+2XxJ+JHizVtKtvHGiapcWPhy7vZVbxA8HleZqrxFlURL58UUbBWLHewIAJP7QxSXrLuNqi88B5efTsDn1/HpW+C0oWPQyqywluzdz4X/wCCgHgPwvpf/BRz4U+NPGcEsWj/ABK+GniD4e3cpRHhvr0sl5YWZEn7sO0vmOhfCl0UZFfOHwr/AGrbf/gmPqXxH/aK+JnwZvNZ1VtXuvDXjLS9K077Jb2PiC3e1lkvLZ08yOC11CK4ics6IXmtYyS2/wCT9Df+Cg37Ia/tmfs9T+ANF8S3Oh+K9B1OHxB4B1+1uDG2na3aq5tZSR/Bl2VvQOSOQK/ID9t39oi98Wan4gn/AGm/DcngL4l3Wm2nhr4q+EvsA360bNFm0rVIWdgr2z3gKzPGSfLSDHA558UnSqc6+RxZhGWGre1jve6/X/gerP2c+CP7Q2l/tF/s2n4tQaDdeHL19LnTXNA1Vg1xot4sW6S3mxtztDKwbgOjo4wGFfzhfBnxv4g8O/s8aVFoHiLVkz441q4Nrp8us+TK+bUb2+w6laIrKvO4hmwR8wHFfsb+yb8TtZ+Gnx58d2+v+ObjXfDfi34hP4f8RjMl1b6VdXiB9FmSbPyq8EsdnJGhKxgWefLw2fxx8MeHNe0rwR4j+AV78Lo5vEXwt8ea9ceLUbRNNnn0y0Z7aNp5ZLyznxbqYpBlWChskg5Un9B8PKnts1k5fyP/ANKRtHEPERjJ7pNP71/X3i2vxQ+IZkvrlr/VtsMCs0lx4i1WJkB5GBN4jAHXkHJxg4+Y46P9hrx34l8Y/wDBU39mx/E11d3LRfECB40udSaRlDxsQQHv7knscnaT0yeled6hrvhtNae2Wx0Ca9liLKLYaOrtuJAAEOiuGHzMcAjA9Noruv8AgnDfy6//AMFVf2dLy10hIII/HISKYKhDhIHBHyWFsD3IPze/qf1XNeVZfV9H/Xc0p/Gj+nevyG/4OX77R4fi58H9K1S80SD7bpWoqjaw2nbB+/gDMftlvNgAEfMo459a/XmvyG/4OatYkPxM+EPh2LQ573dpOqTM0UmpqIgZYEBzZcbieBu9/WvyfgtX4hpryl/6SzvxH8Jn5bX2s/DiLU7fT7W48IboE2Put9Fk3yA43DytCfcp47N15wDXNfHfxPp+pX3hXStM0jQVlivn3XGl6Pp9sDiMFeYNHsTzjnc8g74HU9FrHi+/0u/l0PR9B1Zw1xGt1OH8QkycEiMhrsZ+6QcjnZwRXlPxav31vxjYWGg2l/b6rDd4/st4L3zY5HQLEgS5up23OzAAYGcjseP2ipaEfPT/AIP6nnLVn9Uvgf45+BP2Y/8AgnD4V+PPxOuJ49C8KfCfSb7UfssYkldUsIQERc4Z2YqoGcEsOe9fnJ+2P8cf2ev+Cxf7THws8GaV4E1200vwVouq6v4ysrnSnt9Vmiku4YbDTGdvkhW7dYZMvwqXCtuXDV7V+3NZeOPjFL8Av+CQ2g+IIrC2vfB9jrnxkvo4vMa10nSooGjhIBGzzp4T1I5WPqpIPyJ4I8deM9C0X4rfHzwBetoMnxQs4ba7udO+yXT2+lXup6upuCY5kFs0FukQVJZUkZjCuV+UD+W8dXaqOHT9Tlx+LmrU/s7P1Vj65/4J8eMdO+N//BRjWfjX4U8H6Xpvh7UNDvtP8Ksmj3ds82laYY7ZJo9wWGRJXuw/mIHwgiTI2lT+lCnIyAfxFfJ//BKD9kXXf2fPg1b+OfHpZNW1rSILHQ9Mn0wW02j6HFPcTWlvKCzObhxP5ku5iQdkZyYtzfWAVxwXz+FdOEhKFH3uup6eW0p08NeW8nf7xa/NT/g5C/ZC8BePf2ck/bN1PX9Xg1/4b2a2ml6dZaes1refabuEH7SfLZkRRvG4kL8wGRnn9K6zfGHhDwv8QPCmo+BvG2hW2qaPq9lJaanp15EHiuYJFKvG6nqpUkGtatNVIOJ04iiq9JwZ+GX7MifDn4MeC/Ceg65o/iDwfpPizwvt8a3ep6hcxaZpviO3DX2jasdQG+D50uI3EW8N5kduSoRQa+wviV/wR/8A2Hv+Cvnww8K/tn6hc614J8e+LPDttLr3ifwJqEUf264WLypluImRopSHDqWUKzBVyxHFcZrfwY8J/sh/tMXf7Kvxd8d33gTw3rbyJ+z78U1083LQW9zC0T6DcTt+7IgldTGtyH+TGx4yVYa3io/tDfsfeOdV8Zap4T1Owt9I1ma91Dx/8MNMubjRJo2sYpUF9oiSLkzSxOsjIr4+0oftKGLJ5cux2Myms6lKTT20/X/g+p8/hpVMHJ+0jdbP+vv9e55lqH/Bn/8AAi4gkjsv22/HUZdvl+0aFbSqFxgAjeMn3GPoKytH/wCDU/4q/ALXLf4q/sof8FHdW0fxnpdyZNJvZ/C7WoQFSuDLDdFh1wflIIJ4PQ737QX/AAV5/aZ1zxdZfH74KfGPSLLwl4P0q60nxzoegWyajaQXz3Krb6tslQS3eny4jRimJbYvIDyV8z6L+DP/AAVT+OupPY+GPiF8M/B1/qeoWUl/p81/ql14Ya+tFlWFWtxLFe2V2XZ1ZHivdhVssIgrY+gp8ZZmp61b+sY2f4XO+OPwMpWs15nzTB/wVm/4LFfswTaj+wD8fP2WE8a/HnUWS0+GPjLToIlstYidiv22VU2xzLGqs29RGM8Sqmxy1D4t/wDBuv8A8FEP2/4tO+Kv/BQH/gozpdx4vitiLXTLPwf9sh0dH+Z7eJ4pbaMDONwSPaSMhj1P6B67/wAFCf2TvDfi/Tbr48+DtY8F+KY7OYeGh4l8Nx3Vzd7+JbaxuLJrhJJWMe0wpIHcqPlOOOG8Xf8ABU/xdqlv42g+GvwKOkXHhuwuYNKsvGl3I2s6pqiJEEjt9KsUlM0QlubdHBuI5BmQbAYnxa4nlh3KVGFODb3jHX01bsvJJd9zV4nDwTdSd10Wt/n5nwff/wDBndrMmnlbH/goTF9oaRWxJ8Mdo4BH3l1Enue1fRf7AP8AwbW/s1fsb/Em1+P/AO0N8VW+J+u+HrhbzQUvNHXTNL02WM7luZIfNkM8i4DAyPsUjO0kAjyn9oX9tb/gqN4m+LNr8H9E+MaeF/G2n3Sazqel6dbWdhpfhzw3HuZ9S1gSea0Ujgwslq1y/wArFXTc6g7/AMYP27dV/a21/Qrrwda2/wATpri4jGl/DS1tpE02yi8tpLK41SSdktJJ7x3gV1chYEdkQNIAxwr8ZZtVoypyqOz8kvyWny1OaWY4WKuoO/S/9M4Xxn+0vqnj7Xf2p/2ifgzo174n8f8Aj7xSnhD4f2fh3T5J7zTdAtYHs5dTVojte3eJ5WUswjMiRtkHaR5f/wAEc/2a/Afjb9tcfDq/1v4geCdSs9bsPHHhvRobGyvrG6060SQxi6lAcRmX7QWjcKqquQCzSIw9x+PXxC/aJ8WfFaz+APiPxVp3xB+Iut6QkOifs/8AgiFZdH8O3tvaiNb3VLrfAsSxuPtJikieCTeECMqrKPvH/gnR/wAE/tK/Yu8Haj4s8aeK7rxV8T/G0VrceP8AxXfMrGWaOMKtrbhVXy7aLlUXHIAJwAqr81SpTrVbvZHLhsPUxOIu17qev599/wAT6Sooor1z6UKKKKAOS+OHwL+FH7SHw01L4QfGrwXaa94f1WLZd2N2CMEHKujKQ0bqeVdSGB6GvjnVP+CRX7SnwtuI9J/ZA/4KLeJPDvhGzvPO0fwL448PQ6/Z6cCxZljknbcQrEMmV3LjG4klq+86KznSp1PiRhVw1Gs7yWv3H4Qf8FHv+CQ37YvgHxxf/F7xr8YvA3i7S5dFF9fa9rFjpvhWx1PUmnCPppiinizK0OZPOJBdYwpYYGMn4R/E39sD9h74er+ztoVj8Ivjv4B1yzkF14Q8M6kvig6WkqMzRuFCy28Ku7/ed4wzuwPz5r9mf2yf2Kfgn+3N8Mbf4YfGq31JYdP1KPUdH1LR7829zYXaZCyocFGOCRh1YYJ4BwR4D8LP+CHfwL8OJ/Y3xr+MnjH4geG4btrq08E3EsWk6KJmILSzWunrEs7kgEljg87g2TXBUwlRVP3e3qeRWy6tGt+52fW/9fqfmP8ADLx14D+BnxKt/GHir42eA/Dq3fhqPT7/AECXxXL4lu/D0Mmppc3UVpHAmIZZI2ug8a3CLHHO48x5Nwr0S6/a5+E3wo8a33hf/gmrq0nxG8c6zpU9vqvx++Jd+dOtdEnuHuJZlgku1WJVaS4NwI1WM7gDmfJA/YnQf2Qv2T/C+gP4V8Ofsy/D+y02W2NvNY23g6ySKSIggoyiLDA5OQc5ya8G+Jv/AARY/ZK1TUrvxr+zZd+I/gj4ruEYDXfhlrMtlE+RjElpu8l0/wBlVTPrR9SqQV4tNi/sqvSjeDTfzv8AI/N/9nb/AIJJ/tpeOfiVJ4l8Gft1fB/xP4n19G1TxdcWPi5PEtxaSRq7QT3FtNGY7j99IEWQhvKLhlPc/VnwS/4IdftO33gjS0+PH7f2s6BJeaTHZ+IvCnw68M2VhDBb+aZmtILuER4XeclhCM5IwR1+m/2IP+CaHgT9kDxJP8V/EvxQ1/4h/EK70RNHl8X+ICIzDp6lGFtDAhKopZAzOxeRjkluTn6XralhINXqLX1OrD5bSceatHXtc8k/ZM/Yg/Z0/Ys8L3fh/wCB3gvyLvVJ2n1zxFqc32nU9VlLFt9xcsNz8k4UYUdlGTXrdFFdkYxirJHpwhGnHlirIKKKKZQUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf//Z"""
 
 
 def _clean(value: object) -> str:
@@ -2221,8 +2224,8 @@ def build_shift_html(store: SharedEventStore, day: date, cutoff: str) -> str:
 
 
 def run(args=None) -> int:
-    from PySide6.QtCore import Qt, QDate, QDateTime, QTime, QTimer, QRectF
-    from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen, QIcon, QPixmap, QPalette
+    from PySide6.QtCore import Qt, QDate, QDateTime, QTime, QTimer, QRectF, QPointF
+    from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen, QIcon, QPixmap, QPalette, QPainterPath
     from PySide6.QtWidgets import (
         QApplication, QComboBox, QDateEdit, QFormLayout, QFrame, QHBoxLayout,
         QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout, QWidget,
@@ -2236,10 +2239,87 @@ def run(args=None) -> int:
         "border": "#214565", "danger": "#b73a4a", "ok": "#1f9d70", "input": "#0a1726",
     }
     THEME_LIGHT = {
-        "window": "#eaf1f8", "panel": "#f6f9fc", "card": "#ffffff", "card2": "#eef5fb",
-        "text": "#0d2238", "muted": "#587086", "accent": "#0c68bd", "accent2": "#084d8c",
-        "border": "#c4d5e5", "danger": "#b12f41", "ok": "#16795a", "input": "#ffffff",
+        "window": "#eef3f7", "panel": "#f7fafc", "card": "#ffffff", "card2": "#e7eef3",
+        "text": "#153247", "muted": "#667b8b", "accent": "#173d5d", "accent2": "#0d2940",
+        "border": "#d4e0e8", "danger": "#a93646", "ok": "#177d72", "input": "#ffffff",
     }
+
+    def _police_emblem_pixmap(size: int = 82) -> QPixmap:
+        pixmap = QPixmap()
+        try:
+            pixmap.loadFromData(base64.b64decode(POLICE_EMBLEM_JPEG_B64))
+        except Exception:
+            return QPixmap()
+        return pixmap.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+
+    class GreeceMapWidget(QWidget):
+        """Small vector Greece silhouette for the common TDE service header."""
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self._dark = False
+            self.setFixedSize(86, 86)
+            self.setToolTip("ΕΛΛΑΔΑ")
+
+        def set_dark(self, dark: bool):
+            self._dark = bool(dark)
+            self.update()
+
+        def paintEvent(self, event):
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.Antialiasing)
+            rect = self.rect().adjusted(5, 4, -5, -4)
+            sx, sy = rect.width() / 100.0, rect.height() / 100.0
+            ox, oy = rect.left(), rect.top()
+
+            def point(x, y):
+                return QPointF(ox + x * sx, oy + y * sy)
+
+            def path_from(points):
+                p = QPainterPath()
+                p.moveTo(point(*points[0]))
+                for xy in points[1:]:
+                    p.lineTo(point(*xy))
+                p.closeSubpath()
+                return p
+
+            fill = QColor("#8fb6d1" if self._dark else "#173d5d")
+            edge = QColor("#d9ecf8" if self._dark else "#0d2940")
+            painter.setBrush(fill)
+            painter.setPen(QPen(edge, 1.25))
+
+            # Mainland + Chalkidiki/Epirus approximation.
+            mainland = [
+                (14,25),(20,18),(30,15),(39,14),(48,10),(57,12),(64,8),(73,11),
+                (82,8),(88,13),(86,20),(79,24),(72,24),(68,30),(63,27),(59,34),
+                (62,40),(57,46),(51,44),(47,51),(49,57),(44,62),(39,58),(35,61),
+                (31,56),(27,57),(24,51),(19,51),(17,45),(12,42),(13,35),(9,32)
+            ]
+            painter.drawPath(path_from(mainland))
+
+            # Peloponnese.
+            peloponnese = [
+                (33,58),(41,60),(48,65),(49,72),(45,80),(38,85),(31,82),(26,76),
+                (27,69),(23,66),(27,61)
+            ]
+            painter.drawPath(path_from(peloponnese))
+
+            # Evia.
+            painter.drawPath(path_from([(64,39),(68,35),(70,39),(68,48),(65,53),(63,49)]))
+
+            # Crete.
+            painter.drawPath(path_from([(35,91),(46,89),(57,91),(69,89),(78,91),(72,95),(59,95),(47,94),(38,96)]))
+
+            # Ionian and Aegean islands.
+            for x, y, rx, ry in [
+                (7,39,2.4,4.0),(12,55,1.8,2.7),(58,57,1.7,2.1),(65,53,1.6,2.0),
+                (71,48,1.8,2.3),(75,58,2.0,2.8),(69,66,1.5,2.0),(80,68,2.0,2.6),
+                (86,57,2.4,3.0),(88,76,2.0,3.8),(61,72,1.4,2.0),(74,77,1.4,1.8)
+            ]:
+                center = point(x, y)
+                painter.drawEllipse(center, rx * sx, ry * sy)
+            painter.end()
+
 
     class ArrowComboBox(QComboBox):
         """QComboBox with a permanently visible dropdown arrow."""
@@ -2252,27 +2332,55 @@ def run(args=None) -> int:
             painter.end()
 
     def _theme_stylesheet(theme: str) -> str:
-        t = THEME_DARK if _clean(theme).lower() == "dark" else THEME_LIGHT
+        dark = _clean(theme).lower() == "dark"
+        t = THEME_DARK if dark else THEME_LIGHT
+        metal_top = "#294b66" if dark else "#ffffff"
+        metal_mid = "#18364f" if dark else "#d9e2e8"
+        metal_low = "#10283d" if dark else "#aebdc8"
+        metal_edge = "#355d7d" if dark else "#8298a8"
+        primary_top = "#3f6d8d" if dark else "#477495"
+        primary_mid = "#1b4a6d" if dark else "#173d5d"
+        primary_low = "#0b263b" if dark else "#0d2940"
+        header_bg = "#0d1b2b" if dark else "#ffffff"
         return f"""
             QMainWindow, QWidget#rootPanel {{ background: {t['window']}; color: {t['text']}; }}
             QWidget {{ color: {t['text']}; font-family:'Segoe UI'; font-size:10.5pt; }}
             QDialog {{ background: {t['window']}; color: {t['text']}; }}
             QDialog QLabel {{ color: {t['text']}; }}
 
+            QFrame#serviceHeader {{
+                background:{header_bg};
+                border:1px solid {t['border']};
+                border-bottom:3px solid {primary_low};
+                border-radius:18px;
+            }}
+            QLabel#serviceKicker {{
+                color:{t['accent']}; font-size:11px; font-weight:900; letter-spacing:1px;
+            }}
+            QLabel#serviceTitle {{
+                color:{t['text']}; font-size:19px; font-weight:900;
+            }}
+            QLabel#serviceDepartment {{
+                color:{t['text']}; font-size:14px; font-weight:850;
+            }}
+            QLabel#appSubtitle {{
+                color:{t['muted']}; font-size:11px; font-weight:800; letter-spacing:1px;
+            }}
+
             QFrame#card {{
                 background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['card2']},stop:0.10 {t['card']},stop:1 {t['card']});
-                border:1px solid {t['border']}; border-radius:16px;
+                border:1px solid {t['border']}; border-bottom:3px solid {metal_edge}; border-radius:16px;
             }}
             QLabel#statusBox, QLabel#infoBox {{
                 background:{t['card2']}; border:1px solid {t['border']}; border-radius:10px;
                 padding:9px; color:{t['muted']}; font-weight:700;
             }}
 
-            QLineEdit, QComboBox, QDateEdit, QDateTimeEdit, QSpinBox {{
+            QLineEdit, QComboBox, QDateEdit, QDateTimeEdit, QSpinBox, QTimeEdit, QPlainTextEdit {{
                 background:{t['input']}; color:{t['text']}; border:2px solid {t['border']};
                 border-radius:10px; min-height:36px; padding:4px 9px;
             }}
-            QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QDateTimeEdit:focus, QSpinBox:focus {{
+            QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QDateTimeEdit:focus, QSpinBox:focus, QTimeEdit:focus, QPlainTextEdit:focus {{
                 border:2px solid {t['accent']}; background:{t['card']};
             }}
             QComboBox {{ padding-right:28px; }}
@@ -2298,38 +2406,68 @@ def run(args=None) -> int:
             }}
 
             QPushButton {{
-                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['card2']},stop:1 {t['panel']});
-                color:{t['text']}; border:1px solid {t['border']}; border-bottom:3px solid {t['window']};
-                border-radius:12px; padding:7px 14px; font-weight:750;
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {metal_top}, stop:0.18 {metal_mid}, stop:0.78 {metal_mid}, stop:1 {metal_low});
+                color:{t['text']}; border:1px solid {metal_edge}; border-bottom:4px solid {primary_low};
+                border-radius:11px; padding:7px 14px; font-weight:800;
             }}
             QPushButton:hover {{
-                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['accent']},stop:1 {t['accent2']});
-                color:white; border-color:{t['accent']}; border-bottom-color:{t['window']};
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {primary_top}, stop:0.20 {primary_mid}, stop:1 {primary_low});
+                color:white; border-color:{primary_top}; border-bottom-color:#081b29;
             }}
             QPushButton:pressed {{
-                background:{t['accent2']}; border-bottom-width:1px; padding-top:9px;
+                background:{primary_low}; color:white; border-bottom-width:1px; padding-top:10px;
             }}
             QPushButton:disabled {{
                 color:{t['muted']}; background:{t['panel']}; border-color:{t['border']};
             }}
+
+            QPushButton#metalPrimary {{
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {primary_top}, stop:0.16 {primary_mid}, stop:0.78 {t['accent']}, stop:1 {primary_low});
+                color:white; border:1px solid {primary_top}; border-bottom:5px solid #081b29;
+                border-radius:12px; font-weight:900;
+            }}
+            QPushButton#metalPrimary:hover {{
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 #5685a4, stop:0.20 #2a5b7d, stop:1 {primary_low});
+            }}
+            QPushButton#metalPrimary:pressed {{
+                background:{primary_low}; border-bottom-width:1px; padding-top:11px;
+            }}
+
+            QPushButton#exitButton {{
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {metal_top}, stop:0.25 {metal_mid}, stop:1 {metal_low});
+                color:{t['danger']}; border:1px solid {t['danger']}; border-bottom:4px solid #6f1f2d;
+                font-weight:850;
+            }}
+            QPushButton#exitButton:hover {{ background:{t['danger']}; color:white; }}
+
             QToolButton {{
-                background:{t['card2']}; color:{t['text']}; border:1px solid {t['border']};
-                border-radius:12px; padding:8px 12px; font-weight:700;
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {metal_top},stop:1 {metal_low});
+                color:{t['text']}; border:1px solid {metal_edge}; border-bottom:3px solid {primary_low};
+                border-radius:10px; padding:7px 11px; font-weight:800;
             }}
             QToolButton:hover {{
                 background:{t['accent']}; color:white; border-color:{t['accent']};
             }}
+
             QPushButton#startButton {{
-                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['ok']},stop:1 #0d5f46);
-                color:white; border-color:{t['ok']}; border-bottom:3px solid {t['window']};
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #34a98d,stop:0.18 {t['ok']},stop:1 #0d5f46);
+                color:white; border:1px solid #3ab79a; border-bottom:5px solid #084b37;
                 font-size:17px; font-weight:900; text-align:center;
             }}
+            QPushButton#startButton:pressed {{ border-bottom-width:1px; padding-top:11px; }}
             QPushButton#endButton {{
-                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 {t['danger']},stop:1 #6f1f2d);
-                color:white; border-color:{t['danger']}; border-bottom:3px solid {t['window']};
+                background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #cf5b68,stop:0.18 {t['danger']},stop:1 #6f1f2d);
+                color:white; border:1px solid #d56a75; border-bottom:5px solid #541722;
                 font-size:17px; font-weight:900; text-align:center;
             }}
+            QPushButton#endButton:pressed {{ border-bottom-width:1px; padding-top:11px; }}
         """
+
 
     def _network_icon() -> QIcon:
         pixmap = QPixmap(256, 256)
@@ -2514,8 +2652,11 @@ def run(args=None) -> int:
             self._app_started_at = datetime.now().isoformat(timespec="seconds")
             self.client_id = SharedEventStore.local_client_id()
             self.setWindowTitle("Τ.Δ.Ε. Κρυσταλλοπηγής - Καταγραφή Θέσεων")
-            self.resize(1120, 690)
-            self.setMinimumSize(980, 620)
+            emblem_icon = _police_emblem_pixmap(96)
+            if not emblem_icon.isNull():
+                self.setWindowIcon(QIcon(emblem_icon))
+            self.resize(1160, 720)
+            self.setMinimumSize(1000, 650)
             self._build()
             self._apply_config()
             self._apply_theme()
@@ -2532,21 +2673,44 @@ def run(args=None) -> int:
             self.root = QWidget(); self.root.setObjectName("rootPanel"); self.setCentralWidget(self.root)
             outer = QVBoxLayout(self.root); outer.setContentsMargins(28,22,28,20); outer.setSpacing(14)
 
-            header = QHBoxLayout()
-            titles = QVBoxLayout(); titles.setSpacing(2)
-            self.title_label = QLabel("Τ.Δ.Ε. ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ")
-            self.title_label.setStyleSheet("font-size:25px;font-weight:900;letter-spacing:1px")
+            self.header_card = QFrame()
+            self.header_card.setObjectName("serviceHeader")
+            header = QHBoxLayout(self.header_card)
+            header.setContentsMargins(20, 12, 20, 12)
+            header.setSpacing(16)
+
+            self.police_logo = QLabel()
+            self.police_logo.setFixedSize(86, 86)
+            self.police_logo.setAlignment(Qt.AlignCenter)
+            emblem = _police_emblem_pixmap(78)
+            if not emblem.isNull():
+                self.police_logo.setPixmap(emblem)
+            header.addWidget(self.police_logo)
+
+            titles = QVBoxLayout()
+            titles.setSpacing(1)
+            self.police_title_label = QLabel("ΕΛΛΗΝΙΚΗ ΑΣΤΥΝΟΜΙΑ")
+            self.police_title_label.setObjectName("serviceKicker")
+            self.title_label = QLabel("ΔΙΕΥΘΥΝΣΗ ΑΣΤΥΝΟΜΙΑΣ ΦΛΩΡΙΝΑΣ")
+            self.title_label.setObjectName("serviceTitle")
+            self.department_label = QLabel("ΤΜΗΜΑ ΔΙΑΒΑΤΗΡΙΑΚΟΥ ΕΛΕΓΧΟΥ ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ")
+            self.department_label.setObjectName("serviceDepartment")
             self.subtitle_label = QLabel("ΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ")
-            self.subtitle_label.setStyleSheet("font-size:15px;font-weight:800;letter-spacing:2px")
-            titles.addWidget(self.title_label); titles.addWidget(self.subtitle_label)
-            header.addLayout(titles); header.addStretch()
+            self.subtitle_label.setObjectName("appSubtitle")
+            for label in (self.police_title_label, self.title_label, self.department_label, self.subtitle_label):
+                label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                titles.addWidget(label)
+            header.addLayout(titles, 1)
 
             self.theme_btn = QToolButton()
-            self.theme_btn.setMinimumWidth(112)
+            self.theme_btn.setMinimumWidth(108)
             self.theme_btn.setMinimumHeight(34)
             self.theme_btn.clicked.connect(self._toggle_theme)
-            header.addWidget(self.theme_btn)
-            outer.addLayout(header)
+            header.addWidget(self.theme_btn, 0, Qt.AlignTop)
+
+            self.greece_map = GreeceMapWidget()
+            header.addWidget(self.greece_map, 0, Qt.AlignRight | Qt.AlignVCenter)
+            outer.addWidget(self.header_card)
 
             columns = QHBoxLayout(); columns.setSpacing(16)
 
@@ -2613,6 +2777,7 @@ def run(args=None) -> int:
             self.comm_status.setAlignment(Qt.AlignCenter)
             self.comm_status.setWordWrap(True)
             self.messages_btn = QPushButton("ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ")
+            self.messages_btn.setObjectName("metalPrimary")
             self.messages_btn.setMinimumHeight(42)
             self.messages_btn.clicked.connect(self._open_messages)
             right.addWidget(self.comm_status)
@@ -2626,6 +2791,7 @@ def run(args=None) -> int:
             self.archive_btn = QPushButton("ΑΡΧΕΙΟ ΑΝΑΦΟΡΩΝ")
             self.history_btn = QPushButton("ΙΣΤΟΡΙΚΟ ΠΡΟΣΩΠΙΚΟΥ")
             for b in (self.print_btn, self.archive_btn, self.history_btn):
+                b.setObjectName("metalPrimary")
                 b.setMinimumHeight(44)
                 bottom.addWidget(b)
             self.print_btn.clicked.connect(self._report)
@@ -2637,6 +2803,9 @@ def run(args=None) -> int:
             self.active_positions_btn = QPushButton("ΕΝΕΡΓΕΣ ΘΕΣΕΙΣ ΕΡΓΑΣΙΑΣ")
             self.personnel_list_btn = QPushButton("ΕΠΙΛΟΓΗ ΛΙΣΤΑΣ ΠΡΟΣΩΠΙΚΟΥ")
             self.exit_app_btn = QPushButton("ΕΞΟΔΟΣ ΑΠΟ ΤΟ ΠΡΟΓΡΑΜΜΑ")
+            self.active_positions_btn.setObjectName("metalPrimary")
+            self.personnel_list_btn.setObjectName("metalPrimary")
+            self.exit_app_btn.setObjectName("exitButton")
             for b in (self.active_positions_btn, self.personnel_list_btn, self.exit_app_btn):
                 b.setMinimumHeight(44)
                 bottom2.addWidget(b)
@@ -2998,9 +3167,8 @@ def run(args=None) -> int:
 
                 self.setStyleSheet(_theme_stylesheet(self.config.theme))
                 self.theme_btn.setText("☀ ΦΩΤΕΙΝΟ" if dark else "☾ ΣΚΟΤΕΙΝΟ")
-                self.subtitle_label.setStyleSheet(
-                    f"font-size:15px;font-weight:800;letter-spacing:2px;color:{t['muted']}"
-                )
+                if hasattr(self, "greece_map"):
+                    self.greece_map.set_dark(dark)
                 self._agms_changed()
                 self._officer_changed()
             finally:
