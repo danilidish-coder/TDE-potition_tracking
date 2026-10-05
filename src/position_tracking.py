@@ -2875,7 +2875,7 @@ def run(args=None) -> int:
             self.terminals_btn = QPushButton("ΕΝΕΡΓΑ ΤΕΡΜΑΤΙΚΑ")
             self.terminals_btn.setObjectName("metalPrimary")
             self.terminals_btn.setMinimumHeight(42)
-            self.terminals_btn.clicked.connect(self._close_remaining_clients_dialog)
+            self.terminals_btn.clicked.connect(self._open_terminals_control)
             comm_buttons = QHBoxLayout(); comm_buttons.setSpacing(10)
             comm_buttons.addWidget(self.messages_btn)
             comm_buttons.addWidget(self.terminals_btn)
@@ -3170,6 +3170,19 @@ def run(args=None) -> int:
             send_btn.clicked.connect(do_send)
             refresh_sent()
             dlg.exec()
+
+        def _open_terminals_control(self):
+            if not self.store:
+                return
+            officer = self._officer_selected()
+            if not officer:
+                QMessageBox.warning(
+                    self,
+                    "Ενεργά τερματικά",
+                    "Πληκτρολογήστε πρώτα έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."
+                )
+                return
+            self._close_remaining_clients_dialog()
 
         def _close_remaining_clients_dialog(self):
             if not self.store:
