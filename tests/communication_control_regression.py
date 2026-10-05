@@ -84,4 +84,5 @@ with tempfile.TemporaryDirectory() as tmp:
     assert second["position"] == "2"
 
 assert isinstance(MOD._windows_session_is_active(), bool)
+# Build synchronization marker: duplicate-position safeguard release.
 print("COMMUNICATION_CONTROL_REGRESSION: PASS")
