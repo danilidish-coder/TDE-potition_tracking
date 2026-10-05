@@ -63,5 +63,25 @@ with tempfile.TemporaryDirectory() as tmp:
     stale_path.write_text(__import__("json").dumps(data, ensure_ascii=False), encoding="utf-8")
     assert store.online_clients(max_age_seconds=15) == []
 
+# A physical position may have only one active officer, regardless of direction.
+with tempfile.TemporaryDirectory() as tmp:
+    store = MOD.SharedEventStore(Path(tmp))
+    p1 = MOD.PersonnelRecord("100001", "ΑΡΧ/ΚΑΣ", "ΠΡΩΤΟΣ", "ΑΣΤΥΝΟΜΙΚΟΣ")
+    p2 = MOD.PersonnelRecord("100002", "ΑΡΧ/ΚΑΣ", "ΔΕΥΤΕΡΟΣ", "ΑΣΤΥΝΟΜΙΚΟΣ")
+
+    first = store.start(p1, "1", "ΕΙΣΟΔΟΣ")
+    assert first["position"] == "1"
+
+    try:
+        store.start(p2, "1", "ΕΞΟΔΟΣ")
+    except ValueError as exc:
+        assert "ΘΕΣΗ 1" in str(exc)
+        assert "χρησιμοποιείται ήδη" in str(exc)
+    else:
+        raise AssertionError("Duplicate physical position assignment was accepted.")
+
+    second = store.start(p2, "2", "ΕΞΟΔΟΣ")
+    assert second["position"] == "2"
+
 assert isinstance(MOD._windows_session_is_active(), bool)
 print("COMMUNICATION_CONTROL_REGRESSION: PASS")
