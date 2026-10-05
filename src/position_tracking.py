@@ -1114,31 +1114,50 @@ class SharedEventStore:
         if direction not in {"ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"}:
             raise ValueError("Επιλέξτε κατεύθυνση ΕΙΣΟΔΟΣ ή ΕΞΟΔΟΣ.")
         with self.officer_lock(person.agms):
-            current = self.get_active(person.agms)
-            if current:
-                raise ValueError(
-                    f"Υπάρχει ήδη ανοικτή θέση για {person.full_name}: "
-                    f"{current.get('position','')} {current.get('direction','')} από {current.get('timestamp','')}. "
-                    "Πρέπει πρώτα να γίνει ΛΗΞΗ."
+            # Serialize START operations across all stations so two PCs cannot
+            # claim the same physical position at the same moment.
+            with self.officer_lock("__POSITION_START__"):
+                current = self.get_active(person.agms)
+                if current:
+                    raise ValueError(
+                        f"Υπάρχει ήδη ανοικτή θέση για {person.full_name}: "
+                        f"{current.get('position','')} {current.get('direction','')} από {current.get('timestamp','')}. "
+                        "Πρέπει πρώτα να γίνει ΛΗΞΗ."
+                    )
+                occupied = next(
+                    (
+                        item for item in self.active_all()
+                        if _clean(item.get("position")) == position
+                        and _clean(item.get("agms")) != _clean(person.agms)
+                    ),
+                    None,
                 )
-            event = {
-                "version": 2,
-                "event_id": uuid.uuid4().hex,
-                "kind": "START",
-                "timestamp": when.isoformat(timespec="seconds"),
-                "agms": person.agms,
-                "rank": person.rank,
-                "surname": person.surname,
-                "given_name": person.given_name,
-                "full_name": person.full_name,
-                "position": position,
-                "direction": direction,
-                "computer": socket.gethostname(),
-                "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
-            }
-            path = self._write_event(event)
-            event["event_file"] = str(path)
-            self._atomic_json(self._active_path(person.agms), event)
+                if occupied:
+                    occupant = _clean(
+                        f"{occupied.get('rank','')} {occupied.get('surname','')} {occupied.get('given_name','')}"
+                    ) or _clean(occupied.get("full_name")) or _clean(occupied.get("agms"))
+                    raise ValueError(
+                        f"Η ΘΕΣΗ {position} χρησιμοποιείται ήδη από {occupant}. "
+                        "Πρέπει πρώτα να γίνει ΛΗΞΗ της ενεργής θέσης."
+                    )
+                event = {
+                    "version": 2,
+                    "event_id": uuid.uuid4().hex,
+                    "kind": "START",
+                    "timestamp": when.isoformat(timespec="seconds"),
+                    "agms": person.agms,
+                    "rank": person.rank,
+                    "surname": person.surname,
+                    "given_name": person.given_name,
+                    "full_name": person.full_name,
+                    "position": position,
+                    "direction": direction,
+                    "computer": socket.gethostname(),
+                    "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+                }
+                path = self._write_event(event)
+                event["event_file"] = str(path)
+                self._atomic_json(self._active_path(person.agms), event)
             try:
                 self.sync_active_shift()
             except Exception:
