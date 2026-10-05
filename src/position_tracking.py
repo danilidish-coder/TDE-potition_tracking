@@ -2872,15 +2872,8 @@ def run(args=None) -> int:
             self.messages_btn.setObjectName("metalPrimary")
             self.messages_btn.setMinimumHeight(42)
             self.messages_btn.clicked.connect(self._open_messages)
-            self.terminals_btn = QPushButton("ΕΝΕΡΓΑ ΤΕΡΜΑΤΙΚΑ")
-            self.terminals_btn.setObjectName("metalPrimary")
-            self.terminals_btn.setMinimumHeight(42)
-            self.terminals_btn.clicked.connect(self._open_terminals_control)
-            comm_buttons = QHBoxLayout(); comm_buttons.setSpacing(10)
-            comm_buttons.addWidget(self.messages_btn)
-            comm_buttons.addWidget(self.terminals_btn)
             right.addWidget(self.comm_status)
-            right.addLayout(comm_buttons)
+            right.addWidget(self.messages_btn)
 
             columns.addWidget(self.operator_card, 1); columns.addWidget(self.officer_card, 1)
             outer.addLayout(columns, 1)
@@ -3171,19 +3164,6 @@ def run(args=None) -> int:
             refresh_sent()
             dlg.exec()
 
-        def _open_terminals_control(self):
-            if not self.store:
-                return
-            officer = self._officer_selected()
-            if not officer:
-                QMessageBox.warning(
-                    self,
-                    "Ενεργά τερματικά",
-                    "Πληκτρολογήστε πρώτα έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."
-                )
-                return
-            self._close_remaining_clients_dialog()
-
         def _close_remaining_clients_dialog(self):
             if not self.store:
                 return
@@ -3197,11 +3177,11 @@ def run(args=None) -> int:
 
             labels = self._client_worker_labels(clients)
             dlg = QDialog(self)
-            dlg.setWindowTitle("ΕΝΕΡΓΑ ΤΕΡΜΑΤΙΚΑ")
+            dlg.setWindowTitle("ΕΝΕΡΓΑ ΤΕΡΜΑΤΙΚΑ ΜΕΤΑ ΤΗ ΛΗΞΗ ΒΑΡΔΙΑΣ")
             dlg.resize(820, 520)
             lay = QVBoxLayout(dlg)
             title = QLabel(
-                "Οι παρακάτω εφαρμογές είναι ενεργές αυτή τη στιγμή.\n"
+                "Οι παρακάτω εφαρμογές παραμένουν ανοικτές.\n"
                 "Επιλέξτε ποιες θέλετε να κλείσετε ή κλείστε τες όλες."
             )
             title.setWordWrap(True)
@@ -3233,7 +3213,7 @@ def run(args=None) -> int:
                     return
                 sender = self._sender_payload()
                 for cid in ids:
-                    self.store.send_close_command(sender, cid, "Κλείσιμο εφαρμογής από Αξιωματικό Υπηρεσίας")
+                    self.store.send_close_command(sender, cid, "Λήξη βάρδιας από Αξιωματικό Υπηρεσίας")
                 QMessageBox.information(
                     dlg,
                     "Τερματικά",
