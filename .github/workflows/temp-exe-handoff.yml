@@ -1,0 +1,31 @@
+name: Temporary EXE handoff
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/temp-exe-handoff.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  handoff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print encoded signed EXE URL
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ASSET_ID="$(gh api "repos/$REPO/releases/tags/v1.2.3" --jq '.assets[] | select(.name=="TDE_Katagrafi_Theseon.exe") | .id')"
+          test -n "$ASSET_ID"
+          API_URL="https://api.github.com/repos/$REPO/releases/assets/$ASSET_ID"
+          curl -sS -D headers.txt -o /dev/null -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" "$API_URL"
+          LOC="$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print}' headers.txt | tail -1)"
+          test -n "$LOC"
+          printf 'SIGNED_URL_B64='
+          printf '%s' "$LOC" | base64 -w0
+          echo
