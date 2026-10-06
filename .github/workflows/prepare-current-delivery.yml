@@ -22,7 +22,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          import os, json, subprocess, pathlib, hashlib, zipfile, urllib.request
+          import os, json, subprocess, pathlib, hashlib, zipfile, urllib.request, base64
           repo = os.environ["GITHUB_REPOSITORY"]
           token = os.environ["GH_TOKEN"]
           tag = "v1.2.3"
@@ -71,14 +71,7 @@ jobs:
                   raise RuntimeError("Expected signed download redirect")
               except urllib.error.HTTPError as err:
                   assert err.code == 302, err.code
-                  print("DELIVERY_URL_JSON=" + json.dumps({"name": name, "url": err.headers["Location"]}))
+                  print("DELIVERY_URL_JSON=" + json.dumps({"name": name, "url_base64": base64.b64encode(err.headers["Location"].encode()).decode()}))
           print("DELIVERY_MANIFEST=" + json.dumps(manifest))
           print("SOURCE_SHA256=" + source_hash)
           
-
-      - name: Upload verified delivery files
-        uses: actions/upload-artifact@v4
-        with:
-          name: verified-current-delivery
-          path: delivery/
-          retention-days: 7
