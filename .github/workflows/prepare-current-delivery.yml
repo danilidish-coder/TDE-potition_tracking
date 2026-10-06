@@ -76,4 +76,9 @@ jobs:
           print("SOURCE_SHA256=" + source_hash)
           
 
-# Refresh verified delivery download links.
+      - name: Upload verified delivery files
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-current-delivery
+          path: delivery/
+          retention-days: 7
