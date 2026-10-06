@@ -1,0 +1,77 @@
+name: Prepare current delivery package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/prepare-current-delivery.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify release and package matching source
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import os, json, subprocess, pathlib, hashlib, zipfile, urllib.request
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          tag = "v1.2.3"
+          ref = "v1.2.3"
+          exe_name = "TDE_Katagrafi_Theseon.exe"
+          source_name = "TDE_KATAGRAFI_THESEON_v1.2.3_SOURCE.zip"
+          expected = "bf0647e3b993d09968d21b64d4170c79c52e0a412beb3d4006587dbecf16725f"
+          out = pathlib.Path("delivery")
+          out.mkdir(exist_ok=True)
+          def gh(*args):
+              return subprocess.check_output(["gh", *args], text=True).strip()
+          release = json.loads(gh("api", f"repos/{repo}/releases/tags/{tag}"))
+          gh("release", "download", tag, "-R", repo, "-p", exe_name, "-D", str(out))
+          assert hashlib.sha256((out / exe_name).read_bytes()).hexdigest() == expected, "Release EXE hash changed"
+          paths = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", ref], text=True).splitlines()
+          prefixes = ["src/","tests/","tools/"]
+          files = ["requirements.txt","DEVELOPMENT_RULES.md"]
+          selected = [p for p in paths if any(p.startswith(x) for x in prefixes) or p in files]
+          assert selected
+          commit = gh("api", f"repos/{repo}/commits/{ref}", "--jq", ".sha")
+          manifest = {"repository": repo, "version": tag, "source_commit": commit, "exe": exe_name, "exe_sha256": expected, "source_files": len(selected)}
+          with zipfile.ZipFile(out / source_name, "w", zipfile.ZIP_DEFLATED) as z:
+              for path in selected:
+                  data = subprocess.check_output(["git", "show", f"{ref}:{path}"])
+                  zi = zipfile.ZipInfo(path, (2026, 10, 6, 0, 0, 0))
+                  zi.compress_type = zipfile.ZIP_DEFLATED
+                  z.writestr(zi, data)
+              z.writestr("VERSION.txt", tag + "\n")
+              z.writestr("RELEASE_MANIFEST.json", json.dumps(manifest, indent=2) + "\n")
+          with zipfile.ZipFile(out / source_name) as z:
+              assert z.testzip() is None
+          source_hash = hashlib.sha256((out / source_name).read_bytes()).hexdigest()
+          checksums = out / "SHA256SUMS.txt"
+          checksums.write_text(f"{expected}  {exe_name}\n{source_hash}  {source_name}\n", encoding="ascii")
+          gh("release", "upload", tag, str(out / source_name), str(checksums), "-R", repo, "--clobber")
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+          opener = urllib.request.build_opener(NoRedirect)
+          updated = json.loads(gh("api", f"repos/{repo}/releases/tags/{tag}"))
+          for name in [exe_name, source_name]:
+              asset = next(a for a in updated["assets"] if a["name"] == name)
+              req = urllib.request.Request(asset["url"], headers={"Authorization": f"Bearer {token}", "Accept": "application/octet-stream", "X-GitHub-Api-Version": "2022-11-28"})
+              try:
+                  response = opener.open(req)
+                  raise RuntimeError("Expected signed download redirect")
+              except urllib.error.HTTPError as err:
+                  assert err.code == 302, err.code
+                  print("DELIVERY_URL_JSON=" + json.dumps({"name": name, "url": err.headers["Location"]}))
+          print("DELIVERY_MANIFEST=" + json.dumps(manifest))
+          print("SOURCE_SHA256=" + source_hash)
+          
