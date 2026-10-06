@@ -75,3 +75,5 @@ jobs:
           print("DELIVERY_MANIFEST=" + json.dumps(manifest))
           print("SOURCE_SHA256=" + source_hash)
           
+
+# Refresh verified delivery download links.
