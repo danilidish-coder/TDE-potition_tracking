@@ -1183,6 +1183,8 @@ class SharedEventStore:
 
     def get_active(self, agms: str) -> dict | None:
         path = self._active_path(agms)
+        if not self.active.is_dir():
+            raise BusyError("Ο κοινός φάκελος ενεργών θέσεων δεν είναι διαθέσιμος.")
         try:
             item = json.loads(path.read_text(encoding="utf-8"))
             return None if self._has_end_receipt(item) else self._apply_start_correction(item)
@@ -1301,6 +1303,8 @@ class SharedEventStore:
             return event
 
     def active_all(self) -> list[dict]:
+        if not self.active.is_dir():
+            raise BusyError("Δεν είναι διαθέσιμος ο κοινός φάκελος ενεργών θέσεων.")
         result: list[dict] = []
         for path in sorted(self.active.glob("*.json")):
             try:
@@ -1401,11 +1405,16 @@ class SharedEventStore:
 
     def current_shift(self) -> dict | None:
         path = self._current_shift_path()
+        if not self.shifts.is_dir():
+            raise BusyError("Ο κοινός φάκελος βαρδιών δεν είναι διαθέσιμος.")
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             return data if _clean(data.get("status")).upper() == "ACTIVE" else None
-        except Exception:
+        except FileNotFoundError:
             return None
+        except Exception as exc:
+            # A read failure is not proof that no shift exists.
+            raise BusyError(f"Δεν είναι ασφαλής η ανάγνωση τρέχουσας βάρδιας: {exc}") from exc
 
     def current_report_shift(self) -> dict | None:
         """Return the active/last shift; finalized history itself lives in SQLite."""
@@ -1578,8 +1587,10 @@ class SharedEventStore:
         shift["finalized_at"] = datetime.now().isoformat(timespec="seconds")
         # Το ιστορικό βαρδιών αποθηκεύεται σε SQLite. Το CURRENT_SHIFT.json
         # μένει μόνο ως ελαφρύ ζωντανό αρχείο συγχρονισμού μεταξύ σταθμών.
-        self._atomic_json(self._current_shift_path(), shift)
+        # Persist the finalized report before replacing CURRENT_SHIFT.
+        # If SQLite is unavailable, the shift remains ACTIVE and retryable.
         self._store_shift_snapshot(shift, make_current_report=True)
+        self._atomic_json(self._current_shift_path(), shift)
         self.log_admin_action("SHIFT_ENDED", {"shift_id": shift["shift_id"], "officer_agms": officer.agms, "approved": len(shift.get("approved", [])), "excluded": len(shift.get("excluded", []))})
         return shift
 
