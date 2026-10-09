@@ -472,11 +472,12 @@ class SharedEventStore:
         self.comm_command_acks = self.communications / "command_acks"
         self.shift_db = self.root / "shift_reports.sqlite3"
         self.pending_index = self.root / "pending_sessions"
+        self.corrections = self.root / "start_corrections"
         for p in (
             self.events, self.active, self.locks, self.reports, self.shifts, self.audit,
             self.backups, self.current_docs, self.archive, self.statistics,
             self.communications, self.comm_clients, self.comm_messages, self.comm_acks,
-            self.comm_commands, self.comm_command_acks, self.pending_index,
+            self.comm_commands, self.comm_command_acks, self.pending_index, self.corrections,
         ):
             p.mkdir(parents=True, exist_ok=True)
         self._init_shift_db()
@@ -1124,11 +1125,66 @@ class SharedEventStore:
         except Exception:
             return ""
 
+    def _effective_start_timestamp(self, event_id: str, timestamp: str) -> str:
+        path = self.corrections / f"{_safe_name(event_id)}.json"
+        if not path.is_file():
+            return timestamp
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if _clean(data.get("start_event_id")) != _clean(event_id):
+            raise BusyError("Ασυμφωνία στα στοιχεία διόρθωσης ώρας.")
+        return _clean(data["corrected_start_at"])
+
+    def _apply_start_correction(self, event: dict) -> dict:
+        if _clean(event.get("kind")).upper() != "START":
+            return event
+        revised = self._effective_start_timestamp(_clean(event.get("event_id")), _clean(event.get("timestamp")))
+        if revised == _clean(event.get("timestamp")):
+            return event
+        result = dict(event)
+        result["original_timestamp"] = event["timestamp"]
+        result["timestamp"] = revised
+        return result
+
+    def correct_active_start(self, agms: str, new_when: datetime, officer: PersonnelRecord, reason: str) -> dict:
+        """Audited logical correction; immutable raw START event remains intact."""
+        reason = _clean(reason)
+        if len(reason) < 5:
+            raise ValueError("Συμπληρώστε αιτιολογία τουλάχιστον 5 χαρακτήρων.")
+        if new_when > datetime.now():
+            raise ValueError("Δεν επιτρέπεται μελλοντική ώρα έναρξης.")
+        with self.officer_lock(agms):
+            active = self.get_active(agms)
+            if not active:
+                raise ValueError("Η θέση έχει ήδη κλείσει ή δεν υπάρχει.")
+            old_when = datetime.fromisoformat(active["timestamp"])
+            if new_when.date() != old_when.date():
+                raise ValueError("Για ασφάλεια, η διόρθωση περιορίζεται στην ίδια ημερομηνία.")
+            event_id = _clean(active.get("event_id"))
+            if not event_id:
+                raise ValueError("Δεν βρέθηκε αναγνωριστικό έναρξης.")
+            correction = {
+                "start_event_id": event_id, "agms": agms,
+                "previous_start_at": active["timestamp"],
+                "corrected_start_at": new_when.isoformat(timespec="seconds"),
+                "corrected_by": self._person_payload(officer),
+                "reason": reason,
+                "recorded_at": datetime.now().isoformat(timespec="seconds"),
+            }
+            path = self.corrections / f"{_safe_name(event_id)}.json"
+            if path.exists():
+                previous = json.loads(path.read_text(encoding="utf-8"))
+                correction["original_start_at"] = previous.get("original_start_at", previous.get("previous_start_at"))
+            else:
+                correction["original_start_at"] = active["timestamp"]
+            self._atomic_json(path, correction)
+            self.log_admin_action("ACTIVE_START_TIME_CORRECTED", correction)
+            return correction
+
     def get_active(self, agms: str) -> dict | None:
         path = self._active_path(agms)
         try:
             item = json.loads(path.read_text(encoding="utf-8"))
-            return None if self._has_end_receipt(item) else item
+            return None if self._has_end_receipt(item) else self._apply_start_correction(item)
         except FileNotFoundError:
             return None
         except (OSError, ValueError, json.JSONDecodeError) as exc:
@@ -1251,7 +1307,7 @@ class SharedEventStore:
             except (OSError, ValueError, json.JSONDecodeError) as exc:
                 raise BusyError(f"Δεν διαβάζεται η δέσμευση {path.name}: {exc}") from exc
             if not self._has_end_receipt(item):
-                result.append(item)
+                result.append(self._apply_start_correction(item))
         return sorted(result, key=lambda x: (_clean(x.get("direction")), _clean(x.get("position")), _clean(x.get("full_name"))))
 
     def iter_events(self, start_dt: datetime, end_dt: datetime) -> list[dict]:
@@ -1263,7 +1319,7 @@ class SharedEventStore:
             if folder.exists():
                 for path in sorted(folder.glob("*.json")):
                     try:
-                        e = json.loads(path.read_text(encoding="utf-8"))
+                        e = self._apply_start_correction(json.loads(path.read_text(encoding="utf-8")))
                         ts = datetime.fromisoformat(e.get("timestamp", ""))
                         if start_dt <= ts < end_dt:
                             result.append(e)
@@ -1278,7 +1334,7 @@ class SharedEventStore:
             return result
         for path in sorted(self.events.rglob("*.json")):
             try:
-                event = json.loads(path.read_text(encoding="utf-8"))
+                event = self._apply_start_correction(json.loads(path.read_text(encoding="utf-8")))
                 if _clean(event.get("timestamp")):
                     result.append(event)
             except Exception:
@@ -1532,7 +1588,12 @@ class SharedEventStore:
             return []
         start_at = datetime.fromisoformat(shift["start_at"])
         end_at = datetime.fromisoformat(shift.get("end_at") or datetime.now().isoformat(timespec="seconds"))
-        initial = shift.get("initial_active", {}) or {}
+        initial = {a: dict(item) for a, item in (shift.get("initial_active", {}) or {}).items()}
+        for info in initial.values():
+            if _clean(info.get("event_id")):
+                info["timestamp"] = self._effective_start_timestamp(
+                    _clean(info["event_id"]), _clean(info.get("timestamp"))
+                )
         search_start = start_at
         for agms in approved:
             try:
@@ -2704,9 +2765,13 @@ def run(args=None) -> int:
             self.end_active_btn.setMinimumHeight(40)
             self.end_active_btn.setStyleSheet("font-weight:900")
             self.end_active_btn.clicked.connect(self._end_selected_active)
+            self.edit_start_btn=QPushButton("ΔΙΟΡΘΩΣΗ ΩΡΑΣ ΕΝΑΡΞΗΣ")
+            self.edit_start_btn.setMinimumHeight(40)
+            self.edit_start_btn.clicked.connect(self._correct_selected_start)
             action_row.addWidget(QLabel("Ενεργός αστυνομικός:"))
             action_row.addWidget(self.active_person,1)
             action_row.addWidget(self.end_active_btn)
+            action_row.addWidget(self.edit_start_btn)
             lay.addLayout(action_row)
 
             self.timer=QTimer(self); self.timer.timeout.connect(self.refresh); self.timer.start(2000)
@@ -2717,6 +2782,45 @@ def run(args=None) -> int:
             if not agms:
                 return None
             return self.store.get_active(agms)
+
+        def _correct_selected_start(self):
+            officer=self.officer_getter() if callable(self.officer_getter) else None
+            if not officer:
+                QMessageBox.warning(self,"ΑΞΥΠ","Εισαγάγετε έγκυρο Α.Γ.Μ.Σ. ΑΞΥΠ.")
+                return
+            active=self._selected_active()
+            if not active:
+                QMessageBox.warning(self,"Διόρθωση","Επιλέξτε ενεργό αστυνομικό.")
+                return
+            started=datetime.fromisoformat(active["timestamp"])
+            proposed,ok=QInputDialog.getText(
+                self,"ΔΙΟΡΘΩΣΗ ΩΡΑΣ ΕΝΑΡΞΗΣ",
+                "Πραγματική ώρα έναρξης (ΗΗ/ΜΜ/ΕΕΕΕ ΩΩ:ΛΛ):",
+                QLineEdit.Normal,started.strftime("%d/%m/%Y %H:%M"),
+            )
+            if not ok: return
+            try:
+                revised=datetime.strptime(_clean(proposed),"%d/%m/%Y %H:%M")
+            except ValueError:
+                QMessageBox.warning(self,"Διόρθωση","Χρησιμοποιήστε ΗΗ/ΜΜ/ΕΕΕΕ ΩΩ:ΛΛ.")
+                return
+            reason,ok=QInputDialog.getText(
+                self,"Αιτιολογία διόρθωσης",
+                "Αιτιολογία (π.χ. προσωρινή διακοπή εφαρμογής):",
+            )
+            if not ok: return
+            if QMessageBox.question(
+                self,"Επιβεβαίωση",
+                f"ΑΓΜΣ: {active.get('agms')}\nΠροηγούμενη: {started:%d/%m/%Y %H:%M}\n"
+                f"Νέα: {revised:%d/%m/%Y %H:%M}\nΑιτία: {_clean(reason)}\n\nΝα αποθηκευτεί η διόρθωση;",
+                QMessageBox.Yes | QMessageBox.No,QMessageBox.No,
+            )!=QMessageBox.Yes: return
+            try:
+                self.store.correct_active_start(_clean(active.get("agms")),revised,officer,reason)
+                self.refresh()
+                QMessageBox.information(self,"Διόρθωση","Η νέα ώρα καταγράφηκε με ιστορικό αλλαγής.")
+            except Exception as exc:
+                QMessageBox.critical(self,"Διόρθωση",str(exc))
 
         def _end_selected_active(self):
             officer=self.officer_getter() if callable(self.officer_getter) else None
@@ -2796,6 +2900,7 @@ def run(args=None) -> int:
                     self.active_person.setCurrentIndex(idx)
             self.active_person.blockSignals(False)
             self.end_active_btn.setEnabled(bool(items))
+            self.edit_start_btn.setEnabled(bool(items))
 
             recommended = self.map.recommended_dialog_width()
             screen = QApplication.primaryScreen()
