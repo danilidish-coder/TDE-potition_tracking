@@ -97,6 +97,7 @@ jobs:
           retention-days: 30
 
       - name: Archive Windows EXE
+        if: github.ref == 'refs/heads/main'
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
