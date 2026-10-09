@@ -134,23 +134,24 @@ jobs:
 
       - name: Publish downloadable v1.2.4 validation EXE
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.number == 5 }}
-        shell: powershell
+        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          $tag = "v1.2.4-rc1"
-          $exe = "TDE_Katagrafi_Theseon.exe"
-          Copy-Item "dist\PositionTracking_TEST.exe" $exe -Force
+          $ErrorActionPreference = 'Stop'
+          $tag = 'v1.2.4-rc1'
+          $exe = 'TDE_Katagrafi_Theseon.exe'
+          Copy-Item 'dist/PositionTracking_TEST.exe' $exe -Force
           $hash = (Get-FileHash $exe -Algorithm SHA256).Hash
-          $notes = "Έκδοση ελέγχου της Καταγραφής Θέσεων 1.2.4. Δοκιμές Windows: αυτοματοποιημένα regression, concurrency, smoke και οπτική σταθερότητα. Η 1.2.3 διατηρείται. Πριν τη χρήση σε πραγματικές βάρδιες απαιτείται δοκιμή στον κοινόχρηστο SMB φάκελο, ειδικά για κεντρικό υπολογιστή εκτός σύνδεσης, ταυτόχρονους σταθμούς και αλλαγές χρήστη. SHA256: $hash"
-          gh release view $tag -R $env:REPO *> $null
+          $notes = "Windows validation build 1.2.4. Automated tests, stress regression, GUI smoke and visual test passed. Version 1.2.3 remains unchanged. On-site testing with the real SMB server and at least two booths is still required. SHA256: $hash"
+          gh release view $tag -R $env:REPO 2>$null
           if ($LASTEXITCODE -eq 0) {
-            throw "Tag $tag already exists. Refusing to overwrite a released executable."
+            throw "Tag $tag already exists. Will not overwrite a released executable."
           }
-          gh release create $tag $exe -R $env:REPO --target $env:HEAD_SHA --title "Καταγραφή Θέσεων v1.2.4 — έλεγχος γκισέ" --notes $notes --prerelease
-          if ($LASTEXITCODE -ne 0) { throw "Could not publish test EXE" }
+          gh release create $tag $exe -R $env:REPO --target $env:HEAD_SHA --title 'Position Tracking v1.2.4 - booth validation' --notes $notes --prerelease
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing test EXE failed.' }
           Write-Host "PUBLISHED_RELEASE_TAG=$tag"
           Write-Host "PUBLISHED_EXE_SHA256=$hash"
           Write-Host "PUBLISHED_EXE_URL=https://github.com/$env:REPO/releases/download/$tag/$exe"
