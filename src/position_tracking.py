@@ -2762,6 +2762,8 @@ def run(args=None) -> int:
             self.store = store
             self.people_by_agms = people_by_agms
             self.officer_getter = officer_getter
+            self._live_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TDE-live-map")
+            self._live_future = None
             self.setWindowTitle("ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ - Ζωντανή εικόνα θέσεων")
             self.resize(1100, 820)
             self.setStyleSheet("""
@@ -2901,8 +2903,24 @@ def run(args=None) -> int:
             except Exception as exc:
                 QMessageBox.critical(self,"Δεν καταχωρίστηκε",str(exc))
 
+        def closeEvent(self, event):
+            self.timer.stop()
+            self._live_pool.shutdown(wait=False, cancel_futures=True)
+            super().closeEvent(event)
+
         def refresh(self):
-            items=self.store.active_all()
+            future = self._live_future
+            if future is None:
+                self._live_future = self._live_pool.submit(self.store.active_all)
+                return
+            if not future.done():
+                return
+            self._live_future = None
+            try:
+                items = future.result()
+            except Exception:
+                self.updated.setText("ΑΠΩΛΕΙΑ ΣΥΝΔΕΣΗΣ — αναμονή επαναφοράς")
+                return
             self.map.set_active(items)
             current_agms=_clean(self.active_person.currentData())
             self.active_person.blockSignals(True)
