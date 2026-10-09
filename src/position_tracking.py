@@ -1653,13 +1653,28 @@ class SharedEventStore:
             self.log_admin_action("SHIFT_MEMBER_STATE", {"shift_id": shift["shift_id"], "agms": agms, "state": state})
             return shift
 
-    def end_officer_shift(self, officer: PersonnelRecord, when: datetime | None = None) -> dict:
+    def end_officer_shift(
+        self, officer: PersonnelRecord, when: datetime | None = None,
+        expected_active_start_ids: dict[str, str] | None = None,
+    ) -> dict:
         with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
             shift = self._sync_active_shift_locked()
             if not shift:
                 raise ValueError("Δεν υπάρχει ενεργή βάρδια.")
             if shift.get("pending"):
                 raise ValueError("Υπάρχουν άτομα σε ΑΝΑΜΟΝΗ. Κάντε πρώτα ΑΠΟΔΟΧΗ ή ΕΞΑΙΡΕΣΗ.")
+            if expected_active_start_ids is not None:
+                approved = set(map(_clean, shift.get("approved", [])))
+                actual = {
+                    _clean(item.get("agms")): _clean(item.get("event_id"))
+                    for item in self.active_all()
+                    if _clean(item.get("agms")) in approved
+                }
+                if actual != expected_active_start_ids:
+                    raise BusyError(
+                        "Οι ενεργές θέσεις άλλαξαν μετά την επιβεβαίωση. "
+                        "Ελέγξτε ξανά τον κατάλογο πριν από τη λήξη βάρδιας."
+                    )
             when = when or datetime.now()
             # A finalized roster must not leave its selected officers blocking the
             # physical desks. Close only APPROVED active records, through the same
@@ -1683,7 +1698,10 @@ class SharedEventStore:
                     surname=_clean(current.get("surname")),
                     given_name=_clean(current.get("given_name")),
                 )
-                self.end(member, when=when, expected_start_event_id=_clean(current.get("event_id")))
+                self.end(
+                    member, when=when, expected_start_event_id=_clean(current.get("event_id")),
+                    end_reason="SHIFT_FINALIZED_BY_OFFICER",
+                )
                 self.log_admin_action("SHIFT_AUTO_END_POSITION", {
                     "shift_id": shift["shift_id"],
                     "officer_agms": officer.agms,
@@ -3967,39 +3985,89 @@ def run(args=None) -> int:
             self._refresh_shift_status()
             return True
 
+        def _confirm_and_end_officer_shift(self, officer: PersonnelRecord) -> bool:
+            """Show real unclosed booths, then require officer approval."""
+            if not self.store:
+                return False
+            shift = self.store.sync_active_shift()
+            if not shift:
+                QMessageBox.information(self, "Βάρδια", "Δεν υπάρχει ενεργή βάρδια.")
+                return False
+            if shift.get("pending"):
+                self._resolve_pending_members()
+                shift = self.store.sync_active_shift()
+                if not shift or shift.get("pending"):
+                    return False
+
+            approved = set(_clean(x) for x in shift.get("approved", []))
+            open_items = self.store.active_all()
+            active_in_shift = [x for x in open_items if _clean(x.get("agms")) in approved]
+            active_excluded = [x for x in open_items if _clean(x.get("agms")) not in approved]
+            snapshot = {
+                _clean(x.get("agms")): _clean(x.get("event_id"))
+                for x in active_in_shift
+            }
+
+            def display(item: dict) -> str:
+                name = _clean(
+                    f"{item.get('rank', '')} {item.get('surname', '')} {item.get('given_name', '')}"
+                ) or _clean(item.get("full_name")) or f"ΑΓΜΣ {_clean(item.get('agms'))}"
+                start_at = _clean(item.get("timestamp")).replace("T", " ")
+                return (
+                    f"• {name} — ΘΕΣΗ {_clean(item.get('position'))}, "
+                    f"{_clean(item.get('direction'))} (από {start_at})"
+                )
+
+            if active_in_shift:
+                message = (
+                    "Οι παρακάτω αστυνομικοί της βάρδιας ΔΕΝ έχουν κάνει ΛΗΞΗ:\n\n"
+                    + "\n".join(display(x) for x in active_in_shift)
+                    + "\n\nΝα τους καταχωρίσω αυτόματα ΛΗΞΗ και να ολοκληρώσω τη βάρδια;"
+                )
+            else:
+                message = (
+                    "Όλοι οι αστυνομικοί που έχουν συμπεριληφθεί στη βάρδια "
+                    "έχουν ήδη κάνει ΛΗΞΗ.\n\nΝα ολοκληρωθεί η βάρδια;"
+                )
+            if active_excluded:
+                message += (
+                    "\n\nΠΡΟΣΟΧΗ: Υπάρχουν και ΕΞΑΙΡΕΜΕΝΕΣ/ΕΚΤΟΣ ΒΑΡΔΙΑΣ ενεργές θέσεις "
+                    "που ΔΕΝ θα κλείσουν:\n"
+                    + "\n".join(display(x) for x in active_excluded)
+                )
+            confirm = QMessageBox.question(
+                self, "ΕΛΕΓΧΟΣ ΑΝΟΙΚΤΩΝ ΘΕΣΕΩΝ — ΛΗΞΗ ΒΑΡΔΙΑΣ",
+                message, QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+            )
+            if confirm != QMessageBox.Yes:
+                return False
+            final = self.store.end_officer_shift(
+                officer, expected_active_start_ids=snapshot
+            )
+            self._refresh_shift_status()
+            count = len(final.get("closed_active_agms", []))
+            QMessageBox.information(
+                self, "Λήξη βάρδιας",
+                f"Η βάρδια ολοκληρώθηκε.\n"
+                f"Καταχωρίστηκαν αυτόματα {count} λήξεις ενεργών θέσεων.\n"
+                "Η αναφορά αποθηκεύτηκε στο αρχείο.",
+            )
+            return True
+
         def _end_officer_shift_ui(self):
             if not self.store:
                 return
-            p=self._officer_selected()
-            if not p:
-                QMessageBox.warning(self,"Έλεγχος","Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."); return
-            shift=self.store.sync_active_shift()
-            if not shift:
-                QMessageBox.information(self,"Βάρδια","Δεν υπάρχει ενεργή βάρδια."); return
-            if shift.get("pending"):
-                self._resolve_pending_members()
-                shift=self.store.sync_active_shift()
-                if shift and shift.get("pending"):
-                    return
-            approved=list(shift.get("approved",[]))
-            ok,_,_=self._preview_list_dialog(
-                "ΕΠΙΒΕΒΑΙΩΣΗ ΛΗΞΗΣ ΒΑΡΔΙΑΣ",
-                "Οι ΑΠΟΔΕΚΤΟΙ με ανοικτή θέση θα λάβουν αυτόματα ΛΗΞΗ στην τρέχουσα ώρα. Οι ΕΞΑΙΡΕΜΕΝΟΙ δεν επηρεάζονται. Επιβεβαιώστε.",
-                approved, False
-            )
-            if not ok: return
-            try:
-                final=self.store.end_officer_shift(p)
-                self._refresh_shift_status()
-                QMessageBox.information(
-                    self,
-                    "Λήξη βάρδιας",
-                    "Η βάρδια ολοκληρώθηκε και αποθηκεύτηκε στο αρχείο αναφορών (SQLite)."
+            officer = self._officer_selected()
+            if not officer:
+                QMessageBox.warning(
+                    self, "Έλεγχος",
+                    "Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."
                 )
-                # Shift finalization releases selected booths but never sends
-                # CLOSE_APP to other Windows sessions or gkise terminals.
+                return
+            try:
+                self._confirm_and_end_officer_shift(officer)
             except Exception as exc:
-                QMessageBox.critical(self,"Λήξη βάρδιας",str(exc))
+                QMessageBox.critical(self, "Λήξη βάρδιας", str(exc))
 
         def _refresh_shift_status(self):
             if not hasattr(self, "shift_status"):
@@ -4231,13 +4299,8 @@ def run(args=None) -> int:
                 if not p:
                     QMessageBox.warning(dlg, "Έλεγχος", "Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."); return
                 try:
-                    shift = self.store.end_officer_shift(p)
-                    QMessageBox.information(
-                        dlg,
-                        "Λήξη βάρδιας",
-                        "Η βάρδια ολοκληρώθηκε και αποθηκεύτηκε στο αρχείο αναφορών (SQLite)."
-                    )
-                    refresh_members()
+                    if self._confirm_and_end_officer_shift(p):
+                        refresh_members()
                 except Exception as exc:
                     QMessageBox.critical(dlg, "Λήξη βάρδιας", str(exc))
 
