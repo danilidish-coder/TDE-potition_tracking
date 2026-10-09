@@ -3012,6 +3012,10 @@ def run(args=None) -> int:
             self._app_started_at = datetime.now().isoformat(timespec="seconds")
             self.client_id = SharedEventStore.local_client_id()
             self._network_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="TDE-network")
+            # Network heartbeat/shift polling must never starve a booth action
+            # when the SMB host disconnects or an old worker blocks in I/O.
+            self._position_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TDE-position")
+            self._state_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="TDE-state")
             self._position_operation_future = None
             self._agms_query_serial = 0
             self._shift_status_future = None
@@ -3192,6 +3196,8 @@ def run(args=None) -> int:
         def _cleanup_client(self):
             try:
                 self._network_pool.shutdown(wait=False, cancel_futures=True)
+                self._position_pool.shutdown(wait=False, cancel_futures=True)
+                self._state_pool.shutdown(wait=False, cancel_futures=True)
             except Exception:
                 pass
             if self.store:
@@ -3698,7 +3704,7 @@ def run(args=None) -> int:
                 self.active_status.setText("ΔΕΝ ΥΠΑΡΧΕΙ ΣΥΝΔΕΣΗ ΜΕ ΤΑ ΚΕΝΤΡΙΚΑ ΔΕΔΟΜΕΝΑ.")
                 return
             self.active_status.setText("ΕΛΕΓΧΟΣ ΕΝΕΡΓΗΣ ΘΕΣΗΣ — αναμονή κεντρικού.")
-            future = self._network_pool.submit(self.store.get_active, person.agms)
+            future = self._state_pool.submit(self.store.get_active, person.agms)
 
             def poll():
                 if serial != self._agms_query_serial:
@@ -3753,11 +3759,11 @@ def run(args=None) -> int:
             self.end_btn.setEnabled(False)
             self.active_status.setText("ΚΑΤΑΧΩΡΙΣΗ ΣΕ ΕΞΕΛΙΞΗ — αναμονή επιβεβαίωσης από το κεντρικό.")
             if kind == "START":
-                future = self._network_pool.submit(
+                future = self._position_pool.submit(
                     self.store.start, person, position, direction, None, self.client_id
                 )
             else:
-                future = self._network_pool.submit(self.store.end, person)
+                future = self._position_pool.submit(self.store.end, person)
             self._position_operation_future = future
 
             def poll():
@@ -3953,7 +3959,7 @@ def run(args=None) -> int:
                 final = None if shift else self.store.current_report_shift()
                 return shift, final
 
-            future = self._network_pool.submit(read_status)
+            future = self._state_pool.submit(read_status)
             self._shift_status_future = future
 
             def poll():
