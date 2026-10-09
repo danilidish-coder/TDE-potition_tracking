@@ -1429,6 +1429,38 @@ class SharedEventStore:
         if shift.get("pending"):
             raise ValueError("Υπάρχουν άτομα σε ΑΝΑΜΟΝΗ. Κάντε πρώτα ΑΠΟΔΟΧΗ ή ΕΞΑΙΡΕΣΗ.")
         when = when or datetime.now()
+        # A finalized roster must not leave its selected officers blocking the
+        # physical desks. Close only APPROVED active records, through the same
+        # audited END path used by the normal operator action. This operation
+        # is deliberately retryable: already closed records are skipped.
+        closed_agms = []
+        for agms in sorted(set(_clean(a) for a in shift.get("approved", []))):
+            if not agms:
+                continue
+            current = self.get_active(agms)
+            if not current:
+                continue
+            started = datetime.fromisoformat(current["timestamp"])
+            if started > when:
+                raise ValueError(
+                    f"Η έναρξη του ΑΓΜΣ {agms} είναι μεταγενέστερη της λήξης βάρδιας."
+                )
+            member = PersonnelRecord(
+                agms=agms,
+                rank=_clean(current.get("rank")),
+                surname=_clean(current.get("surname")),
+                given_name=_clean(current.get("given_name")),
+            )
+            self.end(member, when=when)
+            self.log_admin_action("SHIFT_AUTO_END_POSITION", {
+                "shift_id": shift["shift_id"],
+                "officer_agms": officer.agms,
+                "member_agms": agms,
+                "end_at": when.isoformat(timespec="seconds"),
+                "reason": "FINALIZE_SELECTED_SHIFT_MEMBER",
+            })
+            closed_agms.append(agms)
+        shift["closed_active_agms"] = closed_agms
         shift["status"] = "FINALIZED"
         shift["end_at"] = when.isoformat(timespec="seconds")
         shift["end_officer"] = self._person_payload(officer)
@@ -3509,7 +3541,7 @@ def run(args=None) -> int:
             approved=list(shift.get("approved",[]))
             ok,_,_=self._preview_list_dialog(
                 "ΕΠΙΒΕΒΑΙΩΣΗ ΛΗΞΗΣ ΒΑΡΔΙΑΣ",
-                "Αυτά είναι τα άτομα που θα συμπεριληφθούν στην τελική βάρδια. Επιβεβαιώστε για να ολοκληρωθεί η λήξη.",
+                "Οι ΑΠΟΔΕΚΤΟΙ με ανοικτή θέση θα λάβουν αυτόματα ΛΗΞΗ στην τρέχουσα ώρα. Οι ΕΞΑΙΡΕΜΕΝΟΙ δεν επηρεάζονται. Επιβεβαιώστε.",
                 approved, False
             )
             if not ok: return
