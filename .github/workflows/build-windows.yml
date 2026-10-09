@@ -116,6 +116,17 @@ jobs:
             git push
           }
 
+      - name: Publish v1.2.4 recovery EXE without Actions artifact storage
+        if: github.ref == 'refs/heads/fix/shift-recovery-20261009'
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          Copy-Item "dist\PositionTracking_TEST.exe" "TDE_Katagrafi_Theseon.exe" -Force
+          $tag = "v1.2.4"
+          gh release create $tag "TDE_Katagrafi_Theseon.exe" -R $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "Καταγραφή Θέσεων v1.2.4" --notes "Windows build με ελέγχους βαρδιών, αλλαγής χρήστη, δεσμεύσεων, διορθώσεων ώρας και επαναφοράς SQLite. Η v1.2.3 διατηρείται ανέπαφη. Απαιτείται έλεγχος στο πραγματικό υπηρεσιακό δίκτυο πριν από γενική χρήση." --prerelease
+          if ($LASTEXITCODE -ne 0) { throw "GitHub Release v1.2.4 creation failed" }
+
       - name: Upload Windows test EXE
         continue-on-error: true
         uses: actions/upload-artifact@v4
