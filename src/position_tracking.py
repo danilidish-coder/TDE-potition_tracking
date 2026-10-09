@@ -471,14 +471,20 @@ class SharedEventStore:
         self.comm_commands = self.communications / "commands"
         self.comm_command_acks = self.communications / "command_acks"
         self.shift_db = self.root / "shift_reports.sqlite3"
+        self.pending_index = self.root / "pending_sessions"
         for p in (
             self.events, self.active, self.locks, self.reports, self.shifts, self.audit,
             self.backups, self.current_docs, self.archive, self.statistics,
             self.communications, self.comm_clients, self.comm_messages, self.comm_acks,
-            self.comm_commands, self.comm_command_acks,
+            self.comm_commands, self.comm_command_acks, self.pending_index,
         ):
             p.mkdir(parents=True, exist_ok=True)
         self._init_shift_db()
+        # Recover END events left unindexed after a process or SQLite interruption.
+        try:
+            self.reconcile_pending_sessions()
+        except Exception:
+            pass
 
     def _active_path(self, agms: str) -> Path:
         return self.active / f"{_safe_name(agms)}.json"
@@ -527,7 +533,8 @@ class SharedEventStore:
     def local_client_id() -> str:
         computer = _safe_name(socket.gethostname())
         user = _safe_name(os.environ.get("USERNAME") or os.environ.get("USER") or "USER")
-        return f"{computer}__{user}"
+        # Distinguish two Windows sessions/processes sharing the same user.
+        return f"{computer}__{user}__{os.getpid()}"
 
     def write_client_heartbeat(self, client_id: str, extra: dict | None = None) -> dict:
         payload = {
@@ -816,6 +823,35 @@ class SharedEventStore:
             with self._shift_db_connect() as con:
                 self._upsert_personnel_session_con(con, start, end)
 
+    def _has_end_receipt(self, active: dict) -> bool:
+        start_id = _safe_name(active.get("event_id"))
+        receipt = self.pending_index / f"{start_id}.json"
+        if not receipt.is_file():
+            return False
+        try:
+            data = json.loads(receipt.read_text(encoding="utf-8"))
+            return _clean(data.get("start", {}).get("event_id")) == _clean(active.get("event_id"))
+        except Exception as exc:
+            raise BusyError(f"Αδύνατος έλεγχος προσωρινής λήξης {start_id}: {exc}") from exc
+
+    def reconcile_pending_sessions(self) -> int:
+        """Recover committed END events after a crash, without dropping history."""
+        done = 0
+        for path in sorted(self.pending_index.glob("*.json")):
+            data = json.loads(path.read_text(encoding="utf-8"))
+            start, end = data["start"], data["end"]
+            agms = _clean(start.get("agms"))
+            with self.officer_lock(agms):
+                active_path = self._active_path(agms)
+                if active_path.is_file():
+                    current = json.loads(active_path.read_text(encoding="utf-8"))
+                    if _clean(current.get("event_id")) == _clean(start.get("event_id")):
+                        active_path.unlink()
+                self._store_personnel_session(start, end)
+                path.unlink(missing_ok=True)
+                done += 1
+        return done
+
     @staticmethod
     def _session_row_dict(row) -> dict:
         return {
@@ -1091,11 +1127,13 @@ class SharedEventStore:
     def get_active(self, agms: str) -> dict | None:
         path = self._active_path(agms)
         try:
-            return json.loads(path.read_text(encoding="utf-8"))
+            item = json.loads(path.read_text(encoding="utf-8"))
+            return None if self._has_end_receipt(item) else item
         except FileNotFoundError:
             return None
-        except Exception:
-            return None
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            # Fail closed: an unreadable shared active file is NOT a free booth.
+            raise BusyError(f"Δεν είναι ασφαλής η ανάγνωση ενεργής θέσης {agms}: {exc}") from exc
 
     def _write_event(self, event: dict) -> Path:
         dt = datetime.fromisoformat(event["timestamp"])
@@ -1157,7 +1195,12 @@ class SharedEventStore:
                 }
                 path = self._write_event(event)
                 event["event_file"] = str(path)
-                self._atomic_json(self._active_path(person.agms), event)
+                try:
+                    self._atomic_json(self._active_path(person.agms), event)
+                except Exception:
+                    # Do not leave a phantom START if the active marker failed.
+                    path.unlink(missing_ok=True)
+                    raise
             try:
                 self.sync_active_shift()
             except Exception:
@@ -1187,17 +1230,28 @@ class SharedEventStore:
                 "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
             }
             self._write_event(event)
-            self._store_personnel_session(current, event)
+            # Durable receipt before releasing a booth; history indexing can be
+            # retried later if SQLite is locked or temporarily unavailable.
+            receipt = self.pending_index / f"{_safe_name(current.get('event_id'))}.json"
+            self._atomic_json(receipt, {"start": current, "end": event})
             self._active_path(person.agms).unlink(missing_ok=True)
+            try:
+                self._store_personnel_session(current, event)
+            except Exception:
+                event["session_index_pending"] = True
+            else:
+                receipt.unlink(missing_ok=True)
             return event
 
     def active_all(self) -> list[dict]:
         result: list[dict] = []
         for path in sorted(self.active.glob("*.json")):
             try:
-                result.append(json.loads(path.read_text(encoding="utf-8")))
-            except Exception:
-                pass
+                item = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                raise BusyError(f"Δεν διαβάζεται η δέσμευση {path.name}: {exc}") from exc
+            if not self._has_end_receipt(item):
+                result.append(item)
         return sorted(result, key=lambda x: (_clean(x.get("direction")), _clean(x.get("position")), _clean(x.get("full_name"))))
 
     def iter_events(self, start_dt: datetime, end_dt: datetime) -> list[dict]:
@@ -3006,11 +3060,8 @@ def run(args=None) -> int:
         def _communication_tick(self):
             if not self.store:
                 return
-            if not _windows_session_is_active():
-                self._force_exit = True
-                self._cleanup_client()
-                QApplication.quit()
-                return
+            # A Windows Fast User Switch must never forcibly close another
+            # session's app; Windows itself terminates on actual Sign out.
             try:
                 state = "ΕΛΑΧΙΣΤΟΠΟΙΗΜΕΝΟ" if self.isMinimized() else "ΑΝΟΙΧΤΟ"
                 self.store.write_client_heartbeat(self.client_id, {
