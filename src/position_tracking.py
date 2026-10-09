@@ -1217,7 +1217,7 @@ class SharedEventStore:
         self._atomic_json(path, event)
         return path
 
-    def start(self, person: PersonnelRecord, position: str, direction: str, when: datetime | None = None) -> dict:
+    def start(self, person: PersonnelRecord, position: str, direction: str, when: datetime | None = None, client_id: str = "") -> dict:
         when = when or datetime.now()
         position = _clean(position)
         direction = _clean(direction).upper()
@@ -1266,6 +1266,7 @@ class SharedEventStore:
                     "direction": direction,
                     "computer": socket.gethostname(),
                     "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+                    "client_id": _clean(client_id),
                 }
                 path = self._write_event(event)
                 event["event_file"] = str(path)
@@ -3174,16 +3175,47 @@ def run(args=None) -> int:
                 except Exception:
                     pass
 
+        def _end_own_active_positions(self) -> int:
+            """Close only START records created by this exact app process."""
+            if not self.store:
+                return 0
+            mine = [
+                item for item in self.store.active_all()
+                if _clean(item.get("client_id")) == self.client_id
+            ]
+            for item in mine:
+                member = PersonnelRecord(
+                    agms=_clean(item.get("agms")),
+                    rank=_clean(item.get("rank")),
+                    surname=_clean(item.get("surname")),
+                    given_name=_clean(item.get("given_name")),
+                )
+                self.store.end(member)
+            return len(mine)
+
         def _request_real_exit(self):
             answer = QMessageBox.question(
                 self,
                 "Έξοδος από το πρόγραμμα",
-                "Να κλείσει πραγματικά η εφαρμογή;\n\n"
-                "Αν κλείσει, δεν θα λαμβάνει μηνύματα / οδηγίες του Αξιωματικού Υπηρεσίας.",
+                "Να κλείσει πραγματικά η εφαρμογή?\\n\\n"
+                "Οι ενεργές θέσεις που ανοίχθηκαν από αυτό το παράθυρο "
+                "θα λάβουν ΛΗΞΗ πριν κλείσει το πρόγραμμα.\\n"
+                "Αν δεν είναι διαθέσιμος ο κεντρικός φάκελος, η έξοδος "
+                "δεν θα ολοκληρωθεί με ψευδή επιβεβαίωση.",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
             if answer != QMessageBox.Yes:
+                return
+            try:
+                self._end_own_active_positions()
+            except Exception as exc:
+                QMessageBox.critical(
+                    self, "Η λήξη δεν καταχωρίστηκε",
+                    f"Δεν επιβεβαιώθηκε η αποδέσμευση της θέσης.\\n{exc}\\n"
+                    "Ελέγξτε τον κεντρικό υπολογιστή ή ζητήστε από τον ΑΞΥΠ "
+                    "να ολοκληρώσει τη θέση από τη ζωντανή εικόνα."
+                )
                 return
             self._force_exit = True
             self._cleanup_client()
@@ -3257,10 +3289,15 @@ def run(args=None) -> int:
                     command = commands[0]
                     if _clean(command.get("type")).upper() == "CLOSE_APP":
                         try:
+                            self._end_own_active_positions()
                             self.store.acknowledge_command(
                                 _clean(command.get("command_id")), self.client_id
                             )
                         except Exception:
+                            if hasattr(self, "comm_status"):
+                                self.comm_status.setText(
+                                    "ΕΚΚΡΕΜΕΙ ΛΗΞΗ ΘΕΣΗΣ — δεν εκτελέστηκε απομακρυσμένο κλείσιμο"
+                                )
                             return
                         self._force_exit = True
                         self._cleanup_client()
@@ -3649,7 +3686,7 @@ def run(args=None) -> int:
             direction = _clean(self.direction.currentText()).upper()
             try:
                 if pos not in {str(i) for i in range(1,15)}: raise ValueError("Επιλέξτε θέση 1 έως 14.")
-                e = self.store.start(p,pos,direction)
+                e = self.store.start(p,pos,direction,client_id=self.client_id)
                 QMessageBox.information(self,"Καταχώριση",f"ΕΝΑΡΞΗ: ΘΕΣΗ {pos} — {direction}\nΏρα: {e['timestamp'].replace('T',' ')}")
                 self._agms_changed()
                 QTimer.singleShot(150, self._check_shift_updates)
