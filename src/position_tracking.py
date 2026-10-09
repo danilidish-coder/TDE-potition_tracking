@@ -23,6 +23,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 APP_NAME = "TDE Krystallopigis - Katagrafi Theseon"
+APP_VERSION = "1.2.4"
 SETTINGS_NAME = "position_tracking.settings.json"
 DEFAULT_CUTOFF = "10:00"
 STATISTICS_PIN_SHA256 = "ca444860f0e1ddca9596007253ea43b3a5133780b0a566d9a096a53568c063fb"
@@ -2949,7 +2950,7 @@ def run(args=None) -> int:
             self._network_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="TDE-network")
             self._communication_future = None
             self._shift_future = None
-            self.setWindowTitle("Τ.Δ.Ε. Κρυσταλλοπηγής - Καταγραφή Θέσεων")
+            self.setWindowTitle(f"Τ.Δ.Ε. Κρυσταλλοπηγής - Καταγραφή Θέσεων v{APP_VERSION}")
             emblem_icon = _police_emblem_pixmap(96)
             if not emblem_icon.isNull():
                 self.setWindowIcon(QIcon(emblem_icon))
