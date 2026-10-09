@@ -508,8 +508,8 @@ class SharedEventStore:
             except (FileExistsError, PermissionError) as exc:
                 # On Windows/SMB an existing exclusively opened lock file can
                 # raise PermissionError instead of FileExistsError.
-                if isinstance(exc, PermissionError) and not path.exists():
-                    raise
+                # Windows may also deny metadata access to an open lock file.
+                # Treat this as contention until the bounded deadline expires.
                 try:
                     if time.time() - path.stat().st_mtime > 60:
                         path.unlink(missing_ok=True)
@@ -715,8 +715,8 @@ class SharedEventStore:
             except (FileExistsError, PermissionError) as exc:
                 # On Windows/SMB an existing exclusively opened lock file can
                 # raise PermissionError instead of FileExistsError.
-                if isinstance(exc, PermissionError) and not path.exists():
-                    raise
+                # Windows may also deny metadata access to an open lock file.
+                # Treat this as contention until the bounded deadline expires.
                 try:
                     if time.time() - path.stat().st_mtime > 60:
                         path.unlink(missing_ok=True)
