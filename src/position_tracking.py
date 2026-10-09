@@ -2990,6 +2990,8 @@ def run(args=None) -> int:
             self._app_started_at = datetime.now().isoformat(timespec="seconds")
             self.client_id = SharedEventStore.local_client_id()
             self._network_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="TDE-network")
+            self._position_operation_future = None
+            self._agms_query_serial = 0
             self._communication_future = None
             self._shift_future = None
             self.setWindowTitle(f"Τ.Δ.Ε. Κρυσταλλοπηγής - Καταγραφή Θέσεων v{APP_VERSION}")
@@ -3642,27 +3644,55 @@ def run(args=None) -> int:
             self._refresh_shift_status()
 
         def _agms_changed(self, *_):
-            p = self._selected()
-            if not p:
+            self._agms_query_serial = getattr(self, "_agms_query_serial", 0) + 1
+            serial = self._agms_query_serial
+            person = self._selected()
+            self.start_btn.setEnabled(False)
+            self.end_btn.setEnabled(False)
+            if not person:
                 self.person_name.setText("—")
-                self.active_status.setText("Ο Α.Γ.Μ.Σ. δεν βρέθηκε στο προσωπικό" if _clean(self.agms_input.text()) else "Πληκτρολογήστε Α.Γ.Μ.Σ.")
-                self.start_btn.setEnabled(False); self.end_btn.setEnabled(False)
+                self.active_status.setText(
+                    "Ο Α.Γ.Μ.Σ. δεν βρέθηκε στο προσωπικό"
+                    if _clean(self.agms_input.text()) else "Πληκτρολογήστε Α.Γ.Μ.Σ."
+                )
                 return
-            self.person_name.setText(_clean(f"{p.rank} {p.surname} {p.given_name}"))
-            try:
-                active = self.store.get_active(p.agms) if self.store else None
-            except (BusyError, OSError) as exc:
-                self.active_status.setText("ΑΝΑΜΟΝΗ ΣΥΝΔΕΣΗΣ — δεν επιτρέπεται καταχώριση μέχρι να επιβεβαιωθούν τα κεντρικά δεδομένα.")
-                self.start_btn.setEnabled(False)
-                self.end_btn.setEnabled(False)
+            self.person_name.setText(_clean(f"{person.rank} {person.surname} {person.given_name}"))
+            if self._position_operation_future is not None:
+                self.active_status.setText("ΚΑΤΑΧΩΡΙΣΗ ΣΕ ΕΞΕΛΙΞΗ — μην την επαναλάβετε.")
                 return
-            if active:
-                ts = _clean(active.get("timestamp","")).replace("T"," ")
-                self.active_status.setText(f"ΕΝΕΡΓΗ: ΘΕΣΗ {active.get('position','')} — {active.get('direction','')} — από {ts}")
-                self.start_btn.setEnabled(False); self.end_btn.setEnabled(True)
-            else:
-                self.active_status.setText("Δεν υπάρχει ανοικτή καταχώριση")
-                self.start_btn.setEnabled(bool(self.store)); self.end_btn.setEnabled(False)
+            if not self.store:
+                self.active_status.setText("ΔΕΝ ΥΠΑΡΧΕΙ ΣΥΝΔΕΣΗ ΜΕ ΤΑ ΚΕΝΤΡΙΚΑ ΔΕΔΟΜΕΝΑ.")
+                return
+            self.active_status.setText("ΕΛΕΓΧΟΣ ΕΝΕΡΓΗΣ ΘΕΣΗΣ — αναμονή κεντρικού.")
+            future = self._network_pool.submit(self.store.get_active, person.agms)
+
+            def poll():
+                if serial != self._agms_query_serial:
+                    return
+                if not future.done():
+                    QTimer.singleShot(200, poll)
+                    return
+                try:
+                    active = future.result()
+                except Exception:
+                    self.active_status.setText(
+                        "ΑΝΑΜΟΝΗ ΣΥΝΔΕΣΗΣ — δεν επιτρέπεται νέα καταχώριση."
+                    )
+                    return
+                if self._position_operation_future is not None:
+                    return
+                if active:
+                    ts = _clean(active.get("timestamp", "")).replace("T", " ")
+                    self.active_status.setText(
+                        f"ΕΝΕΡΓΗ: ΘΕΣΗ {active.get('position','')} — "
+                        f"{active.get('direction','')} — από {ts}"
+                    )
+                    self.end_btn.setEnabled(True)
+                else:
+                    self.active_status.setText("Δεν υπάρχει ανοικτή καταχώριση")
+                    self.start_btn.setEnabled(True)
+
+            QTimer.singleShot(100, poll)
 
         @staticmethod
         def _suggested_direction(position: str) -> str:
@@ -3678,31 +3708,71 @@ def run(args=None) -> int:
             idx = self.direction.findText(suggested)
             if idx >= 0: self.direction.setCurrentIndex(idx)
 
-        def _start(self):
-            p = self._selected()
-            if not p or not self.store:
-                QMessageBox.warning(self, "Έλεγχος", "Επιλέξτε λίστα προσωπικού."); return
-            pos = _clean(self.position.currentText())
-            direction = _clean(self.direction.currentText()).upper()
-            try:
-                if pos not in {str(i) for i in range(1,15)}: raise ValueError("Επιλέξτε θέση 1 έως 14.")
-                e = self.store.start(p,pos,direction,client_id=self.client_id)
-                QMessageBox.information(self,"Καταχώριση",f"ΕΝΑΡΞΗ: ΘΕΣΗ {pos} — {direction}\nΏρα: {e['timestamp'].replace('T',' ')}")
+        def _position_action(self, kind: str, person: PersonnelRecord, position: str = "", direction: str = ""):
+            if self._position_operation_future is not None:
+                QMessageBox.warning(self, "Καταχώριση", "Υπάρχει ήδη εντολή σε εξέλιξη. Μην την επαναλάβετε.")
+                return
+            if not self.store:
+                QMessageBox.warning(self, "Σύνδεση", "Δεν υπάρχει σύνδεση με τα κεντρικά δεδομένα.")
+                return
+            self.start_btn.setEnabled(False)
+            self.end_btn.setEnabled(False)
+            self.active_status.setText("ΚΑΤΑΧΩΡΙΣΗ ΣΕ ΕΞΕΛΙΞΗ — αναμονή επιβεβαίωσης από το κεντρικό.")
+            if kind == "START":
+                future = self._network_pool.submit(
+                    self.store.start, person, position, direction, None, self.client_id
+                )
+            else:
+                future = self._network_pool.submit(self.store.end, person)
+            self._position_operation_future = future
+
+            def poll():
+                if not future.done():
+                    QTimer.singleShot(200, poll)
+                    return
+                self._position_operation_future = None
+                try:
+                    event = future.result()
+                except Exception as exc:
+                    QMessageBox.critical(
+                        self, "Η καταχώριση δεν επιβεβαιώθηκε",
+                        f"{exc}\\nΕλέγξτε την τρέχουσα κατάσταση πριν επιχειρήσετε ξανά."
+                    )
+                else:
+                    if kind == "START":
+                        QMessageBox.information(
+                            self, "Καταχώριση",
+                            f"ΕΝΑΡΞΗ: ΘΕΣΗ {position} — {direction}\\n"
+                            f"Ώρα: {event['timestamp'].replace('T',' ')}"
+                        )
+                    else:
+                        QMessageBox.information(
+                            self, "Καταχώριση",
+                            f"ΛΗΞΗ καταχωρίστηκε στις {event['timestamp'].replace('T',' ')}"
+                        )
+                    QTimer.singleShot(150, self._check_shift_updates)
                 self._agms_changed()
-                QTimer.singleShot(150, self._check_shift_updates)
-            except Exception as exc:
-                QMessageBox.critical(self,"Δεν καταχωρίστηκε",str(exc))
+
+            QTimer.singleShot(100, poll)
+
+        def _start(self):
+            person = self._selected()
+            if not person or not self.store:
+                QMessageBox.warning(self, "Έλεγχος", "Επιλέξτε λίστα προσωπικού.")
+                return
+            position = _clean(self.position.currentText())
+            direction = _clean(self.direction.currentText()).upper()
+            if position not in {str(i) for i in range(1, 15)}:
+                QMessageBox.warning(self, "Θέση", "Επιλέξτε θέση 1 έως 14.")
+                return
+            self._position_action("START", person, position, direction)
 
         def _end(self):
-            p = self._selected()
-            if not p or not self.store:
-                QMessageBox.warning(self, "Έλεγχος", "Επιλέξτε λίστα προσωπικού."); return
-            try:
-                e=self.store.end(p)
-                QMessageBox.information(self,"Καταχώριση",f"ΛΗΞΗ καταχωρίστηκε στις {e['timestamp'].replace('T',' ')}")
-                self._agms_changed()
-            except Exception as exc:
-                QMessageBox.critical(self,"Δεν καταχωρίστηκε",str(exc))
+            person = self._selected()
+            if not person or not self.store:
+                QMessageBox.warning(self, "Έλεγχος", "Επιλέξτε λίστα προσωπικού.")
+                return
+            self._position_action("END", person)
 
         def _preview_list_dialog(self, title: str, intro: str, agms_list: list[str], allow_exclude: bool) -> tuple[bool,list[str],list[str]]:
             dlg=QDialog(self); dlg.setWindowTitle(title); dlg.resize(620,480)
