@@ -1304,7 +1304,7 @@ class SharedEventStore:
             pass
         return event
 
-    def end(self, person: PersonnelRecord, when: datetime | None = None, expected_start_event_id: str = "") -> dict:
+    def end(self, person: PersonnelRecord, when: datetime | None = None, expected_start_event_id: str = "", end_reason: str = "") -> dict:
         when = when or datetime.now()
         with self.officer_lock(person.agms):
             current = self.get_active(person.agms)
@@ -1328,6 +1328,8 @@ class SharedEventStore:
                 "computer": socket.gethostname(),
                 "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
             }
+            if end_reason:
+                event["end_reason"] = _clean(end_reason)
             self._write_event(event)
             # Durable receipt before releasing a booth; history indexing can be
             # retried later if SQLite is locked or temporarily unavailable.
@@ -1354,6 +1356,69 @@ class SharedEventStore:
             if not self._has_end_receipt(item):
                 result.append(self._apply_start_correction(item))
         return sorted(result, key=lambda x: (_clean(x.get("direction")), _clean(x.get("position")), _clean(x.get("full_name"))))
+
+    def close_previous_windows_user_positions(self, computer: str, windows_user: str) -> list[dict]:
+        """Auto-close only earlier Windows accounts on this exact workstation.
+
+        A locked screen, idle Windows session, or another station is NOT a
+        handoff. If either Windows account cannot be identified, fail safely
+        rather than guessing. A shared lock handles concurrent instances of
+        the new account. Exact START IDs prevent closing a replacement record.
+        """
+        current_computer = _clean(computer).casefold()
+        current_user = _clean(windows_user).casefold()
+        if not current_computer or not current_user:
+            return []
+        completed = []
+        with self.officer_lock("__WINDOWS_USER_HANDOFF__", timeout=15.0):
+            for item in self.active_all():
+                recorded_computer = _clean(item.get("computer")).casefold()
+                recorded_user = _clean(item.get("user")).casefold()
+                if recorded_computer != current_computer or not recorded_user or recorded_user == current_user:
+                    continue
+                start_id = _clean(item.get("event_id"))
+                agms = _clean(item.get("agms"))
+                if not start_id or not agms:
+                    continue
+                person = PersonnelRecord(
+                    agms=agms, rank=_clean(item.get("rank")),
+                    surname=_clean(item.get("surname")), given_name=_clean(item.get("given_name")),
+                )
+                try:
+                    ended = self.end(
+                        person, expected_start_event_id=start_id,
+                        end_reason="WINDOWS_USER_HANDOFF_RECOVERY",
+                    )
+                except ValueError:
+                    # An operator already closed the old START while recovering.
+                    if self.get_active(agms) is None:
+                        continue
+                    raise
+                except BusyError:
+                    # A concurrent END/START may have replaced this session.
+                    latest = self.get_active(agms)
+                    if latest is None or _clean(latest.get("event_id")) != start_id:
+                        continue
+                    raise
+                details = {
+                    "computer": computer,
+                    "previous_windows_user": _clean(item.get("user")),
+                    "new_windows_user": windows_user,
+                    "agms": agms,
+                    "position": _clean(item.get("position")),
+                    "start_event_id": start_id,
+                    "end_event_id": _clean(ended.get("event_id")),
+                    "observed_at": _clean(ended.get("timestamp")),
+                    "end_time_note": "Time of detection; actual departure time unverified",
+                }
+                completed.append(details)
+                try:
+                    self.log_admin_action("AUTO_END_WINDOWS_USER_HANDOFF", details)
+                except Exception:
+                    # The END event carries an immutable end_reason even if the
+                    # supplemental administrative log is temporarily unavailable.
+                    pass
+        return completed
 
     def iter_events(self, start_dt: datetime, end_dt: datetime) -> list[dict]:
         result: list[dict] = []
@@ -3289,16 +3354,12 @@ def run(args=None) -> int:
         def _communication_io(self, window_state: str):
             """Shared-folder IO must not run on the Qt GUI thread."""
             session_active = _windows_session_is_active()
-            if not session_active:
-                # Windows Switch user / disconnected logon session: release
-                # this exact application's booths, but not those of others.
-                count = self._end_own_active_positions()
-                if count:
-                    self.store.log_admin_action("AUTO_END_WINDOWS_SESSION_DISCONNECTED", {
-                        "client_id": self.client_id,
-                        "ended_positions": count,
-                        "observed_at": datetime.now().isoformat(timespec="seconds"),
-                    })
+            # Do NOT close on Windows idle/lock/session-disconnected status:
+            # only a verified DIFFERENT Windows account on the same computer
+            # constitutes a handoff. This check also runs after SMB reconnect.
+            self.store.close_previous_windows_user_positions(
+                socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or ""
+            )
             self.store.write_client_heartbeat(self.client_id, {
                 "app_started_at": self._app_started_at,
                 "window_state": window_state,
