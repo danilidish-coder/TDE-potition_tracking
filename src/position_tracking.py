@@ -13,6 +13,7 @@ import sys
 import tempfile
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 import zipfile
 import unicodedata
 from contextlib import contextmanager
@@ -2760,7 +2761,7 @@ def run(args=None) -> int:
             action_row=QHBoxLayout()
             self.active_person=QComboBox()
             self.active_person.setMinimumHeight(40)
-            self.active_person.setMinimumWidth(520)
+            self.active_person.setMinimumWidth(350)
             self.end_active_btn=QPushButton("ΛΗΞΗ ΕΝΕΡΓΗΣ ΘΕΣΗΣ")
             self.end_active_btn.setMinimumHeight(40)
             self.end_active_btn.setStyleSheet("font-weight:900")
@@ -2934,6 +2935,9 @@ def run(args=None) -> int:
             self._message_dialog_active = False
             self._app_started_at = datetime.now().isoformat(timespec="seconds")
             self.client_id = SharedEventStore.local_client_id()
+            self._network_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="TDE-network")
+            self._communication_future = None
+            self._shift_future = None
             self.setWindowTitle("Τ.Δ.Ε. Κρυσταλλοπηγής - Καταγραφή Θέσεων")
             emblem_icon = _police_emblem_pixmap(96)
             if not emblem_icon.isNull():
@@ -3107,6 +3111,10 @@ def run(args=None) -> int:
             self.showMinimized()
 
         def _cleanup_client(self):
+            try:
+                self._network_pool.shutdown(wait=False, cancel_futures=True)
+            except Exception:
+                pass
             if self.store:
                 try:
                     self.store.remove_client_heartbeat(self.client_id)
@@ -3162,44 +3170,56 @@ def run(args=None) -> int:
                 labels[cid] = f"{computer} — {user}{worker_text}"
             return labels
 
+        def _communication_io(self, window_state: str):
+            """Shared-folder IO must not run on the Qt GUI thread."""
+            self.store.write_client_heartbeat(self.client_id, {
+                "app_started_at": self._app_started_at,
+                "window_state": window_state,
+                "windows_session_active": _windows_session_is_active(),
+            })
+            online = self.store.online_clients()
+            commands = self.store.pending_commands(self.client_id)
+            pending = self.store.pending_messages(self.client_id)
+            return online, commands, pending
+
         def _communication_tick(self):
             if not self.store:
                 return
-            # A Windows Fast User Switch must never forcibly close another
-            # session's app; Windows itself terminates on actual Sign out.
-            try:
-                state = "ΕΛΑΧΙΣΤΟΠΟΙΗΜΕΝΟ" if self.isMinimized() else "ΑΝΟΙΧΤΟ"
-                self.store.write_client_heartbeat(self.client_id, {
-                    "app_started_at": self._app_started_at,
-                    "window_state": state,
-                })
-                online = self.store.online_clients()
-                if hasattr(self, "comm_status"):
-                    self.comm_status.setText(f"ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ — ενεργοί σταθμοί: {len(online)}")
-            except Exception:
-                return
-
-            try:
-                commands = self.store.pending_commands(self.client_id)
+            future = self._communication_future
+            if future is not None:
+                if not future.done():
+                    return
+                self._communication_future = None
+                try:
+                    online, commands, pending = future.result()
+                    if hasattr(self, "comm_status"):
+                        self.comm_status.setText(
+                            f"ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ — ενεργοί σταθμοί: {len(online)}"
+                        )
+                except Exception:
+                    if hasattr(self, "comm_status"):
+                        self.comm_status.setText("ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ — ΕΛΕΓΧΟΣ ΣΥΝΔΕΣΗΣ")
+                    return
                 if commands:
                     command = commands[0]
                     if _clean(command.get("type")).upper() == "CLOSE_APP":
-                        self.store.acknowledge_command(_clean(command.get("command_id")), self.client_id)
+                        try:
+                            self.store.acknowledge_command(
+                                _clean(command.get("command_id")), self.client_id
+                            )
+                        except Exception:
+                            return
                         self._force_exit = True
                         self._cleanup_client()
                         QApplication.quit()
                         return
-            except Exception:
-                pass
-
-            if self._message_dialog_active:
-                return
-            try:
-                pending = self.store.pending_messages(self.client_id)
-            except Exception:
-                pending = []
-            if pending:
-                self._show_message_alarm(pending[0])
+                if pending and not self._message_dialog_active:
+                    self._show_message_alarm(pending[0])
+            if self._communication_future is None:
+                state = "ΕΛΑΧΙΣΤΟΠΟΙΗΜΕΝΟ" if self.isMinimized() else "ΑΝΟΙΧΤΟ"
+                self._communication_future = self._network_pool.submit(
+                    self._communication_io, state
+                )
 
         def _show_message_alarm(self, message: dict):
             if not self.store:
@@ -3746,20 +3766,33 @@ def run(args=None) -> int:
             self.end_shift_btn.setEnabled(bool(p))
 
         def _check_shift_updates(self):
-            if not self.store: return
-            shift=self.store.sync_active_shift()
+            if not self.store:
+                return
+            future = self._shift_future
+            if future is None:
+                self._shift_future = self._network_pool.submit(self.store.sync_active_shift)
+                return
+            if not future.done():
+                return
+            self._shift_future = None
+            try:
+                shift = future.result()
+            except Exception:
+                if hasattr(self, "shift_status"):
+                    self.shift_status.setText("ΑΝΑΜΟΝΗ ΣΥΝΔΕΣΗΣ ΜΕ ΚΕΝΤΡΙΚΑ ΔΕΔΟΜΕΝΑ")
+                return
             if not shift:
                 if self._last_shift_signature != "NO_SHIFT":
                     self._last_shift_signature = "NO_SHIFT"
                     self._refresh_shift_status()
                 return
-            signature=json.dumps({
-                "approved":shift.get("approved",[]),
-                "excluded":shift.get("excluded",[]),
-                "pending":shift.get("pending",[])
-            },ensure_ascii=False,sort_keys=True)
-            if signature!=self._last_shift_signature:
-                self._last_shift_signature=signature
+            signature = json.dumps({
+                "approved": shift.get("approved", []),
+                "excluded": shift.get("excluded", []),
+                "pending": shift.get("pending", [])
+            }, ensure_ascii=False, sort_keys=True)
+            if signature != self._last_shift_signature:
+                self._last_shift_signature = signature
                 self._refresh_shift_status()
             if shift.get("pending") and not self._pending_prompt_active:
                 self._resolve_pending_members()
