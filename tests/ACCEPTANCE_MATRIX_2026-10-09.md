@@ -41,3 +41,14 @@
 5. Πραγματικό Windows SMB fault-injection test πριν από release, με επιβεβαίωση πλήρους αρχείου audit και ιστορικού.
 
 Δεν παραδίδουμε νέο EXE ως production-ready χωρίς αυτά τα κριτήρια.
+
+
+## Ανεξάρτητη εκτέλεση πραγματικού κώδικα — ενημέρωση 09/10/2026
+
+Ο πηγαίος κώδικας `src/position_tracking.py` ανακτήθηκε από το GitHub και επαληθεύτηκε **byte-for-byte**: Git blob SHA1 `1f38c4397edecb2559582e6973ec0c0f40d6acea` (SHA256 `805f25dbf73bb1aa93ef0562a2e151847ca1c7a1eb6e8bcedc8e3deaaf1663e4`).
+
+Σε Linux Python 3.13.5, τα παρακάτω εκτελέστηκαν με **PASS**: network resilience (15 groups, 250 START/END cycles, 56 concurrent booth claims), shift SMB lock concurrency, client lifecycle, Windows user handoff simulation, single/group shift actions, communication control, shift-end release, 100 shift membership reversals, report archive history/search, current report retention, SQLite archive, officer simple flow, simulated host/15 separate clients. Η δοκιμή του κοινού κεντρικού φακέλου επαναλήφθηκε επιτυχώς 4 συνεχόμενες φορές· η πέμπτη διεκόπη από το συνολικό χρονικό όριο εκτέλεσης και δεν θεωρείται PASS.
+
+**ΔΕΝ ΠΕΡΑΣΑΝ ΩΣ ΕΠΙΤΥΧΗ** οι δύο δοκιμές `pdf_report_regression.py` και `personnel_history_sqlite_regression.py` επειδή στο διαθέσιμο περιβάλλον λείπει το `PySide6` (ModuleNotFoundError). Δεν πρόκειται για αποδεδειγμένα προβλήματα στον κώδικα, αλλά για μη εκτελεσμένα γραφικά tests.
+
+Η προσομοίωση απώλειας κεντρικού φακέλου δείχνει ότι **δεν επιβεβαιώνονται ψευδώς κεντρικές εγγραφές**· **ΔΕΝ** δείχνει ότι έχει ήδη υλοποιηθεί το απαιτούμενο offline local outbox. Η πραγματική δοκιμή Windows SMB, τα Windows user session events και η κατασκευή νεότερου Windows EXE παραμένουν ανοιχτά.
