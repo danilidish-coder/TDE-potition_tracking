@@ -41,3 +41,8 @@ jobs:
           python tests/shift_end_actions_regression.py
       - name: Multi-station shortcut and host power-off simulation
         run: python tests/simulated_shared_host_shortcuts.py
+      - name: Offline queue recovery and restart stress
+        run: |
+          python tests/offline_recovery_integration.py
+          python tests/offline_user_logoff_machine_queue.py
+          python tests/offline_15_clients_restart_stress.py

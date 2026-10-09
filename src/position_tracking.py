@@ -20,10 +20,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass, asdict
 from datetime import datetime, date, timedelta, time as dtime
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from position_tracking_offline import OfflineJournal, OfflineConflict
+from position_tracking_bootstrap import cache_windows_client
 from xml.etree import ElementTree as ET
 
 APP_NAME = "TDE Krystallopigis - Katagrafi Theseon"
-APP_VERSION = "1.2.4"
+APP_VERSION = "1.2.5"
 SETTINGS_NAME = "position_tracking.settings.json"
 DEFAULT_CUTOFF = "10:00"
 STATISTICS_PIN_SHA256 = "ca444860f0e1ddca9596007253ea43b3a5133780b0a566d9a096a53568c063fb"
@@ -135,16 +138,42 @@ def _fallback_settings_path() -> Path:
     return Path(appdata) / "TDE_Krystallopigis" / SETTINGS_NAME
 
 
-def _settings_path() -> Path:
+def _local_root() -> Path:
+    target = os.environ.get("TDE_POSITION_LOCAL_ROOT")
+    root = Path(target) if target else Path(
+        os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_DATA_HOME") or
+        (Path.home() / ".local" / "share")
+    ) / "TDE_Krystallopigis" / "PositionTracking"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _machine_queue_root() -> Path:
+    preferred = os.environ.get("TDE_POSITION_MACHINE_ROOT")
+    public = os.environ.get("PUBLIC")
+    path = (Path(preferred) if preferred else
+            Path(public) / "Documents" / "TDE_Krystallopigis" / "PositionTracking_Queue"
+            if public else _local_root() / "machine_queue")
     try:
-        return _runtime_root() / SETTINGS_NAME
-    except Exception:
-        return _fallback_settings_path()
+        path.mkdir(parents=True, exist_ok=True)
+        # Standard Windows users can normally write PUBLIC Documents; if
+        # policy blocks it, safely fall back to the user's own state.
+        check = path / (".writecheck_" + uuid.uuid4().hex)
+        check.write_bytes(b"ok")
+        check.unlink()
+        return path
+    except OSError:
+        return _local_root() / "machine_queue"
+
+
+def _settings_path() -> Path:
+    return _local_root() / SETTINGS_NAME
 
 
 @dataclass
 class AppConfig:
     central_root: str = ""
+    shared_exe_path: str = ""
     personnel_file: str = ""
     cutoff: str = DEFAULT_CUTOFF
     positions: list[str] | None = None
@@ -165,10 +194,20 @@ class AppConfig:
     @classmethod
     def load(cls) -> "AppConfig":
         path = _settings_path()
+        if not path.is_file():
+            # Migration: recover the shared EXE settings only while reachable.
+            try:
+                shared = _app_dir() / ".tde_runtime" / SETTINGS_NAME
+                if shared.is_file():
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(shared, path)
+            except OSError:
+                pass
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             return cls(
                 central_root=_clean(data.get("central_root")),
+                shared_exe_path=_clean(data.get("shared_exe_path")),
                 personnel_file=_clean(data.get("personnel_file")),
                 cutoff=_clean(data.get("cutoff")) or DEFAULT_CUTOFF,
                 positions=[_clean(x) for x in data.get("positions", []) if _clean(x)] or None,
@@ -1229,6 +1268,22 @@ class SharedEventStore:
             # Fail closed: an unreadable shared active file is NOT a free booth.
             raise BusyError(f"Δεν είναι ασφαλής η ανάγνωση ενεργής θέσης {agms}: {exc}") from exc
 
+    def _existing_operation_event(self, op_id: str, when: datetime) -> dict | None:
+        if not op_id:
+            return None
+        # A retry after a server acknowledgement was lost must never record
+        # another START/END. Shared lock for AGMS protects this lookup.
+        folder = self.events / f"{when:%Y}" / f"{when:%m}" / f"{when:%Y-%m-%d}"
+        prefix = f"{when:%Y%m%d_%H%M%S}_"
+        for path in folder.glob(f"{prefix}*_{_safe_name(op_id)}.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                if data.get("event_id") == op_id:
+                    return data
+            except (OSError, ValueError):
+                raise BusyError("Δεν διαβάζεται η προηγούμενη καταχώριση συγχρονισμού.")
+        return None
+
     def _write_event(self, event: dict) -> Path:
         dt = datetime.fromisoformat(event["timestamp"])
         folder = self.events / f"{dt:%Y}" / f"{dt:%m}" / f"{dt:%Y-%m-%d}"
@@ -1237,7 +1292,7 @@ class SharedEventStore:
         self._atomic_json(path, event)
         return path
 
-    def start(self, person: PersonnelRecord, position: str, direction: str, when: datetime | None = None, client_id: str = "") -> dict:
+    def start(self, person: PersonnelRecord, position: str, direction: str, when: datetime | None = None, client_id: str = "", event_id: str = "", origin_computer: str = "", origin_user: str = "") -> dict:
         when = when or datetime.now()
         position = _clean(position)
         direction = _clean(direction).upper()
@@ -1246,10 +1301,36 @@ class SharedEventStore:
         if direction not in {"ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"}:
             raise ValueError("Επιλέξτε κατεύθυνση ΕΙΣΟΔΟΣ ή ΕΞΟΔΟΣ.")
         with self.officer_lock(person.agms):
+            previous = self._existing_operation_event(event_id, when)
+            if previous:
+                if previous.get("kind") != "START" or previous.get("agms") != person.agms:
+                    raise BusyError("Ασυμφωνία αναγνωριστικού START.")
+                current = self.get_active(person.agms)
+                if current and _clean(current.get("event_id")) == event_id:
+                    return previous
+                if current:
+                    raise BusyError("Η παλιά έναρξη αντικαταστάθηκε. Δεν επιτρέπεται επανακατάληψη.")
+                # If START was recorded but its active file was interrupted,
+                # recover only if the original shift was never ended.
+                if self._has_end_receipt(previous):
+                    return previous
+                with self._shift_db_connect() as db:
+                    closed = db.execute(
+                        "SELECT 1 FROM personnel_sessions WHERE start_event_id=? LIMIT 1", (event_id,)
+                    ).fetchone()
+                if closed:
+                    return previous
+                with self.officer_lock("__POSITION_START__"):
+                    if any(_clean(x.get("position")) == position for x in self.active_all()):
+                        raise BusyError("Η θέση έχει ήδη καταληφθεί στο μεταξύ.")
+                    self._atomic_json(self._active_path(person.agms), previous)
+                return previous
             # Serialize START operations across all stations so two PCs cannot
             # claim the same physical position at the same moment.
             with self.officer_lock("__POSITION_START__"):
                 current = self.get_active(person.agms)
+                if current and event_id and current.get("event_id") == event_id:
+                    return current
                 if current:
                     raise ValueError(
                         f"Υπάρχει ήδη ανοικτή θέση για {person.full_name}: "
@@ -1274,7 +1355,7 @@ class SharedEventStore:
                     )
                 event = {
                     "version": 2,
-                    "event_id": uuid.uuid4().hex,
+                    "event_id": event_id or uuid.uuid4().hex,
                     "kind": "START",
                     "timestamp": when.isoformat(timespec="seconds"),
                     "agms": person.agms,
@@ -1284,8 +1365,8 @@ class SharedEventStore:
                     "full_name": person.full_name,
                     "position": position,
                     "direction": direction,
-                    "computer": socket.gethostname(),
-                    "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+                    "computer": origin_computer or socket.gethostname(),
+                    "user": origin_user or os.environ.get("USERNAME") or os.environ.get("USER") or "",
                     "client_id": _clean(client_id),
                 }
                 path = self._write_event(event)
@@ -1304,9 +1385,28 @@ class SharedEventStore:
             pass
         return event
 
-    def end(self, person: PersonnelRecord, when: datetime | None = None, expected_start_event_id: str = "", end_reason: str = "", end_officer: PersonnelRecord | None = None) -> dict:
+    def end(self, person: PersonnelRecord, when: datetime | None = None, expected_start_event_id: str = "", end_reason: str = "", end_officer: PersonnelRecord | None = None, event_id: str = "", origin_computer: str = "", origin_user: str = "") -> dict:
         when = when or datetime.now()
         with self.officer_lock(person.agms):
+            previous = self._existing_operation_event(event_id, when)
+            if previous:
+                if previous.get("kind") != "END" or previous.get("agms") != person.agms:
+                    raise BusyError("Ασυμφωνία αναγνωριστικού END.")
+                current = self.get_active(person.agms)
+                if current and _clean(current.get("event_id")) == _clean(previous.get("start_event_id")):
+                    # Repair interruption between END event and active release.
+                    receipt = self.pending_index / f"{_safe_name(current.get('event_id'))}.json"
+                    self._atomic_json(receipt, {"start": current, "end": previous})
+                    self._active_path(person.agms).unlink(missing_ok=True)
+                    try:
+                        self._store_personnel_session(current, previous)
+                    except Exception:
+                        pass  # durable receipt is reconciled on subsequent startup
+                    else:
+                        receipt.unlink(missing_ok=True)
+                elif current:
+                    raise BusyError("Η θέση άλλαξε μετά την προηγούμενη ΛΗΞΗ.")
+                return previous
             current = self.get_active(person.agms)
             if not current:
                 raise ValueError(f"Δεν υπάρχει ανοικτή θέση για {person.full_name}.")
@@ -1314,7 +1414,7 @@ class SharedEventStore:
                 raise BusyError("Η θέση άλλαξε χρήστη πριν επιβεβαιωθεί η λήξη. Δεν τροποποιήθηκε η νέα καταχώριση.")
             event = {
                 "version": 2,
-                "event_id": uuid.uuid4().hex,
+                "event_id": event_id or uuid.uuid4().hex,
                 "kind": "END",
                 "timestamp": when.isoformat(timespec="seconds"),
                 "start_event_id": current.get("event_id", ""),
@@ -1325,8 +1425,8 @@ class SharedEventStore:
                 "full_name": current.get("full_name", person.full_name),
                 "position": current.get("position", ""),
                 "direction": current.get("direction", ""),
-                "computer": socket.gethostname(),
-                "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+                "computer": origin_computer or socket.gethostname(),
+                "user": origin_user or os.environ.get("USERNAME") or os.environ.get("USER") or "",
             }
             if end_reason:
                 event["end_reason"] = _clean(end_reason)
@@ -3152,6 +3252,11 @@ def run(args=None) -> int:
             self._position_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TDE-position")
             self._state_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="TDE-state")
             self._position_operation_future = None
+            self._last_bootstrap_check = 0.0
+            self._offline_future = None
+            self._offline_polling = False
+            self._pending_central_store = None
+            self.offline = OfflineJournal(_machine_queue_root())
             self._agms_query_serial = 0
             self._shift_status_future = None
             self._communication_future = None
@@ -3172,6 +3277,10 @@ def run(args=None) -> int:
             self.communication_timer.timeout.connect(self._communication_tick)
             self.communication_timer.start(2500)
             QApplication.instance().aboutToQuit.connect(self._cleanup_client)
+            self.offline_timer = QTimer(self)
+            self.offline_timer.timeout.connect(self._offline_tick)
+            self.offline_timer.start(3000)
+            self._offline_tick()
             self._communication_tick()
 
         def _build(self):
@@ -3287,6 +3396,10 @@ def run(args=None) -> int:
             self.messages_btn.clicked.connect(self._open_messages)
             right.addWidget(self.comm_status)
             right.addWidget(self.messages_btn)
+            self.offline_conflicts_btn = QPushButton("ΕΛΕΓΧΟΣ OFFLINE ΑΣΥΜΦΩΝΙΩΝ")
+            self.offline_conflicts_btn.setMinimumHeight(38)
+            self.offline_conflicts_btn.clicked.connect(self._offline_conflicts_dialog)
+            right.addWidget(self.offline_conflicts_btn)
 
             columns.addWidget(self.operator_card, 1); columns.addWidget(self.officer_card, 1)
             outer.addLayout(columns, 1)
@@ -3741,10 +3854,15 @@ def run(args=None) -> int:
 
         def _find_personnel_file(self) -> Path | None:
             candidates = []
+            # Cached roster first, so a powered-off shared host never blocks
+            # the operator window during Windows account login.
+            cache = _local_root() / "roster"
+            for name in ("ΠΡΟΣΩΠΙΚΟ.xlsx", "ΠΡΟΣΩΠΙΚΟ.xlsm", "PROSOPIKO.xlsx", "PROSOPIKO.xlsm"):
+                candidates.append(cache / name)
             legacy = Path(self.config.personnel_file) if _clean(self.config.personnel_file) else None
-            if legacy and legacy.is_file():
+            if legacy:
                 candidates.append(legacy)
-            for base in (_runtime_root(), _app_dir() / "CONFIG", _app_dir()):
+            for base in (_app_dir() / "CONFIG", _app_dir(), Path(self.config.central_root)):
                 for name in ("ΠΡΟΣΩΠΙΚΟ.xlsx", "ΠΡΟΣΩΠΙΚΟ.xlsm", "PROSOPIKO.xlsx", "PROSOPIKO.xlsm"):
                     candidates.append(base / name)
             for path in candidates:
@@ -3755,26 +3873,37 @@ def run(args=None) -> int:
         def _apply_config(self):
             self.position.clear(); self.position.addItems(self.config.positions or [])
             self._position_changed(self.position.currentText())
+            if not self.config.central_root:
+                self.config.central_root = str(_app_dir() / ".tde_runtime")
+            # Never touch a possibly disconnected UNC path on the GUI thread.
+            self.store = None
             try:
-                self.store = SharedEventStore(_runtime_root())
-                self.config.central_root = str(_runtime_root())
-            except Exception as exc:
-                self.store = None
-                self.info.setText(f"Πρόβλημα .tde_runtime: {exc}")
+                self.offline.auto_close_previous_windows_users(
+                    socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or "")
+            except Exception:
+                pass
+            if getattr(sys, "frozen", False) and not self.config.shared_exe_path:
+                self.config.shared_exe_path = str(Path(sys.executable).resolve())
             personnel = self._find_personnel_file()
             if personnel:
                 try:
-                    self._load_people(str(personnel)); self.config.personnel_file = str(personnel)
+                    self._load_people(str(personnel))
+                    if not self.config.personnel_file:
+                        self.config.personnel_file = str(personnel)
                 except Exception as exc:
                     self.info.setText(f"Πρόβλημα προσωπικού: {exc}")
             self.config.save()
             self._refresh_info(); self._agms_changed(); self._refresh_shift_status()
 
         def _refresh_info(self):
-            if self.store and self.people:
+            if not self.store:
+                self.info.setText("ΧΩΡΙΣ ΚΕΝΤΡΙΚΟ — τοπικές εκκρεμείς εγγραφές, θα γίνει συγχρονισμός μόλις επιστρέψει η σύνδεση.")
+            elif self.offline.conflicts():
+                self.info.setText("ΑΣΥΜΦΩΝΙΑ ΣΥΓΧΡΟΝΙΣΜΟΥ — απαιτείται έλεγχος ΑΞΥΠ.")
+            elif self.offline.pending_count():
+                self.info.setText(f"ΑΝΑΜΟΝΗ ΣΥΓΧΡΟΝΙΣΜΟΥ: {self.offline.pending_count()} καταχωρίσεις.")
+            elif self.store and self.people:
                 self.info.setText(f"Σύστημα έτοιμο — Λίστα προσωπικού: {len(self.people)} άτομα")
-            elif not self.store:
-                self.info.setText("Δεν είναι διαθέσιμος ο φάκελος δεδομένων.")
             else:
                 self.info.setText("Δεν έχει επιλεγεί λίστα προσωπικού.")
 
@@ -3785,6 +3914,13 @@ def run(args=None) -> int:
         def _load_people(self, path: str):
             self.people = PersonnelRepository.load(path)
             self._people_by_agms = {_clean(p.agms): p for p in self.people}
+            try:
+                cached = _local_root() / "roster" / Path(path).name
+                cached.parent.mkdir(parents=True, exist_ok=True)
+                if Path(path).resolve() != cached.resolve():
+                    shutil.copy2(path, cached)
+            except OSError:
+                pass
             self._agms_changed(); self._officer_changed()
 
         def _choose_personnel_list(self):
@@ -3831,24 +3967,45 @@ def run(args=None) -> int:
             if self._position_operation_future is not None:
                 self.active_status.setText("ΚΑΤΑΧΩΡΙΣΗ ΣΕ ΕΞΕΛΙΞΗ — μην την επαναλάβετε.")
                 return
-            if not self.store:
-                self.active_status.setText("ΔΕΝ ΥΠΑΡΧΕΙ ΣΥΝΔΕΣΗ ΜΕ ΤΑ ΚΕΝΤΡΙΚΑ ΔΕΔΟΜΕΝΑ.")
+            local = self.offline.local_active(person.agms)
+            if self.offline.conflicts():
+                self.active_status.setText("ΑΣΥΜΦΩΝΙΑ ΣΥΓΧΡΟΝΙΣΜΟΥ — ΕΝΗΜΕΡΩΣΤΕ ΤΟΝ ΑΞΥΠ")
+                return
+            if not self.store or self.offline.pending_count():
+                self.active_status.setText(
+                    (f"ΤΟΠΙΚΗ ΘΕΣΗ {local.get('position','')} — ΕΚΚΡΕΜΕΙ ΚΕΝΤΡΙΚΗ ΕΠΙΒΕΒΑΙΩΣΗ"
+                     if local else "ΕΚΤΟΣ ΣΥΝΔΕΣΗΣ — νέα έναρξη θα παραμείνει ΠΡΟΣΩΡΙΝΗ")
+                )
+                self.end_btn.setEnabled(bool(local))
+                self.start_btn.setEnabled(not bool(local))
                 return
             self.active_status.setText("ΕΛΕΓΧΟΣ ΕΝΕΡΓΗΣ ΘΕΣΗΣ — αναμονή κεντρικού.")
-            future = self._state_pool.submit(self.store.get_active, person.agms)
+            def load_remote():
+                record = self.store.get_active(person.agms)
+                self.offline.remember(person.agms, record)
+                return record
+            future = self._state_pool.submit(load_remote)
+            query_started = time.monotonic()
 
             def poll():
                 if serial != self._agms_query_serial:
                     return
                 if not future.done():
+                    if time.monotonic() - query_started > 3.0:
+                        local = self.offline.local_active(person.agms)
+                        self.active_status.setText("ΔΙΚΤΥΟ ΧΩΡΙΣ ΑΠΟΚΡΙΣΗ — τοπική λειτουργία με εκκρεμή επιβεβαίωση")
+                        self.start_btn.setEnabled(not bool(local))
+                        self.end_btn.setEnabled(bool(local))
+                        return
                     QTimer.singleShot(200, poll)
                     return
                 try:
                     active = future.result()
                 except Exception:
-                    self.active_status.setText(
-                        "ΑΝΑΜΟΝΗ ΣΥΝΔΕΣΗΣ — δεν επιτρέπεται νέα καταχώριση."
-                    )
+                    local = self.offline.local_active(person.agms)
+                    self.active_status.setText("ΧΩΡΙΣ ΣΥΝΔΕΣΗ — τοπικές εγγραφές ΕΚΚΡΕΜΟΥΝ")
+                    self.start_btn.setEnabled(not bool(local))
+                    self.end_btn.setEnabled(bool(local))
                     return
                 if self._position_operation_future is not None:
                     return
@@ -3879,62 +4036,135 @@ def run(args=None) -> int:
             idx = self.direction.findText(suggested)
             if idx >= 0: self.direction.setCurrentIndex(idx)
 
+        def _offline_conflicts_dialog(self):
+            officer = self._officer_selected()
+            if not officer:
+                QMessageBox.warning(self, "ΑΞΥΠ", "Συμπληρώστε πρώτα έγκυρο ΑΓΜΣ ΑΞΥΠ.")
+                return
+            conflicts = self.offline.conflicts()
+            if not conflicts:
+                QMessageBox.information(self, "Offline", "Δεν υπάρχουν εκκρεμείς ασυμφωνίες.")
+                return
+            dlg = QDialog(self)
+            dlg.setWindowTitle("ΑΞΥΠ — ΑΣΥΜΦΩΝΙΕΣ ΣΥΓΧΡΟΝΙΣΜΟΥ")
+            dlg.resize(820, 520)
+            lay = QVBoxLayout(dlg)
+            label = QLabel("Η παρακάτω τοπική εγγραφή ΔΕΝ καταχωρίστηκε κεντρικά. "
+                           "Ελέγξτε την πραγματική εργασία πριν απορρίψετε την εγγραφή.")
+            label.setWordWrap(True)
+            lay.addWidget(label)
+            listing = QListWidget()
+            for rec in conflicts:
+                listing.addItem(f"{rec['created_at']} | ΑΓΜΣ {rec['agms']} | "
+                                f"{rec['kind']} | ΘΕΣΗ {rec['position']} | {rec['error']}")
+                listing.item(listing.count()-1).setData(Qt.UserRole, rec['id'])
+            lay.addWidget(listing, 1)
+            row = QHBoxLayout()
+            reject = QPushButton("ΑΠΟΡΡΙΨΗ ΜΕ ΑΙΤΙΟΛΟΓΙΑ")
+            close = QPushButton("ΚΛΕΙΣΙΜΟ")
+            row.addWidget(reject); row.addWidget(close); lay.addLayout(row)
+            def resolve():
+                item = listing.currentItem()
+                if not item:
+                    return
+                reason, ok = QInputDialog.getText(dlg, "Αιτιολογία", "Γιατί απορρίπτεται η τοπική εγγραφή;")
+                if not ok: return
+                if QMessageBox.question(dlg, "ΕΠΙΒΕΒΑΙΩΣΗ",
+                    "Η καταχώριση δεν θα μεταφερθεί κεντρικά. Διατηρείται στο ιστορικό. Συνέχεια;",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No) != QMessageBox.Yes:
+                    return
+                try:
+                    self.offline.resolve_conflict(_clean(item.data(Qt.UserRole)), officer.agms, reason)
+                    dlg.accept()
+                    self._refresh_info()
+                    self._agms_changed()
+                except Exception as exc:
+                    QMessageBox.critical(dlg, "Ασυμφωνία", str(exc))
+            reject.clicked.connect(resolve)
+            close.clicked.connect(dlg.reject)
+            dlg.exec()
+
+        def _offline_tick(self):
+            if self._offline_future is not None:
+                if not self._offline_future.done():
+                    return
+                future = self._offline_future
+                self._offline_future = None
+                try:
+                    connected, result = future.result()
+                    self.store = connected
+                    if result.get("conflicts"):
+                        self.info.setText("ΑΣΥΜΦΩΝΙΑ ΑΠΟΣΥΝΔΕΔΕΜΕΝΩΝ ΚΑΤΑΧΩΡΙΣΕΩΝ — έλεγχος ΑΞΥΠ")
+                    self._refresh_info()
+                except Exception:
+                    self.store = None
+                    self._refresh_info()
+                self._agms_changed()
+            if self._offline_future is not None:
+                return
+            if not self.config.central_root:
+                return
+            def work():
+                if not Path(self.config.central_root).is_dir():
+                    raise BusyError("Ο κεντρικός φάκελος δεν είναι διαθέσιμος.")
+                store = SharedEventStore(self.config.central_root)
+                report = self.offline.sync(store, PersonnelRecord)
+                if not report.get("pending"):
+                    try:
+                        store.close_previous_windows_user_positions(
+                            socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or "")
+                    except Exception:
+                        pass
+                if self.config.shared_exe_path and time.monotonic() - self._last_bootstrap_check > 300:
+                    self._last_bootstrap_check = time.monotonic()
+                    try:
+                        cache_windows_client(_local_root(), self.config.shared_exe_path)
+                    except Exception:
+                        pass  # cache update must not block shifts
+                return store, report
+            self._offline_future = self._network_pool.submit(work)
+
         def _position_action(self, kind: str, person: PersonnelRecord, position: str = "", direction: str = ""):
             if self._position_operation_future is not None:
-                QMessageBox.warning(self, "Καταχώριση", "Υπάρχει ήδη εντολή σε εξέλιξη. Μην την επαναλάβετε.")
-                return
-            if not self.store:
-                QMessageBox.warning(self, "Σύνδεση", "Δεν υπάρχει σύνδεση με τα κεντρικά δεδομένα.")
+                QMessageBox.warning(self, "Καταχώριση", "Υπάρχει ήδη εντολή σε εξέλιξη.")
                 return
             self.start_btn.setEnabled(False)
             self.end_btn.setEnabled(False)
-            self.active_status.setText("ΚΑΤΑΧΩΡΙΣΗ ΣΕ ΕΞΕΛΙΞΗ — αναμονή επιβεβαίωσης από το κεντρικό.")
-            if kind == "START":
-                def handoff_then_start():
-                    # Never reject the incoming user merely because the previous
-                    # Windows account left its booth open on this workstation.
-                    self.store.close_previous_windows_user_positions(
-                        socket.gethostname(),
-                        os.environ.get("USERNAME") or os.environ.get("USER") or "",
-                    )
-                    return self.store.start(person, position, direction, None, self.client_id)
-                future = self._position_pool.submit(handoff_then_start)
-            else:
-                future = self._position_pool.submit(self.store.end, person)
+            self.active_status.setText("ΤΟΠΙΚΗ ΑΠΟΘΗΚΕΥΣΗ ΚΑΤΑΧΩΡΙΣΗΣ…")
+            def work():
+                result = self.offline.enqueue(kind, person, position, direction, self.client_id)
+                if self.store:
+                    self.offline.sync(self.store, PersonnelRecord)
+                result["pending_sync"] = any(
+                    x["id"] == result["operation_id"] for x in self.offline._rows(("PENDING", "CONFLICT"))
+                )
+                result["conflict"] = bool(self.offline.conflicts())
+                return result
+            future = self._position_pool.submit(work)
             self._position_operation_future = future
-
             def poll():
                 if not future.done():
                     QTimer.singleShot(200, poll)
                     return
                 self._position_operation_future = None
                 try:
-                    event = future.result()
+                    outcome = future.result()
                 except Exception as exc:
-                    QMessageBox.critical(
-                        self, "Η καταχώριση δεν επιβεβαιώθηκε",
-                        f"{exc}\\nΕλέγξτε την τρέχουσα κατάσταση πριν επιχειρήσετε ξανά."
-                    )
+                    QMessageBox.critical(self, "Δεν καταχωρίστηκε", str(exc))
                 else:
-                    if kind == "START":
-                        QMessageBox.information(
-                            self, "Καταχώριση",
-                            f"ΕΝΑΡΞΗ: ΘΕΣΗ {position} — {direction}\\n"
-                            f"Ώρα: {event['timestamp'].replace('T',' ')}"
-                        )
+                    if outcome.get("conflict"):
+                        QMessageBox.warning(self, "ΑΣΥΜΦΩΝΙΑ", "Απαιτείται έλεγχος ΑΞΥΠ. Η τοπική εγγραφή δεν διαγράφηκε.")
+                    elif outcome["pending_sync"]:
+                        QMessageBox.warning(self, "ΕΚΚΡΕΜΕΙ ΣΥΓΧΡΟΝΙΣΜΟΣ", "Η καταχώριση φυλάχθηκε ΤΟΠΙΚΑ. Δεν έχει ακόμη επιβεβαιωθεί κεντρικά.")
                     else:
-                        QMessageBox.information(
-                            self, "Καταχώριση",
-                            f"ΛΗΞΗ καταχωρίστηκε στις {event['timestamp'].replace('T',' ')}"
-                        )
-                    QTimer.singleShot(150, self._check_shift_updates)
+                        QMessageBox.information(self, "Καταχώριση", f"{kind}: Η καταχώριση επιβεβαιώθηκε κεντρικά.")
+                self._refresh_info()
                 self._agms_changed()
-
             QTimer.singleShot(100, poll)
 
         def _start(self):
             person = self._selected()
-            if not person or not self.store:
+            if not person:
                 QMessageBox.warning(self, "Έλεγχος", "Επιλέξτε λίστα προσωπικού.")
                 return
             position = _clean(self.position.currentText())
@@ -3946,7 +4176,7 @@ def run(args=None) -> int:
 
         def _end(self):
             person = self._selected()
-            if not person or not self.store:
+            if not person:
                 QMessageBox.warning(self, "Έλεγχος", "Επιλέξτε λίστα προσωπικού.")
                 return
             self._position_action("END", person)
