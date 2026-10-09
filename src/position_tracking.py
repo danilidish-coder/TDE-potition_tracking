@@ -3740,7 +3740,8 @@ def run(args=None) -> int:
                     "Λήξη βάρδιας",
                     "Η βάρδια ολοκληρώθηκε και αποθηκεύτηκε στο αρχείο αναφορών (SQLite)."
                 )
-                self._close_remaining_clients_dialog()
+                # Shift finalization releases selected booths but never sends
+                # CLOSE_APP to other Windows sessions or gkise terminals.
             except Exception as exc:
                 QMessageBox.critical(self,"Λήξη βάρδιας",str(exc))
 
