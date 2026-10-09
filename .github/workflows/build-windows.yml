@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - "feature/**"
+      - "fix/**"
     paths:
       - "src/**"
       - "tools/**"
@@ -55,6 +56,8 @@ jobs:
           python "tests\report_archive_search_regression.py"
           python "tests\personnel_history_sqlite_regression.py"
           python "tests\communication_control_regression.py"
+          python "tests\shift_end_release_regression.py"
+          python "tests\network_resilience_regression.py"
 
       - name: Generate network application icon
         shell: powershell
