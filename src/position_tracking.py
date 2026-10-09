@@ -1304,12 +1304,14 @@ class SharedEventStore:
             pass
         return event
 
-    def end(self, person: PersonnelRecord, when: datetime | None = None) -> dict:
+    def end(self, person: PersonnelRecord, when: datetime | None = None, expected_start_event_id: str = "") -> dict:
         when = when or datetime.now()
         with self.officer_lock(person.agms):
             current = self.get_active(person.agms)
             if not current:
                 raise ValueError(f"Δεν υπάρχει ανοικτή θέση για {person.full_name}.")
+            if expected_start_event_id and _clean(current.get("event_id")) != _clean(expected_start_event_id):
+                raise BusyError("Η θέση άλλαξε χρήστη πριν επιβεβαιωθεί η λήξη. Δεν τροποποιήθηκε η νέα καταχώριση.")
             event = {
                 "version": 2,
                 "event_id": uuid.uuid4().hex,
@@ -1616,7 +1618,7 @@ class SharedEventStore:
                     surname=_clean(current.get("surname")),
                     given_name=_clean(current.get("given_name")),
                 )
-                self.end(member, when=when)
+                self.end(member, when=when, expected_start_event_id=_clean(current.get("event_id")))
                 self.log_admin_action("SHIFT_AUTO_END_POSITION", {
                     "shift_id": shift["shift_id"],
                     "officer_agms": officer.agms,
@@ -3213,7 +3215,7 @@ def run(args=None) -> int:
                     surname=_clean(item.get("surname")),
                     given_name=_clean(item.get("given_name")),
                 )
-                self.store.end(member)
+                self.store.end(member, expected_start_event_id=_clean(item.get("event_id")))
             return len(mine)
 
         def _request_real_exit(self):
