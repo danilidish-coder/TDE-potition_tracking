@@ -514,7 +514,7 @@ class SharedEventStore:
         try:
             try:
                 if os.fstat(fd).st_size == 0:
-                    os.write(fd, b"\\x00")
+                    os.write(fd, b"\x00")
             except OSError as exc:
                 raise BusyError(f"Αδύνατη προετοιμασία κλειδώματος: {exc}") from exc
             deadline = time.monotonic() + timeout
