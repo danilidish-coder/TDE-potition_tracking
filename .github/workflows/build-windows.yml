@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   build:
@@ -36,6 +37,7 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Verify source and test reports
+        id: regressions
         shell: powershell
         run: |
           if (-not (Test-Path "src\position_tracking.py")) { throw "Source file missing" }
@@ -67,12 +69,14 @@ jobs:
           if (-not (Test-Path "build_assets\position_tracking_network.ico")) { throw "Network icon was not created" }
 
       - name: Build Windows application
+        id: build_exe
         shell: powershell
         run: |
           python -m PyInstaller --noconfirm --clean --windowed --onefile --icon "build_assets\position_tracking_network.ico" --name "PositionTracking_TEST" "src\position_tracking.py"
           if (-not (Test-Path "dist\PositionTracking_TEST.exe")) { throw "EXE was not created" }
 
       - name: Smoke test launch
+        id: smoke
         shell: powershell
         run: |
           $exe = Resolve-Path "dist\PositionTracking_TEST.exe"
@@ -84,6 +88,7 @@ jobs:
           Write-Host "EXE SHA256: $((Get-FileHash $exe -Algorithm SHA256).Hash)"
 
       - name: Visual flicker test
+        id: visual
         shell: powershell
         run: |
           python "tests\visual_flicker_windows.py" --exe "dist\PositionTracking_TEST.exe" --out "visual_flicker"
@@ -136,3 +141,14 @@ jobs:
           path: dist/PositionTracking_TEST.exe
           if-no-files-found: error
           retention-days: 30
+
+      - name: Report isolated Windows build outcome to PR 5
+        if: ${{ always() && github.ref == 'refs/heads/fix/shift-recovery-20261009' }}
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $sha = "$env:GITHUB_SHA"
+          $status = "regressions=${{ steps.regressions.outcome }} | exe=${{ steps.build_exe.outcome }} | smoke=${{ steps.smoke.outcome }} | visual=${{ steps.visual.outcome }}"
+          $message = "Automated Windows check for commit $sha -- $status. This is NOT a production-release approval. Physical SMB/power-loss tests are still required."
+          gh pr comment 5 -R "$env:GITHUB_REPOSITORY" --body "$message"
