@@ -26,16 +26,14 @@ with tempfile.TemporaryDirectory() as tmp:
     with store.officer_lock("123"):
         old = (datetime.now() - timedelta(hours=4)).timestamp()
         os.utime(path, (old, old))
-        with ThreadPoolExecutor(max_workers=1) as pool:
-            future = pool.submit(lambda: next(
-                iter([store.officer_lock("123").__enter__()])
-            ))
+        def contender():
             try:
-                future.result(timeout=0.4)
-            except TimeoutError:
-                pass
-            else:
-                raise AssertionError("Live lock was stolen because its file looked old")
+                with store.officer_lock("123", timeout=0.4):
+                    return "stolen"
+            except MOD.BusyError:
+                return "blocked"
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            assert pool.submit(contender).result() == "blocked", "Live lock stolen"
     # Acquire again after the previous owner releases normally.
     with store.officer_lock("123", timeout=2):
         pass
