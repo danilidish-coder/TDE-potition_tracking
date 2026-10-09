@@ -68,6 +68,7 @@ jobs:
           python "tests\shift_end_release_regression.py"
           python "tests\network_resilience_regression.py"
           python "tests\shift_smb_lock_concurrency.py"
+          python "tests\client_lifecycle_regression.py"
 
       - name: Generate network application icon
         shell: powershell
