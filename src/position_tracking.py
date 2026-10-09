@@ -44,20 +44,40 @@ def _norm_search(value: object) -> str:
 
 
 def _windows_session_is_active() -> bool:
-    """True for the interactive Windows session; remains True when merely locked."""
+    """Return False only for a demonstrably disconnected Windows logon session.
+
+    Locking the screen (Win+L) is not a disconnection. Console and RDP
+    sessions are checked via WTSConnectState, not just console session ID.
+    On an API failure, retain the position rather than closing it wrongly.
+    """
     if os.name != "nt":
         return True
     try:
         import ctypes
-        kernel32 = ctypes.windll.kernel32
-        current_session = ctypes.c_ulong()
-        pid = kernel32.GetCurrentProcessId()
-        if not kernel32.ProcessIdToSessionId(pid, ctypes.byref(current_session)):
+        from ctypes import wintypes
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        wts = ctypes.WinDLL("wtsapi32", use_last_error=True)
+        session_id = wintypes.DWORD()
+        if not kernel32.ProcessIdToSessionId(
+            kernel32.GetCurrentProcessId(), ctypes.byref(session_id)
+        ):
             return True
-        active_session = kernel32.WTSGetActiveConsoleSessionId()
-        if active_session == 0xFFFFFFFF:
+        buffer = ctypes.c_void_p()
+        returned = wintypes.DWORD()
+        # WTSConnectState=8; WTSDisconnected=4, WTSReset=7, WTSDown=8.
+        if not wts.WTSQuerySessionInformationW(
+            None, session_id.value, 8,
+            ctypes.byref(buffer), ctypes.byref(returned)
+        ):
             return True
-        return int(current_session.value) == int(active_session)
+        try:
+            if not buffer.value or returned.value < 4:
+                return True
+            state = ctypes.cast(buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
+            return state not in (4, 7, 8, 9)
+        finally:
+            if buffer.value:
+                wts.WTSFreeMemory(buffer)
     except Exception:
         return True
 
@@ -3260,10 +3280,21 @@ def run(args=None) -> int:
 
         def _communication_io(self, window_state: str):
             """Shared-folder IO must not run on the Qt GUI thread."""
+            session_active = _windows_session_is_active()
+            if not session_active:
+                # Windows Switch user / disconnected logon session: release
+                # this exact application's booths, but not those of others.
+                count = self._end_own_active_positions()
+                if count:
+                    self.store.log_admin_action("AUTO_END_WINDOWS_SESSION_DISCONNECTED", {
+                        "client_id": self.client_id,
+                        "ended_positions": count,
+                        "observed_at": datetime.now().isoformat(timespec="seconds"),
+                    })
             self.store.write_client_heartbeat(self.client_id, {
                 "app_started_at": self._app_started_at,
                 "window_state": window_state,
-                "windows_session_active": _windows_session_is_active(),
+                "windows_session_active": session_active,
             })
             online = self.store.online_clients()
             commands = self.store.pending_commands(self.client_id)
