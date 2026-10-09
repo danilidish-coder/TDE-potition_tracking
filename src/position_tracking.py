@@ -3838,9 +3838,15 @@ def run(args=None) -> int:
             self.end_btn.setEnabled(False)
             self.active_status.setText("ΚΑΤΑΧΩΡΙΣΗ ΣΕ ΕΞΕΛΙΞΗ — αναμονή επιβεβαίωσης από το κεντρικό.")
             if kind == "START":
-                future = self._position_pool.submit(
-                    self.store.start, person, position, direction, None, self.client_id
-                )
+                def handoff_then_start():
+                    # Never reject the incoming user merely because the previous
+                    # Windows account left its booth open on this workstation.
+                    self.store.close_previous_windows_user_positions(
+                        socket.gethostname(),
+                        os.environ.get("USERNAME") or os.environ.get("USER") or "",
+                    )
+                    return self.store.start(person, position, direction, None, self.client_id)
+                future = self._position_pool.submit(handoff_then_start)
             else:
                 future = self._position_pool.submit(self.store.end, person)
             self._position_operation_future = future
