@@ -1745,6 +1745,11 @@ class SharedEventStore:
                     if expected_active_start_ids is not None
                     else _clean(current.get("event_id"))
                 )
+                if not expected_start or _clean(current.get("event_id")) != _clean(expected_start):
+                    raise BusyError(
+                        "Η ενεργή καταχώριση άλλαξε μετά την επιβεβαίωση. "
+                        "Δεν πραγματοποιήθηκε λήξη νεότερης θέσης."
+                    )
                 self.end(
                     member, when=when, expected_start_event_id=expected_start,
                     end_reason="SHIFT_FINALIZED_BY_OFFICER", end_officer=officer,
