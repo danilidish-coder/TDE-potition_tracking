@@ -106,6 +106,7 @@ jobs:
           python "tests\visual_flicker_windows.py" --exe "dist\PositionTracking_TEST.exe" --out "visual_flicker"
 
       - name: Upload visual flicker evidence
+        if: ${{ false }} # Disabled: artifact quota / incomplete offline acceptance. Retain step for later gated release.
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
@@ -135,7 +136,7 @@ jobs:
           }
 
       - name: Publish downloadable v1.2.4 validation EXE
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.number == 5 }}
+        if: ${{ false }} # Disabled: artifact quota / incomplete offline acceptance. Retain step for later gated release.
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -159,6 +160,7 @@ jobs:
           Write-Host "PUBLISHED_EXE_URL=https://github.com/$env:REPO/releases/download/$tag/$exe"
 
       - name: Upload Windows test EXE
+        if: ${{ false }} # Disabled: artifact quota / incomplete offline acceptance. Retain step for later gated release.
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
