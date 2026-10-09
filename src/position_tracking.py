@@ -2992,6 +2992,7 @@ def run(args=None) -> int:
             self._network_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="TDE-network")
             self._position_operation_future = None
             self._agms_query_serial = 0
+            self._shift_status_future = None
             self._communication_future = None
             self._shift_future = None
             self.setWindowTitle(f"Τ.Δ.Ε. Κρυσταλλοπηγής - Καταγραφή Θέσεων v{APP_VERSION}")
@@ -3901,36 +3902,73 @@ def run(args=None) -> int:
                 QMessageBox.critical(self,"Λήξη βάρδιας",str(exc))
 
         def _refresh_shift_status(self):
-            if not hasattr(self,"shift_status"): return
-            shift=self.store.current_shift() if self.store else None
-            p=self._officer_selected() if hasattr(self,"officer_agms") else None
-            if not shift:
-                report_shift = self.store.current_report_shift() if self.store else None
-                if report_shift and _clean(report_shift.get("status")).upper() == "FINALIZED":
-                    ended = _clean(report_shift.get("end_at"))
-                    try:
-                        ended_dt = datetime.fromisoformat(ended)
-                        ended_text = f"{ended_dt:%d/%m/%Y %H:%M}"
-                    except Exception:
-                        ended_text = ended.replace("T", " ") if ended else "—"
-                    self.shift_status.setText(
-                        f"Η προηγούμενη βάρδια έληξε {ended_text}.\n"
-                        "Η αναφορά της παραμένει ΤΡΕΧΟΥΣΑ μέχρι την έναρξη της επόμενης."
-                    )
-                else:
-                    self.shift_status.setText("Δεν υπάρχει ενεργή βάρδια.")
-                self.start_shift_btn.setEnabled(bool(p and self.store))
+            if not hasattr(self, "shift_status"):
+                return
+            if not self.store:
+                self.shift_status.setText("ΑΝΑΜΟΝΗ ΣΥΝΔΕΣΗΣ ΜΕ ΤΑ ΚΕΝΤΡΙΚΑ ΔΕΔΟΜΕΝΑ")
+                self.start_shift_btn.setEnabled(False)
                 self.end_shift_btn.setEnabled(False)
                 return
-            st=datetime.fromisoformat(shift["start_at"])
-            off=shift.get("start_officer") or {}
-            name=_clean(f"{off.get('rank','')} {off.get('full_name','')}")
-            pending=len(shift.get("pending",[]))
-            text=f"Ενεργή βάρδια από {st:%d/%m/%Y %H:%M}\n{name}"
-            if pending: text += f"\nΑναμονή επιβεβαίωσης: {pending}"
-            self.shift_status.setText(text)
+            previous = getattr(self, "_shift_status_future", None)
+            if previous is not None and not previous.done():
+                return
             self.start_shift_btn.setEnabled(False)
-            self.end_shift_btn.setEnabled(bool(p))
+            self.end_shift_btn.setEnabled(False)
+
+            def read_status():
+                shift = self.store.current_shift()
+                final = None if shift else self.store.current_report_shift()
+                return shift, final
+
+            future = self._network_pool.submit(read_status)
+            self._shift_status_future = future
+
+            def poll():
+                if self._shift_status_future is not future:
+                    return
+                if not future.done():
+                    QTimer.singleShot(200, poll)
+                    return
+                self._shift_status_future = None
+                try:
+                    shift, report_shift = future.result()
+                except Exception:
+                    self.shift_status.setText(
+                        "ΑΝΑΜΟΝΗ ΣΥΝΔΕΣΗΣ ΜΕ ΤΑ ΚΕΝΤΡΙΚΑ ΔΕΔΟΜΕΝΑ"
+                    )
+                    self.start_shift_btn.setEnabled(False)
+                    self.end_shift_btn.setEnabled(False)
+                    return
+                officer = self._officer_selected()
+                if not shift:
+                    if report_shift and _clean(report_shift.get("status")).upper() == "FINALIZED":
+                        ended = _clean(report_shift.get("end_at"))
+                        try:
+                            ended_dt = datetime.fromisoformat(ended)
+                            ended_text = f"{ended_dt:%d/%m/%Y %H:%M}"
+                        except Exception:
+                            ended_text = ended.replace("T", " ") if ended else "—"
+                        self.shift_status.setText(
+                            f"Η προηγούμενη βάρδια έληξε {ended_text}.\\n"
+                            "Η αναφορά της παραμένει ΤΡΕΧΟΥΣΑ μέχρι την έναρξη της επόμενης."
+                        )
+                    else:
+                        self.shift_status.setText("Δεν υπάρχει ενεργή βάρδια.")
+                    self.start_shift_btn.setEnabled(bool(officer))
+                    self.end_shift_btn.setEnabled(False)
+                    return
+                started = datetime.fromisoformat(shift["start_at"])
+                starter = shift.get("start_officer") or {}
+                name = _clean(f"{starter.get('rank','')} {starter.get('full_name','')}")
+                pending = len(shift.get("pending", []))
+                msg = f"Ενεργή βάρδια από {started:%d/%m/%Y %H:%M}\\n{name}"
+                if pending:
+                    msg += f"\\nΑναμονή επιβεβαίωσης: {pending}"
+                self.shift_status.setText(msg)
+                self.start_shift_btn.setEnabled(False)
+                self.end_shift_btn.setEnabled(bool(officer))
+
+            QTimer.singleShot(100, poll)
 
         def _check_shift_updates(self):
             if not self.store:
