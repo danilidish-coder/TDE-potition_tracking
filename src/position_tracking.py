@@ -505,7 +505,11 @@ class SharedEventStore:
                 fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
                 os.write(fd, f"{socket.gethostname()}|{os.environ.get('USERNAME') or os.environ.get('USER') or ''}|{time.time()}".encode("utf-8", "ignore"))
                 break
-            except FileExistsError:
+            except (FileExistsError, PermissionError) as exc:
+                # On Windows/SMB an existing exclusively opened lock file can
+                # raise PermissionError instead of FileExistsError.
+                if isinstance(exc, PermissionError) and not path.exists():
+                    raise
                 try:
                     if time.time() - path.stat().st_mtime > 60:
                         path.unlink(missing_ok=True)
@@ -708,7 +712,11 @@ class SharedEventStore:
                 fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
                 os.write(fd, f"{socket.gethostname()}|{time.time()}".encode("utf-8", "ignore"))
                 break
-            except FileExistsError:
+            except (FileExistsError, PermissionError) as exc:
+                # On Windows/SMB an existing exclusively opened lock file can
+                # raise PermissionError instead of FileExistsError.
+                if isinstance(exc, PermissionError) and not path.exists():
+                    raise
                 try:
                     if time.time() - path.stat().st_mtime > 60:
                         path.unlink(missing_ok=True)
