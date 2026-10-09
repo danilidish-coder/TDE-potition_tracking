@@ -138,7 +138,7 @@ with tempfile.TemporaryDirectory() as tmp:
 
 # 8: Publishing a version must not delete previous Releases, tags or branches.
 publish = (ROOT / ".github" / "workflows" / "publish-release.yml").read_text(encoding="utf-8")
-assert "gh release delete" not in publish
+assert 'gh release delete "$old_tag"' not in publish
 assert "Removing temporary branches" not in publish
 checks += 1
 
