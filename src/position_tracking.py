@@ -1304,7 +1304,7 @@ class SharedEventStore:
             pass
         return event
 
-    def end(self, person: PersonnelRecord, when: datetime | None = None, expected_start_event_id: str = "", end_reason: str = "") -> dict:
+    def end(self, person: PersonnelRecord, when: datetime | None = None, expected_start_event_id: str = "", end_reason: str = "", end_officer: PersonnelRecord | None = None) -> dict:
         when = when or datetime.now()
         with self.officer_lock(person.agms):
             current = self.get_active(person.agms)
@@ -1330,6 +1330,8 @@ class SharedEventStore:
             }
             if end_reason:
                 event["end_reason"] = _clean(end_reason)
+            if end_officer:
+                event["end_officer"] = self._person_payload(end_officer)
             self._write_event(event)
             # Durable receipt before releasing a booth; history indexing can be
             # retried later if SQLite is locked or temporarily unavailable.
@@ -1653,14 +1655,54 @@ class SharedEventStore:
             self.log_admin_action("SHIFT_MEMBER_STATE", {"shift_id": shift["shift_id"], "agms": agms, "state": state})
             return shift
 
+    def end_officer_shift_member(
+        self, officer: PersonnelRecord, agms: str, expected_shift_id: str,
+        expected_start_event_id: str,
+    ) -> dict:
+        """Individually end a confirmed, approved member without finalizing shift."""
+        agms = _clean(agms)
+        if not agms or not expected_start_event_id:
+            raise BusyError("Η επιλεγμένη θέση δεν έχει έγκυρο αναγνωριστικό.")
+        with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
+            shift = self.current_shift()
+            if not shift or _clean(shift.get("shift_id")) != _clean(expected_shift_id):
+                raise BusyError("Η βάρδια άλλαξε. Ελέγξτε ξανά την τρέχουσα λίστα.")
+            if agms not in {_clean(x) for x in shift.get("approved", [])}:
+                raise BusyError("Ο αστυνομικός δεν ανήκει πλέον στους αποδεκτούς της βάρδιας.")
+            active = self.get_active(agms)
+            if not active or _clean(active.get("event_id")) != _clean(expected_start_event_id):
+                raise BusyError("Η ενεργή θέση άλλαξε. Δεν καταχωρίστηκε λανθασμένη λήξη.")
+            member = PersonnelRecord(
+                agms=agms, rank=_clean(active.get("rank")),
+                surname=_clean(active.get("surname")), given_name=_clean(active.get("given_name")),
+            )
+            event = self.end(
+                member, expected_start_event_id=expected_start_event_id,
+                end_reason="SHIFT_SINGLE_BY_OFFICER", end_officer=officer,
+            )
+            try:
+                self.log_admin_action("SHIFT_SINGLE_END_POSITION", {
+                    "shift_id": expected_shift_id, "officer_agms": officer.agms,
+                    "member_agms": agms, "position": _clean(active.get("position")),
+                    "start_event_id": expected_start_event_id,
+                    "end_event_id": _clean(event.get("event_id")),
+                })
+            except Exception:
+                # Audit actor and reason are also embedded in durable END event.
+                pass
+            return event
+
     def end_officer_shift(
         self, officer: PersonnelRecord, when: datetime | None = None,
         expected_active_start_ids: dict[str, str] | None = None,
+        expected_shift_id: str = "",
     ) -> dict:
         with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
             shift = self._sync_active_shift_locked()
             if not shift:
                 raise ValueError("Δεν υπάρχει ενεργή βάρδια.")
+            if expected_shift_id and _clean(shift.get("shift_id")) != _clean(expected_shift_id):
+                raise BusyError("Η βάρδια άλλαξε. Ανανεώστε τη λίστα πριν συνεχίσετε.")
             if shift.get("pending"):
                 raise ValueError("Υπάρχουν άτομα σε ΑΝΑΜΟΝΗ. Κάντε πρώτα ΑΠΟΔΟΧΗ ή ΕΞΑΙΡΕΣΗ.")
             if expected_active_start_ids is not None:
@@ -1698,9 +1740,14 @@ class SharedEventStore:
                     surname=_clean(current.get("surname")),
                     given_name=_clean(current.get("given_name")),
                 )
+                expected_start = (
+                    expected_active_start_ids.get(agms, "")
+                    if expected_active_start_ids is not None
+                    else _clean(current.get("event_id"))
+                )
                 self.end(
-                    member, when=when, expected_start_event_id=_clean(current.get("event_id")),
-                    end_reason="SHIFT_FINALIZED_BY_OFFICER",
+                    member, when=when, expected_start_event_id=expected_start,
+                    end_reason="SHIFT_FINALIZED_BY_OFFICER", end_officer=officer,
                 )
                 self.log_admin_action("SHIFT_AUTO_END_POSITION", {
                     "shift_id": shift["shift_id"],
