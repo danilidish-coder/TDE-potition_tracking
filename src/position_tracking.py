@@ -495,38 +495,70 @@ class SharedEventStore:
     def _lock_path(self, agms: str) -> Path:
         return self.locks / f"{_safe_name(agms)}.lock"
 
+    @staticmethod
     @contextmanager
-    def officer_lock(self, agms: str, timeout: float = 6.0):
-        path = self._lock_path(agms)
-        deadline = time.monotonic() + timeout
-        fd = None
-        while True:
-            try:
-                fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.write(fd, f"{socket.gethostname()}|{os.environ.get('USERNAME') or os.environ.get('USER') or ''}|{time.time()}".encode("utf-8", "ignore"))
-                break
-            except (FileExistsError, PermissionError) as exc:
-                # On Windows/SMB an existing exclusively opened lock file can
-                # raise PermissionError instead of FileExistsError.
-                # Windows may also deny metadata access to an open lock file.
-                # Treat this as contention until the bounded deadline expires.
-                try:
-                    if time.time() - path.stat().st_mtime > 60:
-                        path.unlink(missing_ok=True)
-                        continue
-                except OSError:
-                    pass
-                if time.monotonic() >= deadline:
-                    raise BusyError("Η καταχώριση χρησιμοποιείται αυτή τη στιγμή από άλλο σταθμό. Δοκιμάστε ξανά.")
-                time.sleep(0.15)
+    def _file_lock(path: Path, timeout: float, busy_message: str):
+        """OS-held byte-range lock. The lock file stays in place on SMB.
+
+        Unlike stale-file mtime locks, Windows releases this lock when the
+        owning process dies or its SMB handle is disconnected. Never unlink
+        another process's lock based on its age.
+        """
+        import errno
+        path.parent.mkdir(parents=True, exist_ok=True)
         try:
+            fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o666)
+        except OSError as exc:
+            raise BusyError(f"Δεν είναι διαθέσιμος ο κοινόχρηστος φάκελος: {exc}") from exc
+        locked = False
+        try:
+            try:
+                if os.fstat(fd).st_size == 0:
+                    os.write(fd, b"\\x00")
+            except OSError as exc:
+                raise BusyError(f"Αδύνατη προετοιμασία κλειδώματος: {exc}") from exc
+            deadline = time.monotonic() + timeout
+            while True:
+                try:
+                    os.lseek(fd, 0, os.SEEK_SET)
+                    if os.name == "nt":
+                        import msvcrt
+                        msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+                    else:
+                        import fcntl
+                        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    locked = True
+                    break
+                except OSError as exc:
+                    contention = exc.errno in (errno.EACCES, errno.EAGAIN) or getattr(exc, "winerror", None) in (32, 33, 36)
+                    if not contention:
+                        raise BusyError(f"Αποτυχία κοινόχρηστου κλειδώματος: {exc}") from exc
+                    if time.monotonic() >= deadline:
+                        raise BusyError(busy_message) from exc
+                    time.sleep(0.15)
             yield
         finally:
-            try:
-                if fd is not None:
+            if locked:
+                try:
+                    os.lseek(fd, 0, os.SEEK_SET)
+                    if os.name == "nt":
+                        import msvcrt
+                        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+                    else:
+                        import fcntl
+                        fcntl.flock(fd, fcntl.LOCK_UN)
+                finally:
                     os.close(fd)
-            finally:
-                path.unlink(missing_ok=True)
+            else:
+                os.close(fd)
+
+    @contextmanager
+    def officer_lock(self, agms: str, timeout: float = 6.0):
+        with self._file_lock(
+            self._lock_path(agms), timeout,
+            "Η καταχώριση χρησιμοποιείται από άλλο σταθμό. Δοκιμάστε ξανά."
+        ):
+            yield
 
     @staticmethod
     def _atomic_json(path: Path, data: dict):
@@ -703,37 +735,11 @@ class SharedEventStore:
 
     @contextmanager
     def _shift_db_write_lock(self, timeout: float = 10.0):
-        """Serialize SQLite writes across the shared runtime folder."""
-        path = self.locks / "shift_reports.sqlite.lock"
-        deadline = time.monotonic() + timeout
-        fd = None
-        while True:
-            try:
-                fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.write(fd, f"{socket.gethostname()}|{time.time()}".encode("utf-8", "ignore"))
-                break
-            except (FileExistsError, PermissionError) as exc:
-                # On Windows/SMB an existing exclusively opened lock file can
-                # raise PermissionError instead of FileExistsError.
-                # Windows may also deny metadata access to an open lock file.
-                # Treat this as contention until the bounded deadline expires.
-                try:
-                    if time.time() - path.stat().st_mtime > 60:
-                        path.unlink(missing_ok=True)
-                        continue
-                except OSError:
-                    pass
-                if time.monotonic() >= deadline:
-                    raise BusyError("Το αρχείο βαρδιών χρησιμοποιείται από άλλο σταθμό. Δοκιμάστε ξανά.")
-                time.sleep(0.15)
-        try:
+        with self._file_lock(
+            self.locks / "shift_reports.sqlite.lock", timeout,
+            "Το αρχείο βαρδιών χρησιμοποιείται από άλλο σταθμό. Δοκιμάστε ξανά."
+        ):
             yield
-        finally:
-            try:
-                if fd is not None:
-                    os.close(fd)
-            finally:
-                path.unlink(missing_ok=True)
 
     @contextmanager
     def _shift_db_connect(self):
@@ -1269,11 +1275,13 @@ class SharedEventStore:
                     # Do not leave a phantom START if the active marker failed.
                     path.unlink(missing_ok=True)
                     raise
-            try:
-                self.sync_active_shift()
-            except Exception:
-                pass
-            return event
+        try:
+            self.sync_active_shift()
+        except Exception:
+            # START was durably recorded. Do not report its failure merely
+            # because synchronizing the shift membership is delayed.
+            pass
+        return event
 
     def end(self, person: PersonnelRecord, when: datetime | None = None) -> dict:
         when = when or datetime.now()
@@ -1455,68 +1463,69 @@ class SharedEventStore:
         initial_approved: list[str] | tuple[str, ...] | None = None,
         initial_excluded: list[str] | tuple[str, ...] | None = None,
     ) -> dict:
-        if self.current_shift():
-            raise ValueError("Υπάρχει ήδη ενεργή βάρδια. Πρέπει πρώτα να γίνει ΛΗΞΗ ΒΑΡΔΙΑΣ.")
-        when = when or datetime.now()
-        active_now = self.active_all()
-        active_by_agms = {}
-        for item in active_now:
-            agms = _clean(item.get("agms"))
-            if agms and agms not in active_by_agms:
-                active_by_agms[agms] = item
+        with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
+            if self.current_shift():
+                raise ValueError("Υπάρχει ήδη ενεργή βάρδια. Πρέπει πρώτα να γίνει ΛΗΞΗ ΒΑΡΔΙΑΣ.")
+            when = when or datetime.now()
+            active_now = self.active_all()
+            active_by_agms = {}
+            for item in active_now:
+                agms = _clean(item.get("agms"))
+                if agms and agms not in active_by_agms:
+                    active_by_agms[agms] = item
 
-        if initial_approved is None and initial_excluded is None:
-            approved = list(active_by_agms)
-            excluded = []
-        else:
-            approved = []
-            seen = set()
-            for value in initial_approved or []:
-                agms = _clean(value)
-                if agms and agms in active_by_agms and agms not in seen:
-                    approved.append(agms); seen.add(agms)
-            excluded = []
-            for value in initial_excluded or []:
-                agms = _clean(value)
-                if agms and agms in active_by_agms and agms not in seen:
-                    excluded.append(agms); seen.add(agms)
-            for agms in active_by_agms:
-                if agms not in seen:
-                    excluded.append(agms)
+            if initial_approved is None and initial_excluded is None:
+                approved = list(active_by_agms)
+                excluded = []
+            else:
+                approved = []
+                seen = set()
+                for value in initial_approved or []:
+                    agms = _clean(value)
+                    if agms and agms in active_by_agms and agms not in seen:
+                        approved.append(agms); seen.add(agms)
+                excluded = []
+                for value in initial_excluded or []:
+                    agms = _clean(value)
+                    if agms and agms in active_by_agms and agms not in seen:
+                        excluded.append(agms); seen.add(agms)
+                for agms in active_by_agms:
+                    if agms not in seen:
+                        excluded.append(agms)
 
-        # Κρατάμε την πραγματική ώρα έναρξης ΟΛΩΝ όσων είναι ήδη ενεργοί
-        # κατά την έναρξη της βάρδιας, ακόμη κι αν αρχικά εξαιρεθούν.
-        # Έτσι μια μεταγενέστερη διόρθωση ΕΞΑΙΡΕΣΗ -> ΑΠΟΔΟΧΗ
-        # επαναφέρει πλήρως την πραγματική αρχική ώρα εργασίας.
-        initial_active = {}
-        for agms, item in active_by_agms.items():
-            initial_active[agms] = {
-                "timestamp": _clean(item.get("timestamp")),
-                "event_id": _clean(item.get("event_id")),
+            # Κρατάμε την πραγματική ώρα έναρξης ΟΛΩΝ όσων είναι ήδη ενεργοί
+            # κατά την έναρξη της βάρδιας, ακόμη κι αν αρχικά εξαιρεθούν.
+            # Έτσι μια μεταγενέστερη διόρθωση ΕΞΑΙΡΕΣΗ -> ΑΠΟΔΟΧΗ
+            # επαναφέρει πλήρως την πραγματική αρχική ώρα εργασίας.
+            initial_active = {}
+            for agms, item in active_by_agms.items():
+                initial_active[agms] = {
+                    "timestamp": _clean(item.get("timestamp")),
+                    "event_id": _clean(item.get("event_id")),
+                }
+
+            shift = {
+                "version": 2,
+                "shift_id": f"SHIFT_{when:%Y%m%d_%H%M%S_%f}",
+                "status": "ACTIVE",
+                "start_at": when.isoformat(timespec="seconds"),
+                "start_officer": self._person_payload(officer),
+                "approved": approved,
+                "excluded": excluded,
+                "pending": [],
+                "initial_active": initial_active,
+                "created_at": datetime.now().isoformat(timespec="seconds"),
             }
+            self._atomic_json(self._current_shift_path(), shift)
+            self.log_admin_action("SHIFT_STARTED", {
+                "shift_id": shift["shift_id"],
+                "officer_agms": officer.agms,
+                "initial_people": len(approved),
+                "initial_excluded": len(excluded),
+            })
+            return shift
 
-        shift = {
-            "version": 2,
-            "shift_id": f"SHIFT_{when:%Y%m%d_%H%M%S_%f}",
-            "status": "ACTIVE",
-            "start_at": when.isoformat(timespec="seconds"),
-            "start_officer": self._person_payload(officer),
-            "approved": approved,
-            "excluded": excluded,
-            "pending": [],
-            "initial_active": initial_active,
-            "created_at": datetime.now().isoformat(timespec="seconds"),
-        }
-        self._atomic_json(self._current_shift_path(), shift)
-        self.log_admin_action("SHIFT_STARTED", {
-            "shift_id": shift["shift_id"],
-            "officer_agms": officer.agms,
-            "initial_people": len(approved),
-            "initial_excluded": len(excluded),
-        })
-        return shift
-
-    def sync_active_shift(self) -> dict | None:
+    def _sync_active_shift_locked(self) -> dict | None:
         shift = self.current_shift()
         if not shift:
             return None
@@ -1535,73 +1544,79 @@ class SharedEventStore:
             self._atomic_json(self._current_shift_path(), shift)
         return shift
 
+    def sync_active_shift(self) -> dict | None:
+        with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
+            return self._sync_active_shift_locked()
+
     def set_shift_member_state(self, agms: str, state: str) -> dict:
-        shift = self.current_shift()
-        if not shift:
-            raise ValueError("Δεν υπάρχει ενεργή βάρδια.")
-        agms = _clean(agms)
-        state = _clean(state).upper()
-        if state not in {"APPROVED", "EXCLUDED"}:
-            raise ValueError("Μη έγκυρη κατάσταση μέλους βάρδιας.")
-        for key in ("approved", "excluded", "pending"):
-            shift[key] = [x for x in shift.get(key, []) if _clean(x) != agms]
-        shift["approved" if state == "APPROVED" else "excluded"].append(agms)
-        shift["updated_at"] = datetime.now().isoformat(timespec="seconds")
-        self._atomic_json(self._current_shift_path(), shift)
-        self.log_admin_action("SHIFT_MEMBER_STATE", {"shift_id": shift["shift_id"], "agms": agms, "state": state})
-        return shift
+        with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
+            shift = self.current_shift()
+            if not shift:
+                raise ValueError("Δεν υπάρχει ενεργή βάρδια.")
+            agms = _clean(agms)
+            state = _clean(state).upper()
+            if state not in {"APPROVED", "EXCLUDED"}:
+                raise ValueError("Μη έγκυρη κατάσταση μέλους βάρδιας.")
+            for key in ("approved", "excluded", "pending"):
+                shift[key] = [x for x in shift.get(key, []) if _clean(x) != agms]
+            shift["approved" if state == "APPROVED" else "excluded"].append(agms)
+            shift["updated_at"] = datetime.now().isoformat(timespec="seconds")
+            self._atomic_json(self._current_shift_path(), shift)
+            self.log_admin_action("SHIFT_MEMBER_STATE", {"shift_id": shift["shift_id"], "agms": agms, "state": state})
+            return shift
 
     def end_officer_shift(self, officer: PersonnelRecord, when: datetime | None = None) -> dict:
-        shift = self.sync_active_shift()
-        if not shift:
-            raise ValueError("Δεν υπάρχει ενεργή βάρδια.")
-        if shift.get("pending"):
-            raise ValueError("Υπάρχουν άτομα σε ΑΝΑΜΟΝΗ. Κάντε πρώτα ΑΠΟΔΟΧΗ ή ΕΞΑΙΡΕΣΗ.")
-        when = when or datetime.now()
-        # A finalized roster must not leave its selected officers blocking the
-        # physical desks. Close only APPROVED active records, through the same
-        # audited END path used by the normal operator action. This operation
-        # is deliberately retryable: already closed records are skipped.
-        closed_agms = []
-        for agms in sorted(set(_clean(a) for a in shift.get("approved", []))):
-            if not agms:
-                continue
-            current = self.get_active(agms)
-            if not current:
-                continue
-            started = datetime.fromisoformat(current["timestamp"])
-            if started > when:
-                raise ValueError(
-                    f"Η έναρξη του ΑΓΜΣ {agms} είναι μεταγενέστερη της λήξης βάρδιας."
+        with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
+            shift = self._sync_active_shift_locked()
+            if not shift:
+                raise ValueError("Δεν υπάρχει ενεργή βάρδια.")
+            if shift.get("pending"):
+                raise ValueError("Υπάρχουν άτομα σε ΑΝΑΜΟΝΗ. Κάντε πρώτα ΑΠΟΔΟΧΗ ή ΕΞΑΙΡΕΣΗ.")
+            when = when or datetime.now()
+            # A finalized roster must not leave its selected officers blocking the
+            # physical desks. Close only APPROVED active records, through the same
+            # audited END path used by the normal operator action. This operation
+            # is deliberately retryable: already closed records are skipped.
+            closed_agms = []
+            for agms in sorted(set(_clean(a) for a in shift.get("approved", []))):
+                if not agms:
+                    continue
+                current = self.get_active(agms)
+                if not current:
+                    continue
+                started = datetime.fromisoformat(current["timestamp"])
+                if started > when:
+                    raise ValueError(
+                        f"Η έναρξη του ΑΓΜΣ {agms} είναι μεταγενέστερη της λήξης βάρδιας."
+                    )
+                member = PersonnelRecord(
+                    agms=agms,
+                    rank=_clean(current.get("rank")),
+                    surname=_clean(current.get("surname")),
+                    given_name=_clean(current.get("given_name")),
                 )
-            member = PersonnelRecord(
-                agms=agms,
-                rank=_clean(current.get("rank")),
-                surname=_clean(current.get("surname")),
-                given_name=_clean(current.get("given_name")),
-            )
-            self.end(member, when=when)
-            self.log_admin_action("SHIFT_AUTO_END_POSITION", {
-                "shift_id": shift["shift_id"],
-                "officer_agms": officer.agms,
-                "member_agms": agms,
-                "end_at": when.isoformat(timespec="seconds"),
-                "reason": "FINALIZE_SELECTED_SHIFT_MEMBER",
-            })
-            closed_agms.append(agms)
-        shift["closed_active_agms"] = closed_agms
-        shift["status"] = "FINALIZED"
-        shift["end_at"] = when.isoformat(timespec="seconds")
-        shift["end_officer"] = self._person_payload(officer)
-        shift["finalized_at"] = datetime.now().isoformat(timespec="seconds")
-        # Το ιστορικό βαρδιών αποθηκεύεται σε SQLite. Το CURRENT_SHIFT.json
-        # μένει μόνο ως ελαφρύ ζωντανό αρχείο συγχρονισμού μεταξύ σταθμών.
-        # Persist the finalized report before replacing CURRENT_SHIFT.
-        # If SQLite is unavailable, the shift remains ACTIVE and retryable.
-        self._store_shift_snapshot(shift, make_current_report=True)
-        self._atomic_json(self._current_shift_path(), shift)
-        self.log_admin_action("SHIFT_ENDED", {"shift_id": shift["shift_id"], "officer_agms": officer.agms, "approved": len(shift.get("approved", [])), "excluded": len(shift.get("excluded", []))})
-        return shift
+                self.end(member, when=when)
+                self.log_admin_action("SHIFT_AUTO_END_POSITION", {
+                    "shift_id": shift["shift_id"],
+                    "officer_agms": officer.agms,
+                    "member_agms": agms,
+                    "end_at": when.isoformat(timespec="seconds"),
+                    "reason": "FINALIZE_SELECTED_SHIFT_MEMBER",
+                })
+                closed_agms.append(agms)
+            shift["closed_active_agms"] = closed_agms
+            shift["status"] = "FINALIZED"
+            shift["end_at"] = when.isoformat(timespec="seconds")
+            shift["end_officer"] = self._person_payload(officer)
+            shift["finalized_at"] = datetime.now().isoformat(timespec="seconds")
+            # Το ιστορικό βαρδιών αποθηκεύεται σε SQLite. Το CURRENT_SHIFT.json
+            # μένει μόνο ως ελαφρύ ζωντανό αρχείο συγχρονισμού μεταξύ σταθμών.
+            # Persist the finalized report before replacing CURRENT_SHIFT.
+            # If SQLite is unavailable, the shift remains ACTIVE and retryable.
+            self._store_shift_snapshot(shift, make_current_report=True)
+            self._atomic_json(self._current_shift_path(), shift)
+            self.log_admin_action("SHIFT_ENDED", {"shift_id": shift["shift_id"], "officer_agms": officer.agms, "approved": len(shift.get("approved", [])), "excluded": len(shift.get("excluded", []))})
+            return shift
 
     def shift_sessions_v2(self, shift: dict) -> list[dict]:
         approved = {_clean(x) for x in shift.get("approved", []) if _clean(x)}
@@ -3597,7 +3612,13 @@ def run(args=None) -> int:
                 self.start_btn.setEnabled(False); self.end_btn.setEnabled(False)
                 return
             self.person_name.setText(_clean(f"{p.rank} {p.surname} {p.given_name}"))
-            active = self.store.get_active(p.agms) if self.store else None
+            try:
+                active = self.store.get_active(p.agms) if self.store else None
+            except (BusyError, OSError) as exc:
+                self.active_status.setText("ΑΝΑΜΟΝΗ ΣΥΝΔΕΣΗΣ — δεν επιτρέπεται καταχώριση μέχρι να επιβεβαιωθούν τα κεντρικά δεδομένα.")
+                self.start_btn.setEnabled(False)
+                self.end_btn.setEnabled(False)
+                return
             if active:
                 ts = _clean(active.get("timestamp","")).replace("T"," ")
                 self.active_status.setText(f"ΕΝΕΡΓΗ: ΘΕΣΗ {active.get('position','')} — {active.get('direction','')} — από {ts}")
