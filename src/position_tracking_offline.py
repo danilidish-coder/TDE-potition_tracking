@@ -205,16 +205,20 @@ class OfflineJournal:
             return False
         # Auditable reconciliation on the central share *before* clearing the
         # local conflict. Do not assert that an END event was written.
-        store.log_admin_action("OFFLINE_HANDOFF_END_ALREADY_SUPERSEDED", {
-            "operation_id": op["id"],
-            "agms": op["agms"],
-            "old_start_event_id": op["start_id"],
-            "old_position": op["position"],
-            "old_created_at": op["created_at"],
-            "current_start_event_id": (current or {}).get("event_id", ""),
-            "current_position": (current or {}).get("position", ""),
-            "note": "Obsolete automatic handoff END: replacement session preserved; actual departure time unverified",
-        })
+        store._atomic_json(
+            store.audit / "offline_handoff_reconciliations" / (op["id"] + ".json"),
+            {
+                "action": "OFFLINE_HANDOFF_END_ALREADY_SUPERSEDED",
+                "operation_id": op["id"],
+                "agms": op["agms"],
+                "old_start_event_id": op["start_id"],
+                "old_position": op["position"],
+                "old_created_at": op["created_at"],
+                "current_start_event_id": (current or {}).get("event_id", ""),
+                "current_position": (current or {}).get("position", ""),
+                "note": "Obsolete automatic handoff END: replacement session preserved; actual departure time unverified",
+            },
+        )
         self._mark(op["id"], "RECONCILED", "Η παλιά θέση δεν είναι πλέον ενεργή. Η νέα θέση διατηρήθηκε. Έγινε καταγραφή ελέγχου.")
         self.remember(op["agms"], current)
         return True
@@ -236,6 +240,7 @@ class OfflineJournal:
         blocked = self.conflicts()
         blocked_agms = {x["agms"] for x in blocked}
         blocked_positions = {x["position"] for x in blocked if x["kind"] == "START"}
+        network_error = ""
         for op in self._rows(("PENDING",)):
             if op["agms"] in blocked_agms or (
                 op["kind"] == "START" and op["position"] in blocked_positions
@@ -272,6 +277,7 @@ class OfflineJournal:
                     if op["kind"] == "START":
                         blocked_positions.add(op["position"])
                     continue
+                network_error = str(exc)[:240]
                 break
             self._mark(op["id"], "APPLIED", "")
             applied.append(op["id"])
@@ -279,7 +285,7 @@ class OfflineJournal:
                 self.remember(op["agms"], event)
             else:
                 self.remember(op["agms"], None)
-        return {"applied": applied, "pending": self.pending_count(), "conflicts": self.conflicts()}
+        return {"applied": applied, "pending": self.pending_count(), "conflicts": self.conflicts(), "network_error": network_error}
 
     def resolve_conflict(self, op_id: str, officer_agms: str, reason: str):
         """Reject an unconfirmed offline claim with a durable officer audit.
