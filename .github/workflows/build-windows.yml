@@ -100,6 +100,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\start_time_correction_edge_regression.py"
           if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
+          python "tests\field_handoff_conflict_recovery.py"
+          if ($LASTEXITCODE -ne 0) { throw "FIELD HANDOFF RECOVERY FAILED (exit code $LASTEXITCODE)" }
 
       - name: Generate network application icon
         shell: powershell
@@ -186,15 +188,14 @@ jobs:
           Write-Host "PUBLISHED_EXE_SHA256=$hash"
           Write-Host "PUBLISHED_EXE_URL=https://github.com/$env:REPO/releases/download/$tag/$exe"
 
-      - name: Upload Windows test EXE
-        if: ${{ false }} # Disabled: artifact quota / incomplete offline acceptance. Retain step for later gated release.
-        continue-on-error: true
+      - name: Upload isolated v1.2.6 Windows EXE for on-site validation
+        if: github.ref == 'refs/heads/feature/v1.2.6-handoff-recovery'
         uses: actions/upload-artifact@v4
         with:
-          name: POSITION_TRACKING_WINDOWS_TEST
+          name: TDE_Katagrafi_Theseon_v1.2.6_FIELD_TEST
           path: dist/TDE_Katagrafi_Theseon.exe
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
 
       - name: Report isolated Windows build outcome to PR 5
         if: ${{ always() && github.ref == 'refs/heads/fix/shift-recovery-20261009' }}
