@@ -27,7 +27,7 @@ from position_tracking_watchdog import run_frozen_watchdog, parent_is_alive
 from xml.etree import ElementTree as ET
 
 APP_NAME = "TDE Krystallopigis - Katagrafi Theseon"
-APP_VERSION = "1.2.7"
+APP_VERSION = "1.2.8"
 SETTINGS_NAME = "position_tracking.settings.json"
 DEFAULT_CUTOFF = "10:00"
 STATISTICS_PIN_SHA256 = "ca444860f0e1ddca9596007253ea43b3a5133780b0a566d9a096a53568c063fb"
@@ -3250,6 +3250,10 @@ def run(args=None, *, watchdog_heartbeat_path: Path | None = None, watchdog_pare
             # A stalled SMB communications request must not block durable replay.
             self._sync_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TDE-sync")
             self._last_sync_error = ""
+            # Do not restart the same officer's async status lookup every
+            # time an unchanged central sync completes. That reset kept
+            # START/END disabled forever if SMB was slower than the timer.
+            self._last_operator_sync_signature = None
             self._central_handoff_verified = False
             # Network heartbeat/shift polling must never starve a booth action
             # when the SMB host disconnects or an old worker blocks in I/O.
@@ -3993,7 +3997,11 @@ def run(args=None, *, watchdog_heartbeat_path: Path | None = None, watchdog_pare
                 if x["agms"] == person.agms
             ]
             if affected:
-                self.active_status.setText("ΑΣΥΜΦΩΝΙΑ ΣΤΗΝ ΕΓΓΡΑΦΗ ΑΥΤΟΥ ΤΟΥ ΑΣΤΥΝΟΜΙΚΟΥ — ΕΛΕΓΧΟΣ ΑΞΥΠ")
+                self.active_status.setText(
+                    f"ΑΣΥΜΦΩΝΙΑ ΓΙΑ ΑΓΜΣ {person.agms} — "
+                    "ΕΝΑΡΞΗ/ΛΗΞΗ ΠΡΟΣΩΡΙΝΑ ΑΝΕΝΕΡΓΕΣ. "
+                    "Απαιτείται έλεγχος από ΑΞΥΠ, χωρίς διαγραφή τοπικών στοιχείων."
+                )
                 return
             person_pending = any(
                 x["agms"] == person.agms
@@ -4124,12 +4132,26 @@ def run(args=None, *, watchdog_heartbeat_path: Path | None = None, watchdog_pare
                     self._last_sync_error = result.get("network_error", "")
                     if result.get("conflicts"):
                         self.info.setText("ΑΣΥΜΦΩΝΙΑ ΑΠΟΣΥΝΔΕΔΕΜΕΝΩΝ ΚΑΤΑΧΩΡΙΣΕΩΝ — έλεγχος ΑΞΥΠ")
+                    signature = (
+                        True, self._last_sync_error,
+                        result.get("pending", 0),
+                        tuple(sorted(x["id"] for x in result.get("conflicts", []))),
+                    )
+                    refresh_operator = bool(result.get("applied"))
                     self._refresh_info()
                 except Exception as exc:
                     self.store = None
                     self._last_sync_error = str(exc)[:240]
+                    signature = (False, self._last_sync_error)
+                    refresh_operator = False
                     self._refresh_info()
-                self._agms_changed()
+                # Previously this was unconditional. Every 3-second tick
+                # disabled BOTH controls and started a fresh remote lookup.
+                # If SMB took >=3 sec, the timeout callback was invalidated
+                # on each tick. Allow an in-flight lookup to finish/time out.
+                if signature != self._last_operator_sync_signature or refresh_operator:
+                    self._last_operator_sync_signature = signature
+                    self._agms_changed()
             if self._offline_future is not None:
                 return
             if not self.config.central_root:
