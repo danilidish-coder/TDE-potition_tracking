@@ -115,8 +115,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "REPEATED OLD HANDOFF END ON WINDOWS LOGIN ($LASTEXITCODE)" }
           python "tests\central_exe_and_exit_handoff_regression.py"
           if ($LASTEXITCODE -ne 0) { throw "CENTRAL EXE AND EXIT HANDOFF REGRESSION ($LASTEXITCODE)" }
+          python "tests\audit_lost_ack_rejected_end.py"
+          $lostAckProblem = $LASTEXITCODE -ne 0
+          if ($lostAckProblem) { Write-Host "AUDIT FINDING: lost-ACK previous START prevents next user" }
           python "tests\audit_flapping_network_buttons.py"
-          if ($LASTEXITCODE -ne 0) { throw "AUDIT: FLAPPING NETWORK STALLS BOOTH CONTROLS ($LASTEXITCODE)" }
+          $flappingProblem = $LASTEXITCODE -ne 0
+          if ($flappingProblem) { Write-Host "AUDIT FINDING: fluctuating network prevents booth controls" }
+          if ($lostAckProblem -or $flappingProblem) { throw "AUDIT REGRESSION FOUND (lost_ACK=$lostAckProblem, flapping=$flappingProblem)" }
           python "tests\field_handoff_conflict_recovery.py"
           if ($LASTEXITCODE -ne 0) { throw "FIELD HANDOFF RECOVERY FAILED (exit code $LASTEXITCODE)" }
 
