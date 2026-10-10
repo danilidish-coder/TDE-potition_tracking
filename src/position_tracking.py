@@ -571,11 +571,10 @@ class SharedEventStore:
             raise BusyError(f"Δεν είναι διαθέσιμος ο κοινόχρηστος φάκελος: {exc}") from exc
         locked = False
         try:
-            try:
-                if os.fstat(fd).st_size == 0:
-                    os.write(fd, b"\x00")
-            except OSError as exc:
-                raise BusyError(f"Αδύνατη προετοιμασία κλειδώματος: {exc}") from exc
+            # Never write to the shared lock file before acquiring its OS
+            # byte-range lock. Two Windows processes raced in this pre-lock
+            # write and raised EACCES, even though the lock was available.
+            # Windows byte-range locks are valid beyond EOF.
             deadline = time.monotonic() + timeout
             while True:
                 try:
