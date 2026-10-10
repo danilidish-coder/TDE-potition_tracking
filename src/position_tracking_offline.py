@@ -299,6 +299,14 @@ class OfflineJournal:
         blocked_positions = {x["position"] for x in blocked if x["kind"] == "START"}
         network_error = ""
         for op in self._rows(("PENDING",)):
+            # Previous reconciliation can atomically settle dependent operations
+            # that were present in this iteration's original snapshot.
+            with self._db() as db:
+                still_pending = db.execute(
+                    "SELECT status FROM operations WHERE id=?", (op["id"],)
+                ).fetchone()
+            if not still_pending or still_pending[0] != "PENDING":
+                continue
             if op["agms"] in blocked_agms or (
                 op["kind"] == "START" and op["position"] in blocked_positions
             ):
