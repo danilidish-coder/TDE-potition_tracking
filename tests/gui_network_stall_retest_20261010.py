@@ -50,6 +50,7 @@ if len(sys.argv) > 1 and sys.argv[1] == "--qt-probe":
             self.beats = []
             self.t0 = time.monotonic()
             self.poked = False
+            self.start_enabled = False
             self.probe_timer = QtCore.QTimer(self)
             self.probe_timer.timeout.connect(lambda: self.beats.append(time.monotonic()))
             self.probe_timer.start(100)
@@ -58,8 +59,12 @@ if len(sys.argv) > 1 and sys.argv[1] == "--qt-probe":
                 windows = [w for w in self.topLevelWidgets() if hasattr(w, "agms_input")]
                 if windows:
                     window = windows[0]
-                    window.agms_input.setText("123456")
+                    worker = MOD.PersonnelRecord("123456", "ΑΣΤ", "TEST", "PERSON")
+                    window.people = (worker,)
+                    window._people_by_agms = {worker.agms: worker}
+                    window.agms_input.setText(worker.agms)
                     window.position.setCurrentText("8")
+                    self.start_enabled = bool(window.start_btn.isEnabled())
                     self.poked = True
 
             QtCore.QTimer.singleShot(750, poke)
@@ -73,6 +78,7 @@ if len(sys.argv) > 1 and sys.argv[1] == "--qt-probe":
         "beats": len(app.beats),
         "max_gap_s": round(max(gaps, default=0), 3),
         "poked": app.poked,
+        "start_enabled": app.start_enabled,
         "elapsed_s": round(time.monotonic()-app.t0, 3),
         "result": result,
     }
@@ -94,5 +100,6 @@ with tempfile.TemporaryDirectory() as d:
     assert report["beats"] >= 20, report
     assert report["max_gap_s"] < 1.0, report
     assert report["poked"] is True, report
+    assert report["start_enabled"] is True, report
     assert report["elapsed_s"] < 6, report
     print("GUI_NETWORK_STALL_RESPONSIVENESS: PASS", report)
