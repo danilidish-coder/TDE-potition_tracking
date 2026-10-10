@@ -22,7 +22,7 @@ def start(directory,i):
         return ("rejected",str(exc))
 
 if len(sys.argv)>1 and sys.argv[1]=="--child":
-    print(json.dumps(start(Path(sys.argv[2]),int(sys.argv[3])),ensure_ascii=False))
+    print(json.dumps(start(Path(sys.argv[2]),int(sys.argv[3])),ensure_ascii=True))
     raise SystemExit(0)
 
 with tempfile.TemporaryDirectory(prefix="TDE-offline-same-machine-") as d:
