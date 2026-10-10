@@ -121,7 +121,8 @@ jobs:
           retention-days: 30
 
       - name: Archive Windows EXE
-        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v1.2.5-windows-publish'
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
@@ -137,19 +138,20 @@ jobs:
           git diff --cached --quiet
           if ($LASTEXITCODE -ne 0) {
             git commit -m "Archive final Windows EXE"
-            git push
+            git push origin HEAD:refs/heads/feature/v1.2.5-windows-publish
           }
 
       - name: Publish downloadable v1.2.5 Windows EXE
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/shift-recovery-20261009' }}
+        continue-on-error: true
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/feature/v1.2.5-windows-publish' }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $tag = 'v1.2.5-rc2'
+          $tag = 'v1.2.5-rc3'
           $exe = 'TDE_Katagrafi_Theseon.exe'
           Copy-Item 'dist/TDE_Katagrafi_Theseon.exe' $exe -Force
           $hash = (Get-FileHash $exe -Algorithm SHA256).Hash
