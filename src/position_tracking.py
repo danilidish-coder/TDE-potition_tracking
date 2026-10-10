@@ -23,10 +23,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from position_tracking_offline import OfflineJournal, OfflineConflict
 from position_tracking_bootstrap import cache_windows_client
+from position_tracking_watchdog import run_frozen_watchdog, parent_is_alive
 from xml.etree import ElementTree as ET
 
 APP_NAME = "TDE Krystallopigis - Katagrafi Theseon"
-APP_VERSION = "1.2.6"
+APP_VERSION = "1.2.7"
 SETTINGS_NAME = "position_tracking.settings.json"
 DEFAULT_CUTOFF = "10:00"
 STATISTICS_PIN_SHA256 = "ca444860f0e1ddca9596007253ea43b3a5133780b0a566d9a096a53568c063fb"
@@ -2684,7 +2685,7 @@ def build_shift_html(store: SharedEventStore, day: date, cutoff: str) -> str:
 </head><body><pre>{_escape_html(text)}</pre></body></html>"""
 
 
-def run(args=None) -> int:
+def run(args=None, *, watchdog_heartbeat_path: Path | None = None, watchdog_parent_pid: int = 0) -> int:
     from PySide6.QtCore import Qt, QDate, QDateTime, QTime, QTimer, QRectF, QPointF, QByteArray
     from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen, QIcon, QPixmap, QPalette, QPainterPath
     from PySide6.QtSvg import QSvgRenderer
@@ -5405,8 +5406,42 @@ def run(args=None) -> int:
     app.setApplicationName("TDE Position Tracking")
     window = MainWindow()
     window.show()
+    if watchdog_heartbeat_path is not None:
+        # This timer executes on the actual Qt GUI thread, not a background
+        # worker. It stops ticking if a GUI action blocks on Windows SMB.
+        # The independent watchdog can then kill/restart this process.
+        heartbeat = QTimer(window)
+        heartbeat.setInterval(1250)
+
+        def announce_responsiveness():
+            if watchdog_parent_pid and not parent_is_alive(watchdog_parent_pid):
+                # The supervisor was terminated; do not orphan this old GUI.
+                # No shift END is issued by a normal QApplication.quit().
+                app.quit()
+                return
+            try:
+                watchdog_heartbeat_path.parent.mkdir(parents=True, exist_ok=True)
+                watchdog_heartbeat_path.touch()
+            except OSError:
+                # If local writes fail, the watcher will eventually recognize
+                # the missing heartbeat. Do not touch the central SMB share.
+                pass
+
+        heartbeat.timeout.connect(announce_responsiveness)
+        heartbeat.start()
+        announce_responsiveness()
     return app.exec()
 
 
 if __name__ == "__main__":
+    if getattr(sys, "frozen", False):
+        if len(sys.argv) == 4 and sys.argv[1] == "--tde-watched-child":
+            raise SystemExit(run(
+                [sys.executable],
+                watchdog_heartbeat_path=Path(sys.argv[2]),
+                watchdog_parent_pid=int(sys.argv[3]),
+            ))
+        # The EXE always starts an independent watcher, even when launched
+        # via the existing desktop shortcut. No admin/install is required.
+        raise SystemExit(run_frozen_watchdog(sys.executable, _local_root()))
     raise SystemExit(run())
