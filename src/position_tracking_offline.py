@@ -135,8 +135,30 @@ class OfflineJournal:
             person.surname = rec.get("surname", "")
             person.given_name = rec.get("given_name", "")
             op = self.enqueue("END", person, client_id="AUTO_WINDOWS_USER_HANDOFF", reason="WINDOWS_USER_HANDOFF_OFFLINE")
-            closed.append(op["operation_id"])
+            if not op.get("already_recorded"):
+                closed.append(op["operation_id"])
         return closed
+
+    @staticmethod
+    def _prior_handoff_end_db(db, agms: str, exact_start_id: str):
+        """A prior automatic END is a durable one-shot claim for this START.
+
+        REJECTED is intentionally included. A dismissed stale END must NEVER
+        be regenerated when a third/fourth Windows account logs onto the booth.
+        """
+        if not exact_start_id:
+            return None
+        for ident, payload, status in db.execute(
+            "SELECT id, payload, status FROM operations "
+            "WHERE agms=? AND kind='END' AND start_id=? ORDER BY rowid DESC",
+            (agms, exact_start_id),
+        ).fetchall():
+            try:
+                if json.loads(payload).get("reason") == "WINDOWS_USER_HANDOFF_OFFLINE":
+                    return (ident, status)
+            except (TypeError, ValueError):
+                continue
+        return None
 
     def enqueue(self, kind, person, position="", direction="", client_id="", reason=""):
         if kind not in ("START", "END"):
@@ -146,6 +168,23 @@ class OfflineJournal:
         with self._db() as db:
             db.execute("BEGIN IMMEDIATE")
             pending = self._rows_db(db)
+            if kind == "END" and reason == "WINDOWS_USER_HANDOFF_OFFLINE":
+                # Look through *all* historical statuses, not only PENDING.
+                # The exact same old START can be retried after a user manually
+                # rejects the handoff. Serialize through BEGIN IMMEDIATE to
+                # prevent simultaneous Windows logins queuing duplicates.
+                recorded = self._local_active_db(db, person.agms, pending)
+                if recorded:
+                    original_start = recorded.get("event_id", "")
+                    prior = self._prior_handoff_end_db(db, person.agms, original_start)
+                    if prior is not None:
+                        return {
+                            "operation_id": prior[0], "kind": kind,
+                            "position": recorded.get("position", ""),
+                            "direction": recorded.get("direction", ""),
+                            "pending_sync": prior[1] in ("PENDING", "CONFLICT"),
+                            "already_recorded": True,
+                        }
             # A conflict on another officer or booth must not stop all work
             # at this Windows terminal. Keep the affected officer/booth guarded.
             conflicts = [x for x in pending if x["status"] == "CONFLICT"]
@@ -222,6 +261,56 @@ class OfflineJournal:
         self._mark(op["id"], "RECONCILED", "Η παλιά θέση δεν είναι πλέον ενεργή. Η νέα θέση διατηρήθηκε. Έγινε καταγραφή ελέγχου.")
         self.remember(op["agms"], current)
         return True
+
+    def _refresh_rejected_handoff_observations(self, store):
+        """Replace a stale local cache only after checking the central START.
+
+        A supervisor rejecting an old auto-END preserves the row for audit,
+        but older versions left the old START in 'observed' indefinitely.
+        The next login would then generate another END. When the central
+        system proves that the old START is no longer active, retire the old
+        local cache without creating a false END or disturbing a new session.
+        """
+        for op in self._rows(("REJECTED",)):
+            if not self._is_handoff_end(op) or not op["start_id"]:
+                continue
+            with self._db() as db:
+                row = db.execute("SELECT record FROM observed WHERE agms=?", (op["agms"],)).fetchone()
+            if not row:
+                continue
+            try:
+                cached = json.loads(row[0])
+            except (TypeError, ValueError):
+                continue
+            if not cached or cached.get("event_id") != op["start_id"]:
+                continue
+            # Failure to read central state is NOT proof of a closed session.
+            current = store.get_active(op["agms"])
+            if current and current.get("event_id") == op["start_id"]:
+                continue
+            store._atomic_json(
+                store.audit / "offline_handoff_reconciliations" / (op["id"] + "_rejected_cache.json"),
+                {
+                    "action": "REJECTED_OLD_HANDOFF_LOCAL_CACHE_REFRESH",
+                    "operation_id": op["id"], "agms": op["agms"],
+                    "old_start_event_id": op["start_id"],
+                    "old_position": op["position"],
+                    "current_start_event_id": (current or {}).get("event_id", ""),
+                    "current_position": (current or {}).get("position", ""),
+                    "note": "Local cache updated after verified central read; "
+                            "no END operation was created and replacement START was preserved",
+                },
+            )
+            with self._db() as db:
+                # CAS: an unrelated update or another Windows user must not be
+                # overwritten by a late network reply.
+                latest = db.execute("SELECT record FROM observed WHERE agms=?", (op["agms"],)).fetchone()
+                if latest and latest[0] == row[0]:
+                    db.execute(
+                        "UPDATE observed SET record=?, checked_at=? WHERE agms=? AND record=?",
+                        (json.dumps(current, ensure_ascii=False),
+                         datetime.now().isoformat(), op["agms"], row[0]),
+                    )
 
     def _reconcile_superseded_handoff_start(self, store, op):
         """Preserve a complete locally recorded OLD session as a central
@@ -351,6 +440,15 @@ class OfflineJournal:
                 self.remember(op["agms"], event)
             else:
                 self.remember(op["agms"], None)
+        if not network_error:
+            # This is a network worker, never the Qt UI thread. Refresh only
+            # old rejected END caches that have not already been corrected.
+            try:
+                self._refresh_rejected_handoff_observations(store)
+            except Exception as exc:
+                # Do not discard local entries or break new officers' replay
+                # because the central share was temporarily unavailable.
+                network_error = str(exc)[:240]
         return {"applied": applied, "pending": self.pending_count(), "conflicts": self.conflicts(), "network_error": network_error}
 
     def resolve_conflict(self, op_id: str, officer_agms: str, reason: str):
