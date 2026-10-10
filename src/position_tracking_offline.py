@@ -223,6 +223,62 @@ class OfflineJournal:
         self.remember(op["agms"], current)
         return True
 
+    def _reconcile_superseded_handoff_start(self, store, op):
+        """Preserve a complete locally recorded OLD session as a central
+        reconciliation record if its START never arrived but its officer has
+        a newer, different active START elsewhere. Never alter that new START.
+        """
+        if op["kind"] != "START":
+            return False
+        dependent = [
+            x for x in self._rows(("PENDING", "CONFLICT"))
+            if x["kind"] == "END" and x["start_id"] == op["id"]
+            and self._is_handoff_end(x)
+        ]
+        if not dependent:
+            return False  # May still be physically working; do not infer END.
+        current = store.get_active(op["agms"])
+        if not current or current.get("event_id") == op["id"]:
+            return False
+        try:
+            if datetime.fromisoformat(current["timestamp"]) <= datetime.fromisoformat(op["created_at"]):
+                return False
+        except (KeyError, ValueError, TypeError):
+            return False  # An uncertain timeline requires manual reconciliation.
+        record = {
+            "action": "SUPERSEDED_OFFLINE_HANDOFF_SESSION_UNVERIFIED",
+            "agms": op["agms"], "old_start_operation_id": op["id"],
+            "old_start_at": op["created_at"], "old_position": op["position"],
+            "old_end_operations": [
+                {"id": x["id"], "recorded_at": x["created_at"]}
+                for x in dependent
+            ],
+            "current_active_start_id": current.get("event_id"),
+            "current_active_position": current.get("position"),
+            "note": "Locally recorded earlier START/automatic END archived for supervisor review; exact departure time not verified; replacement START untouched",
+        }
+        # Commit audit to central SMB first. If unavailable, retain all
+        # local operations for a later attempt.
+        store._atomic_json(
+            store.audit / "offline_handoff_reconciliations" / (op["id"] + ".json"),
+            record,
+        )
+        note = "Αρχειοθετήθηκε τοπική παλιά θέση για έλεγχο ΑΞΥΠ. Η νέα θέση διατηρήθηκε."
+        when = datetime.now().isoformat(timespec="seconds")
+        ids = [op["id"]] + [x["id"] for x in dependent]
+        with self._db() as db:
+            for ident in ids:
+                db.execute(
+                    "UPDATE operations SET status='RECONCILED',error=?,recorded_at=? "
+                    "WHERE id=? AND status IN ('PENDING','CONFLICT')",
+                    (note, when, ident),
+                )
+            db.execute(
+                "INSERT OR REPLACE INTO observed VALUES(?,?,?)",
+                (op["agms"], json.dumps(current, ensure_ascii=False), when),
+            )
+        return True
+
     def sync(self, store, person_type):
         """Replay durable local events independently unless their officer or
         claimed booth conflicts. Persist conflicts; never discard work silently.
@@ -231,7 +287,8 @@ class OfflineJournal:
         # Repair previously stuck v1.2.5 handoffs before processing new claims.
         for op in self._rows(("CONFLICT",)):
             try:
-                if self._reconcile_stale_handoff(store, op):
+                if (self._reconcile_superseded_handoff_start(store, op)
+                        or self._reconcile_stale_handoff(store, op)):
                     applied.append(op["id"])
             except Exception:
                 # If the central host/audit is unreachable, retain the local
@@ -249,7 +306,8 @@ class OfflineJournal:
             p = json.loads(op["payload"])
             person = person_type(agms=p["agms"], rank=p["rank"], surname=p["surname"], given_name=p["given_name"])
             try:
-                if self._reconcile_stale_handoff(store, op):
+                if (self._reconcile_superseded_handoff_start(store, op)
+                        or self._reconcile_stale_handoff(store, op)):
                     applied.append(op["id"])
                     continue
                 if op["kind"] == "START":
