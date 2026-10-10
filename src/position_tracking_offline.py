@@ -146,8 +146,16 @@ class OfflineJournal:
         with self._db() as db:
             db.execute("BEGIN IMMEDIATE")
             pending = self._rows_db(db)
-            if any(x["status"] == "CONFLICT" for x in pending):
-                raise OfflineConflict("Υπάρχει ΑΣΥΜΦΩΝΙΑ συγχρονισμού. Απαιτείται έλεγχος ΑΞΥΠ πριν από νέες ενέργειες.")
+            # A conflict on another officer or booth must not stop all work
+            # at this Windows terminal. Keep the affected officer/booth guarded.
+            conflicts = [x for x in pending if x["status"] == "CONFLICT"]
+            if any(x["agms"] == person.agms for x in conflicts) or (
+                kind == "START" and any(
+                    x["kind"] == "START" and x["position"] == position
+                    for x in conflicts
+                )
+            ):
+                raise OfflineConflict("Υπάρχει ΑΣΥΜΦΩΝΙΑ για τον αστυνομικό ή τη θέση. Απαιτείται έλεγχος ΑΞΥΠ.")
             if kind == "START":
                 if self._local_active_db(db, person.agms, pending):
                     raise ValueError("Ο αστυνομικός έχει ήδη ανοικτή θέση.")
@@ -177,19 +185,68 @@ class OfflineJournal:
         return {"operation_id": op_id, "kind": kind, "timestamp": created,
                 "position": position, "direction": direction, "pending_sync": True}
 
-    def sync(self, store, person_type):
-        """Replay in recorded order, exactly identified by operation IDs.
+    @staticmethod
+    def _is_handoff_end(op):
+        if op["kind"] != "END":
+            return False
+        return json.loads(op["payload"]).get("reason") == "WINDOWS_USER_HANDOFF_OFFLINE"
 
-        Returns pending and conflict counts; stops on network failure. Pending
-        operations remain durable and retryable across process termination.
+    def _reconcile_stale_handoff(self, store, op):
+        """Safely retire a handoff END if its exact START is no longer active.
+
+        The prior officer may already have moved to a different terminal and
+        opened another session. Never issue END against that replacement.
+        This also repairs CONFLICT rows left by v1.2.5 after a restart.
+        """
+        if not self._is_handoff_end(op):
+            return False
+        current = store.get_active(op["agms"])
+        if current and current.get("event_id") == op["start_id"]:
+            return False
+        # Auditable reconciliation on the central share *before* clearing the
+        # local conflict. Do not assert that an END event was written.
+        store.log_admin_action("OFFLINE_HANDOFF_END_ALREADY_SUPERSEDED", {
+            "operation_id": op["id"],
+            "agms": op["agms"],
+            "old_start_event_id": op["start_id"],
+            "old_position": op["position"],
+            "old_created_at": op["created_at"],
+            "current_start_event_id": (current or {}).get("event_id", ""),
+            "current_position": (current or {}).get("position", ""),
+            "note": "Obsolete automatic handoff END: replacement session preserved; actual departure time unverified",
+        })
+        self._mark(op["id"], "RECONCILED", "Η παλιά θέση δεν είναι πλέον ενεργή. Η νέα θέση διατηρήθηκε. Έγινε καταγραφή ελέγχου.")
+        self.remember(op["agms"], current)
+        return True
+
+    def sync(self, store, person_type):
+        """Replay durable local events independently unless their officer or
+        claimed booth conflicts. Persist conflicts; never discard work silently.
         """
         applied = []
-        if self.conflicts():
-            return {"applied": [], "pending": self.pending_count(), "conflicts": self.conflicts()}
+        # Repair previously stuck v1.2.5 handoffs before processing new claims.
+        for op in self._rows(("CONFLICT",)):
+            try:
+                if self._reconcile_stale_handoff(store, op):
+                    applied.append(op["id"])
+            except Exception:
+                # If the central host/audit is unreachable, retain the local
+                # conflict and let the next timed sync retry it.
+                pass
+        blocked = self.conflicts()
+        blocked_agms = {x["agms"] for x in blocked}
+        blocked_positions = {x["position"] for x in blocked if x["kind"] == "START"}
         for op in self._rows(("PENDING",)):
+            if op["agms"] in blocked_agms or (
+                op["kind"] == "START" and op["position"] in blocked_positions
+            ):
+                continue
             p = json.loads(op["payload"])
             person = person_type(agms=p["agms"], rank=p["rank"], surname=p["surname"], given_name=p["given_name"])
             try:
+                if self._reconcile_stale_handoff(store, op):
+                    applied.append(op["id"])
+                    continue
                 if op["kind"] == "START":
                     event = store.start(person, op["position"], op["direction"],
                                         when=datetime.fromisoformat(op["created_at"]),
@@ -202,12 +259,19 @@ class OfflineJournal:
                                       origin_computer=p["computer"], origin_user=p["windows_user"])
             except ValueError as exc:
                 self._mark(op["id"], "CONFLICT", str(exc))
-                break
+                blocked_agms.add(op["agms"])
+                if op["kind"] == "START":
+                    blocked_positions.add(op["position"])
+                continue
             except Exception as exc:
-                # Network outage, corrupt file or lock contention: never
-                # discard an operation or claim that it was applied.
+                # Network failure/lock contention: never discard or acknowledge
+                # any unsent entry. Conflicts are isolated by AGMS/booth.
                 if "άλλαξε" in str(exc) or "changed" in str(exc).lower():
                     self._mark(op["id"], "CONFLICT", str(exc))
+                    blocked_agms.add(op["agms"])
+                    if op["kind"] == "START":
+                        blocked_positions.add(op["position"])
+                    continue
                 break
             self._mark(op["id"], "APPLIED", "")
             applied.append(op["id"])
