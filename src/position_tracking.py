@@ -4132,12 +4132,11 @@ def run(args=None) -> int:
             self.end_btn.setEnabled(False)
             self.active_status.setText("ΤΟΠΙΚΗ ΑΠΟΘΗΚΕΥΣΗ ΚΑΤΑΧΩΡΙΣΗΣ…")
             def work():
+                # Never wait on a sleeping/disconnected SMB host while a booth
+                # action is being recorded. Store the operation locally first;
+                # a separate network worker performs idempotent central replay.
                 result = self.offline.enqueue(kind, person, position, direction, self.client_id)
-                if self.store:
-                    self.offline.sync(self.store, PersonnelRecord)
-                result["pending_sync"] = any(
-                    x["id"] == result["operation_id"] for x in self.offline._rows(("PENDING", "CONFLICT"))
-                )
+                result["pending_sync"] = True
                 result["conflict"] = bool(self.offline.conflicts())
                 return result
             future = self._position_pool.submit(work)
@@ -4160,6 +4159,9 @@ def run(args=None) -> int:
                         QMessageBox.information(self, "Καταχώριση", f"{kind}: Η καταχώριση επιβεβαιώθηκε κεντρικά.")
                 self._refresh_info()
                 self._agms_changed()
+                # Launch central reconciliation asynchronously; the button
+                # remains responsive regardless of central SMB availability.
+                self._offline_tick()
             QTimer.singleShot(100, poll)
 
         def _start(self):
