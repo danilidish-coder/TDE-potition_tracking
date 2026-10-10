@@ -26,7 +26,7 @@ from position_tracking_bootstrap import cache_windows_client
 from xml.etree import ElementTree as ET
 
 APP_NAME = "TDE Krystallopigis - Katagrafi Theseon"
-APP_VERSION = "1.2.5"
+APP_VERSION = "1.2.6"
 SETTINGS_NAME = "position_tracking.settings.json"
 DEFAULT_CUTOFF = "10:00"
 STATISTICS_PIN_SHA256 = "ca444860f0e1ddca9596007253ea43b3a5133780b0a566d9a096a53568c063fb"
