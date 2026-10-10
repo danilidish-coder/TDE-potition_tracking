@@ -119,3 +119,56 @@ assert "if not self._central_handoff_verified and _windows_session_is_active():"
 assert "store = self.store or SharedEventStore(" in bootstrap
 assert "self._sync_pool.submit(work)" in bootstrap
 print("WINDOWS_OLD_SESSION_ISOLATION: PASS")
+
+for prior_status in ("PENDING", "CONFLICT"):
+    # Old booth did not upload its START at all. The officer registered at
+    # another PC first. The previous booth then changed Windows users.
+    # v1.2.5 blocked BOTH the previous and next person's operations.
+    with tempfile.TemporaryDirectory() as d:
+        from datetime import datetime, timedelta
+        central = MOD.SharedEventStore(Path(d) / "share" / "TDE_DATA")
+        journal = MOD.OfflineJournal(Path(d) / "local")
+        a, b = person(96001), person(96002)
+        prior_host = MOD.socket.gethostname
+        original_user = os.environ.get("USERNAME")
+        try:
+            MOD.socket.gethostname = lambda: "EXIT-09"
+            os.environ["USERNAME"] = "OLD_ACCOUNT"
+            previous = journal.enqueue("START", a, "9", "ΕΞΟΔΟΣ", "OLD_APP")
+            old_at = (datetime.now() - timedelta(minutes=7)).isoformat(timespec="seconds")
+            with journal._db() as db:
+                db.execute("UPDATE operations SET created_at=? WHERE id=?",
+                           (old_at, previous["operation_id"]))
+            replacement = central.start(
+                a, "12", "ΕΞΟΔΟΣ",
+                origin_computer="EXIT-12", origin_user="OLD_ACCOUNT",
+            )
+            os.environ["USERNAME"] = "NEW_ACCOUNT"
+            ended = journal.auto_close_previous_windows_users("EXIT-09", "NEW_ACCOUNT")
+            assert len(ended) == 1
+            newcomer = journal.enqueue("START", b, "9", "ΕΞΟΔΟΣ", "NEW_APP")
+            if prior_status == "CONFLICT":
+                journal._mark(previous["operation_id"], "CONFLICT", "Old start not synchronized")
+            results = journal.sync(central, MOD.PersonnelRecord)
+            assert results["conflicts"] == [], (prior_status, results)
+            assert results["pending"] == 0, (prior_status, results)
+            assert central.get_active(a.agms)["event_id"] == replacement["event_id"]
+            assert central.get_active(b.agms)["event_id"] == newcomer["operation_id"]
+            audit = central.audit / "offline_handoff_reconciliations" / (previous["operation_id"] + ".json")
+            assert audit.is_file(), prior_status
+            import json
+            note = json.loads(audit.read_text(encoding="utf-8"))
+            assert note["old_start_operation_id"] == previous["operation_id"], note
+            assert note["old_end_operations"][0]["id"] == ended[0], note
+            assert note["current_active_start_id"] == replacement["event_id"], note
+            with journal._db() as db:
+                states = db.execute("SELECT status FROM operations WHERE id IN (?,?)",
+                                    (previous["operation_id"], ended[0])).fetchall()
+            assert sorted(x[0] for x in states) == ["RECONCILED", "RECONCILED"], states
+        finally:
+            MOD.socket.gethostname = prior_host
+            if original_user is None:
+                os.environ.pop("USERNAME", None)
+            else:
+                os.environ["USERNAME"] = original_user
+print("UNSENT_OLD_START_NEW_LOGIN_RECOVERY: PASS (pending, legacy conflict)")
