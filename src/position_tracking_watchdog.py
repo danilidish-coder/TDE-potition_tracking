@@ -167,4 +167,20 @@ def run_frozen_watchdog(executable: str | Path, local_root: str | Path) -> int:
             _log(folder, "duplicate_launcher_ignored")
             return 0
         _log(folder, "watchdog_start")
-        return supervise(executable, folder)
+        result = supervise(executable, folder)
+        if result:
+            # An ordinary operator must not be left with a vanished program.
+            # On a crash loop, show a local, actionable message. There is no
+            # automatic END here; pending SQLite records remain untouched.
+            try:
+                ctypes.windll.user32.MessageBoxW(
+                    None,
+                    "Η Καταγραφή Θέσεων δεν μπόρεσε να επανεκκινήσει αυτόματα.\\n"
+                    "Ενημερώστε τον Αξιωματικό Υπηρεσίας.\\n"
+                    "Μη διαγράψετε τα τοπικά δεδομένα καταχωρίσεων.",
+                    "ΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ — ΑΝΑΚΑΜΨΗ",
+                    0x00000010,
+                )
+            except Exception:
+                pass
+        return result
