@@ -3250,6 +3250,7 @@ def run(args=None) -> int:
             # A stalled SMB communications request must not block durable replay.
             self._sync_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TDE-sync")
             self._last_sync_error = ""
+            self._central_handoff_verified = False
             # Network heartbeat/shift polling must never starve a booth action
             # when the SMB host disconnects or an old worker blocks in I/O.
             self._position_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TDE-position")
@@ -3541,12 +3542,9 @@ def run(args=None) -> int:
         def _communication_io(self, window_state: str):
             """Shared-folder IO must not run on the Qt GUI thread."""
             session_active = _windows_session_is_active()
-            # Do NOT close on Windows idle/lock/session-disconnected status:
-            # only a verified DIFFERENT Windows account on the same computer
-            # constitutes a handoff. This check also runs after SMB reconnect.
-            self.store.close_previous_windows_user_positions(
-                socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or ""
-            )
+            # No handoff from a periodic heartbeat: an older, disconnected
+            # Windows session might still be running. It must never close
+            # the newer Windows user's active booth on this computer.
             self.store.write_client_heartbeat(self.client_id, {
                 "app_started_at": self._app_started_at,
                 "window_state": window_state,
@@ -4131,15 +4129,18 @@ def run(args=None) -> int:
             def work():
                 if not Path(self.config.central_root).is_dir():
                     raise BusyError("Ο κεντρικός φάκελος δεν είναι διαθέσιμος.")
-                store = SharedEventStore(self.config.central_root)
+                # Avoid reinitializing shared SQLite and directories every
+                # three seconds on all 15 clients; it causes SMB lock churn.
+                store = self.store or SharedEventStore(self.config.central_root)
                 # Close the old Windows user's central START before applying
                 # the new user's offline START at the same physical booth.
                 # Store checks computer, Windows account and exact START id.
-                try:
+                if not self._central_handoff_verified and _windows_session_is_active():
+                    # Once per NEW application session. Never let an older
+                    # background Windows session keep closing its successor.
                     store.close_previous_windows_user_positions(
                         socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or "")
-                except Exception:
-                    pass
+                    self._central_handoff_verified = True
                 report = self.offline.sync(store, PersonnelRecord)
                 if self.config.shared_exe_path and time.monotonic() - self._last_bootstrap_check > 300:
                     self._last_bootstrap_check = time.monotonic()
