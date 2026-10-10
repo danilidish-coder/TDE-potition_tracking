@@ -68,31 +68,40 @@ if len(sys.argv) > 1 and sys.argv[1] == "--qt-probe":
                     self.poked = True
 
             QtCore.QTimer.singleShot(750, poke)
-            QtCore.QTimer.singleShot(3400, self.quit)
+            def finish_probe():
+                # Terminate from the Qt timer itself. Python's ThreadPoolExecutor
+                # atexit would otherwise wait for deliberately blocked SMB jobs,
+                # obscuring whether the GUI was responsive.
+                gaps = [b-a for a,b in zip(self.beats, self.beats[1:])]
+                summary = {
+                    "beats": len(self.beats),
+                    "max_gap_s": round(max(gaps, default=0), 3),
+                    "poked": self.poked,
+                    "start_enabled": self.start_enabled,
+                    "elapsed_s": round(time.monotonic()-self.t0, 3),
+                }
+                print("GUI_PROBE:" + json.dumps(summary), flush=True)
+                os._exit(0)
+            QtCore.QTimer.singleShot(3400, finish_probe)
 
     QtWidgets.QApplication = InstrumentedApp
-    result = MOD.run(["TDE Position Tracking - test"])
-    app = QtWidgets.QApplication.instance()
-    gaps = [b-a for a,b in zip(app.beats, app.beats[1:])]
-    summary = {
-        "beats": len(app.beats),
-        "max_gap_s": round(max(gaps, default=0), 3),
-        "poked": app.poked,
-        "start_enabled": app.start_enabled,
-        "elapsed_s": round(time.monotonic()-app.t0, 3),
-        "result": result,
-    }
-    print("GUI_PROBE:" + json.dumps(summary), flush=True)
-    raise SystemExit(0)
+    MOD.run(["TDE Position Tracking - test"])
+    raise SystemExit("Qt event loop quit unexpectedly before responsiveness report")
 
 with tempfile.TemporaryDirectory() as d:
     env = os.environ.copy()
     env["QT_QPA_PLATFORM"] = "offscreen"
-    output = subprocess.run(
-        [sys.executable, "-u", str(SCRIPT), "--qt-probe", d],
-        env=env, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, encoding="utf-8", errors="replace", timeout=22,
-    )
+    try:
+        output = subprocess.run(
+            [sys.executable, "-u", str(SCRIPT), "--qt-probe", d],
+            env=env, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, encoding="utf-8", errors="replace", timeout=18,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise AssertionError(
+            "GUI event loop did not emit its timed heartbeat in 18 seconds; "
+            f"stdout={exc.stdout!r}; stderr={exc.stderr!r}"
+        ) from exc
     assert output.returncode == 0, (output.stdout, output.stderr[-1600:])
     rows = [x for x in output.stdout.splitlines() if x.startswith("GUI_PROBE:")]
     assert len(rows) == 1, (output.stdout, output.stderr[-1600:])
