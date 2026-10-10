@@ -3542,6 +3542,14 @@ def run(args=None) -> int:
         def _communication_io(self, window_state: str):
             """Shared-folder IO must not run on the Qt GUI thread."""
             session_active = _windows_session_is_active()
+            if not session_active:
+                # Background application from a disconnected Windows login
+                # must not masquerade as a live workstation.
+                try:
+                    self.store.remove_client_heartbeat(self.client_id)
+                except Exception:
+                    pass
+                return [], [], []
             # No handoff from a periodic heartbeat: an older, disconnected
             # Windows session might still be running. It must never close
             # the newer Windows user's active booth on this computer.
