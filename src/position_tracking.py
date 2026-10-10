@@ -3247,6 +3247,9 @@ def run(args=None) -> int:
             self._app_started_at = datetime.now().isoformat(timespec="seconds")
             self.client_id = SharedEventStore.local_client_id()
             self._network_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="TDE-network")
+            # A stalled SMB communications request must not block durable replay.
+            self._sync_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TDE-sync")
+            self._last_sync_error = ""
             # Network heartbeat/shift polling must never starve a booth action
             # when the SMB host disconnects or an old worker blocks in I/O.
             self._position_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TDE-position")
@@ -3444,6 +3447,7 @@ def run(args=None) -> int:
         def _cleanup_client(self):
             try:
                 self._network_pool.shutdown(wait=False, cancel_futures=True)
+                self._sync_pool.shutdown(wait=False, cancel_futures=True)
                 self._position_pool.shutdown(wait=False, cancel_futures=True)
                 self._state_pool.shutdown(wait=False, cancel_futures=True)
             except Exception:
@@ -3896,16 +3900,25 @@ def run(args=None) -> int:
             self._refresh_info(); self._agms_changed(); self._refresh_shift_status()
 
         def _refresh_info(self):
+            conflicts = self.offline.conflicts()
+            pending = self.offline._rows(("PENDING",))
             if not self.store:
-                self.info.setText("ΧΩΡΙΣ ΚΕΝΤΡΙΚΟ — τοπικές εκκρεμείς εγγραφές, θα γίνει συγχρονισμός μόλις επιστρέψει η σύνδεση.")
-            elif self.offline.conflicts():
-                self.info.setText("ΑΣΥΜΦΩΝΙΑ ΣΥΓΧΡΟΝΙΣΜΟΥ — απαιτείται έλεγχος ΑΞΥΠ.")
-            elif self.offline.pending_count():
-                self.info.setText(f"ΑΝΑΜΟΝΗ ΣΥΓΧΡΟΝΙΣΜΟΥ: {self.offline.pending_count()} καταχωρίσεις.")
-            elif self.store and self.people:
-                self.info.setText(f"Σύστημα έτοιμο — Λίστα προσωπικού: {len(self.people)} άτομα")
+                problem = _clean(getattr(self, "_last_sync_error", ""))
+                self.info.setText(
+                    f"ΚΕΝΤΡΙΚΟΣ: ΧΩΡΙΣ ΣΥΝΔΕΣΗ — ΤΟΠΙΚΑ: {len(pending)} ΕΚΚΡΕΜΕΙΣ / "
+                    f"{len(conflicts)} ΑΣΥΜΦΩΝΙΕΣ. "
+                    + (f"ΑΙΤΙΑ: {problem}" if problem else "Αναμονή σύνδεσης.")
+                )
+            elif conflicts or pending:
+                self.info.setText(
+                    f"ΚΕΝΤΡΙΚΟΣ: ΣΥΝΔΕΔΕΜΕΝΟΣ — ΤΟΠΙΚΑ: {len(pending)} ΕΚΚΡΕΜΕΙΣ / "
+                    f"{len(conflicts)} ΑΣΥΜΦΩΝΙΕΣ. "
+                    "Οι μη επιβεβαιωμένες κινήσεις ΔΕΝ φαίνονται στον ΑΞΥΠ."
+                )
+            elif self.people:
+                self.info.setText(f"ΚΕΝΤΡΙΚΟΣ: ΣΥΝΔΕΔΕΜΕΝΟΣ — ΣΥΓΧΡΟΝΙΣΜΕΝΟ — προσωπικό: {len(self.people)}")
             else:
-                self.info.setText("Δεν έχει επιλεγεί λίστα προσωπικού.")
+                self.info.setText("ΚΕΝΤΡΙΚΟΣ: ΣΥΝΔΕΔΕΜΕΝΟΣ — δεν έχει επιλεγεί λίστα προσωπικού.")
 
         def _save_config(self):
             self.config.positions = [self.position.itemText(i) for i in range(self.position.count()) if _clean(self.position.itemText(i))]
@@ -3968,8 +3981,12 @@ def run(args=None) -> int:
                 self.active_status.setText("ΚΑΤΑΧΩΡΙΣΗ ΣΕ ΕΞΕΛΙΞΗ — μην την επαναλάβετε.")
                 return
             local = self.offline.local_active(person.agms)
-            if self.offline.conflicts():
-                self.active_status.setText("ΑΣΥΜΦΩΝΙΑ ΣΥΓΧΡΟΝΙΣΜΟΥ — ΕΝΗΜΕΡΩΣΤΕ ΤΟΝ ΑΞΥΠ")
+            affected = [
+                x for x in self.offline.conflicts()
+                if x["agms"] == person.agms
+            ]
+            if affected:
+                self.active_status.setText("ΑΣΥΜΦΩΝΙΑ ΣΤΗΝ ΕΓΓΡΑΦΗ ΑΥΤΟΥ ΤΟΥ ΑΣΤΥΝΟΜΙΚΟΥ — ΕΛΕΓΧΟΣ ΑΞΥΠ")
                 return
             if not self.store or self.offline.pending_count():
                 self.active_status.setText(
@@ -4093,11 +4110,13 @@ def run(args=None) -> int:
                 try:
                     connected, result = future.result()
                     self.store = connected
+                    self._last_sync_error = ""
                     if result.get("conflicts"):
                         self.info.setText("ΑΣΥΜΦΩΝΙΑ ΑΠΟΣΥΝΔΕΔΕΜΕΝΩΝ ΚΑΤΑΧΩΡΙΣΕΩΝ — έλεγχος ΑΞΥΠ")
                     self._refresh_info()
-                except Exception:
+                except Exception as exc:
                     self.store = None
+                    self._last_sync_error = str(exc)[:240]
                     self._refresh_info()
                 self._agms_changed()
             if self._offline_future is not None:
@@ -4108,13 +4127,15 @@ def run(args=None) -> int:
                 if not Path(self.config.central_root).is_dir():
                     raise BusyError("Ο κεντρικός φάκελος δεν είναι διαθέσιμος.")
                 store = SharedEventStore(self.config.central_root)
+                # Close the old Windows user's central START before applying
+                # the new user's offline START at the same physical booth.
+                # Store checks computer, Windows account and exact START id.
+                try:
+                    store.close_previous_windows_user_positions(
+                        socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or "")
+                except Exception:
+                    pass
                 report = self.offline.sync(store, PersonnelRecord)
-                if not report.get("pending"):
-                    try:
-                        store.close_previous_windows_user_positions(
-                            socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or "")
-                    except Exception:
-                        pass
                 if self.config.shared_exe_path and time.monotonic() - self._last_bootstrap_check > 300:
                     self._last_bootstrap_check = time.monotonic()
                     try:
@@ -4122,7 +4143,7 @@ def run(args=None) -> int:
                     except Exception:
                         pass  # cache update must not block shifts
                 return store, report
-            self._offline_future = self._network_pool.submit(work)
+            self._offline_future = self._sync_pool.submit(work)
 
         def _position_action(self, kind: str, person: PersonnelRecord, position: str = "", direction: str = ""):
             if self._position_operation_future is not None:
@@ -4137,7 +4158,10 @@ def run(args=None) -> int:
                 # a separate network worker performs idempotent central replay.
                 result = self.offline.enqueue(kind, person, position, direction, self.client_id)
                 result["pending_sync"] = True
-                result["conflict"] = bool(self.offline.conflicts())
+                result["conflict"] = any(
+                    x["agms"] == person.agms
+                    for x in self.offline.conflicts()
+                )
                 return result
             future = self._position_pool.submit(work)
             self._position_operation_future = future
