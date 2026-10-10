@@ -120,4 +120,4 @@ with tempfile.TemporaryDirectory() as d:
     assert result["central_present"] and result["pending"] == 0 and result["conflicts"] == 0, result
     assert result["start_enabled"] and not result["end_enabled"], result
     assert "ΔΙΚΤΥΟ ΧΩΡΙΣ ΑΠΟΚΡΙΣΗ" in result["position_status"], result
-    print("REPEATED_SYNC_MUST_NOT_DISABLE_START: PASS", result)
+    print("REPEATED_SYNC_MUST_NOT_DISABLE_START: PASS", json.dumps(result, ensure_ascii=True))
