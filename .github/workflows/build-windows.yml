@@ -51,7 +51,7 @@ jobs:
         run: |
           if (-not (Test-Path "src\position_tracking.py")) { throw "Source file missing" }
           python -m py_compile "src\position_tracking.py" "src\position_tracking_offline.py" "src\position_tracking_bootstrap.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           $r14 = Get-Content "tests\reports\FLEXIBLE_IMPORT_TEST_14_OF_14.txt" -Raw
           $r121 = Get-Content "tests\reports\FLEXIBLE_HARD_STRESS_121_OF_121.txt" -Raw
           $runtime = Get-Content "tests\reports\RUNTIME_SHIFT_CHANGE_TEST.txt" -Raw
@@ -59,47 +59,47 @@ jobs:
           if ($r121 -notmatch "RESULT 121/121") { throw "Stress report failed" }
           if ($runtime -notmatch "100 sequential shifts stress test: PASS") { throw "Runtime shift report failed" }
           python -c "import json,pathlib; d=json.loads(pathlib.Path(r'tests/reports/INTEGRATED_REGRESSION_STRESS.txt').read_text(encoding='utf-8')); assert d['shifts']==100 and d['pending_blocks']==100 and d['late_accept']==100 and d['exclude']==100 and d['events']==600 and d['charts']>=1"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\simulate_officer_simple_flow.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\stress_shift_membership_reversal.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\report_archive_history_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\current_report_retention_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\pdf_report_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\sqlite_shift_archive_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\report_archive_search_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\personnel_history_sqlite_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\communication_control_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\shift_end_release_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\network_resilience_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\shift_smb_lock_concurrency.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\client_lifecycle_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\windows_user_handoff_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\shift_end_actions_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\offline_recovery_integration.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\offline_user_logoff_machine_queue.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\offline_15_clients_restart_stress.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\offline_single_machine_claim_stress.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\start_time_correction_edge_regression.py"
-          if ($LASTEXITCODE -ne 0) { throw "Αποτυχία σε δοκιμή Python (exit code $LASTEXITCODE)" }
+          if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
 
       - name: Generate network application icon
         shell: powershell
