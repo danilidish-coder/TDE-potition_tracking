@@ -4132,6 +4132,14 @@ def run(args=None) -> int:
                 # Avoid reinitializing shared SQLite and directories every
                 # three seconds on all 15 clients; it causes SMB lock churn.
                 store = self.store or SharedEventStore(self.config.central_root)
+                if not _windows_session_is_active():
+                    # An old, disconnected Windows logon must not replay the
+                    # new user's shared machine queue before that user has
+                    # performed the safe central handoff.
+                    return store, {
+                        "applied": [], "pending": self.offline.pending_count(),
+                        "conflicts": self.offline.conflicts(), "network_error": "",
+                    }
                 # Close the old Windows user's central START before applying
                 # the new user's offline START at the same physical booth.
                 # Store checks computer, Windows account and exact START id.
