@@ -3910,10 +3910,11 @@ def run(args=None) -> int:
                     + (f"ΑΙΤΙΑ: {problem}" if problem else "Αναμονή σύνδεσης.")
                 )
             elif conflicts or pending:
+                problem = _clean(getattr(self, "_last_sync_error", ""))
                 self.info.setText(
-                    f"ΚΕΝΤΡΙΚΟΣ: ΣΥΝΔΕΔΕΜΕΝΟΣ — ΤΟΠΙΚΑ: {len(pending)} ΕΚΚΡΕΜΕΙΣ / "
-                    f"{len(conflicts)} ΑΣΥΜΦΩΝΙΕΣ. "
-                    "Οι μη επιβεβαιωμένες κινήσεις ΔΕΝ φαίνονται στον ΑΞΥΠ."
+                    ("ΚΕΝΤΡΙΚΟΣ: ΣΦΑΛΜΑ ΣΥΓΧΡΟΝΙΣΜΟΥ" if problem else "ΚΕΝΤΡΙΚΟΣ: ΠΡΟΣΒΑΣΙΜΟΣ")
+                    + f" — ΤΟΠΙΚΑ: {len(pending)} ΕΚΚΡΕΜΕΙΣ / {len(conflicts)} ΑΣΥΜΦΩΝΙΕΣ. "
+                    + (f"ΑΙΤΙΑ: {problem}" if problem else "Οι μη επιβεβαιωμένες κινήσεις ΔΕΝ φαίνονται στον ΑΞΥΠ.")
                 )
             elif self.people:
                 self.info.setText(f"ΚΕΝΤΡΙΚΟΣ: ΣΥΝΔΕΔΕΜΕΝΟΣ — ΣΥΓΧΡΟΝΙΣΜΕΝΟ — προσωπικό: {len(self.people)}")
@@ -3988,7 +3989,11 @@ def run(args=None) -> int:
             if affected:
                 self.active_status.setText("ΑΣΥΜΦΩΝΙΑ ΣΤΗΝ ΕΓΓΡΑΦΗ ΑΥΤΟΥ ΤΟΥ ΑΣΤΥΝΟΜΙΚΟΥ — ΕΛΕΓΧΟΣ ΑΞΥΠ")
                 return
-            if not self.store or self.offline.pending_count():
+            person_pending = any(
+                x["agms"] == person.agms
+                for x in self.offline._rows(("PENDING",))
+            )
+            if not self.store or person_pending:
                 self.active_status.setText(
                     (f"ΤΟΠΙΚΗ ΘΕΣΗ {local.get('position','')} — ΕΚΚΡΕΜΕΙ ΚΕΝΤΡΙΚΗ ΕΠΙΒΕΒΑΙΩΣΗ"
                      if local else "ΕΚΤΟΣ ΣΥΝΔΕΣΗΣ — νέα έναρξη θα παραμείνει ΠΡΟΣΩΡΙΝΗ")
@@ -4110,7 +4115,7 @@ def run(args=None) -> int:
                 try:
                     connected, result = future.result()
                     self.store = connected
-                    self._last_sync_error = ""
+                    self._last_sync_error = result.get("network_error", "")
                     if result.get("conflicts"):
                         self.info.setText("ΑΣΥΜΦΩΝΙΑ ΑΠΟΣΥΝΔΕΔΕΜΕΝΩΝ ΚΑΤΑΧΩΡΙΣΕΩΝ — έλεγχος ΑΞΥΠ")
                     self._refresh_info()
