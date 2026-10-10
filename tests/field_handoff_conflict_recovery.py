@@ -56,8 +56,12 @@ with tempfile.TemporaryDirectory() as d:
         assert store.get_active(b.agms)["event_id"] == start_b["operation_id"]
         assert not journal.conflicts()
         assert journal.sync(store, MOD.PersonnelRecord)["applied"] == []
-        assert any(x.get("action") == "OFFLINE_HANDOFF_END_ALREADY_SUPERSEDED"
-                   for x in store.iter_admin_audit()) if hasattr(store, "iter_admin_audit") else True
+        audit_path = store.audit / "offline_handoff_reconciliations" / (orphan["id"] + ".json")
+        assert audit_path.is_file(), "Reconciliation must leave a durable central audit"
+        import json
+        audit = json.loads(audit_path.read_text(encoding="utf-8"))
+        assert audit["old_start_event_id"] == old_start["operation_id"]
+        assert audit["current_start_event_id"] == replacement["event_id"]
 
         # Unrelated conflict cannot stop newly started officer at a different booth.
         bad = journal.enqueue("START", third, "9", "ΕΞΟΔΟΣ", "APP_C")
@@ -83,3 +87,26 @@ with tempfile.TemporaryDirectory() as d:
             os.environ["USERNAME"] = original_user
 
 print("FIELD_HANDOFF_CONFLICT_RECOVERY: PASS")
+
+with tempfile.TemporaryDirectory() as d:
+    # Transient transport errors may never be mislabeled as centrally committed.
+    from types import SimpleNamespace
+    store = MOD.SharedEventStore(Path(d) / "share" / "TDE_DATA")
+    journal = MOD.OfflineJournal(Path(d) / "local")
+    p = person(95001)
+    first = journal.enqueue("START", p, "13", "ΕΞΟΔΟΣ", "APP_13")
+    def fail_start(*args, **kwargs):
+        raise OSError("[WinError 1326] Login rejected")
+    failed_store = SimpleNamespace(
+        start=fail_start,
+        get_active=store.get_active,
+        audit=store.audit,
+        _atomic_json=store._atomic_json,
+    )
+    report = journal.sync(failed_store, MOD.PersonnelRecord)
+    assert "1326" in report["network_error"], report
+    assert report["pending"] == 1 and store.get_active(p.agms) is None, report
+    report = journal.sync(store, MOD.PersonnelRecord)
+    assert report["pending"] == 0 and not report["network_error"], report
+    assert store.get_active(p.agms)["event_id"] == first["operation_id"]
+print("FIELD_TRANSPORT_REPLAY: PASS")
