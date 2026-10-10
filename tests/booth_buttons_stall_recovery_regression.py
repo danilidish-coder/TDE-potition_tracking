@@ -92,7 +92,7 @@ if len(sys.argv) > 1 and sys.argv[1] == "--qt-buttons-child":
                 "pending": w.offline.pending_count(),
                 "conflicts": len(w.offline.conflicts()),
             }
-            print("BUTTON_RESULT:" + json.dumps(result, ensure_ascii=False), flush=True)
+            print("BUTTON_RESULT:" + json.dumps(result, ensure_ascii=True), flush=True)
             os._exit(0)
 
         def finish(self, reason):
