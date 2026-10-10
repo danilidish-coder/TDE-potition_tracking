@@ -104,6 +104,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "FIELD HANDOFF RECOVERY FAILED (exit code $LASTEXITCODE)" }
           python "tests\field_acceptance_retest_20261010.py"
           if ($LASTEXITCODE -ne 0) { throw "FIELD ACCEPTANCE RETEST FAILED (exit code $LASTEXITCODE)" }
+          python "tests\gui_network_stall_retest_20261010.py"
+          if ($LASTEXITCODE -ne 0) { throw "GUI RESPONSIVENESS RETEST FAILED (exit code $LASTEXITCODE)" }
 
       - name: Generate network application icon
         shell: powershell
