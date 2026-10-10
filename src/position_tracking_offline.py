@@ -14,6 +14,7 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
+from contextlib import contextmanager
 
 
 class OfflineConflict(RuntimeError):
@@ -38,12 +39,19 @@ class OfflineJournal:
                 agms TEXT PRIMARY KEY, record TEXT NOT NULL, checked_at TEXT NOT NULL
             )""")
 
+    @contextmanager
     def _db(self):
-        db = sqlite3.connect(self.path, timeout=7.0)
-        db.execute("PRAGMA busy_timeout = 7000")
-        db.execute("PRAGMA synchronous = FULL")
-        db.execute("PRAGMA journal_mode = WAL")
-        return db
+        """Always close SQLite handles; sqlite3.Connection.__exit__ alone does not close them on Windows."""
+        db = sqlite3.connect(self.path, timeout=2.0)
+        try:
+            db.execute("PRAGMA busy_timeout = 2000")
+            db.execute("PRAGMA synchronous = FULL")
+            # Local machine queue uses rollback journaling. Setting WAL mode on
+            # each startup races with other booth processes and produces SQLITE_BUSY.
+            with db:
+                yield db
+        finally:
+            db.close()
 
     @staticmethod
     def _payload(person, client_id):
@@ -57,11 +65,15 @@ class OfflineJournal:
             db.execute("INSERT OR REPLACE INTO observed VALUES(?,?,?)",
                        (agms, json.dumps(active, ensure_ascii=False), datetime.now().isoformat()))
 
+    @staticmethod
+    def _rows_db(db, statuses=("PENDING", "CONFLICT")):
+        q = ",".join("?" for _ in statuses)
+        rows = db.execute(f"SELECT id, kind, agms, position, direction, created_at, payload, start_id, status, error FROM operations WHERE status IN ({q}) ORDER BY rowid", tuple(statuses)).fetchall()
+        return [dict(zip(("id", "kind", "agms", "position", "direction", "created_at", "payload", "start_id", "status", "error"), row)) for row in rows]
+
     def _rows(self, statuses=("PENDING", "CONFLICT")):
         with self._db() as db:
-            q = ",".join("?" for _ in statuses)
-            rows = db.execute(f"SELECT id, kind, agms, position, direction, created_at, payload, start_id, status, error FROM operations WHERE status IN ({q}) ORDER BY rowid", tuple(statuses)).fetchall()
-        return [dict(zip(("id", "kind", "agms", "position", "direction", "created_at", "payload", "start_id", "status", "error"), row)) for row in rows]
+            return self._rows_db(db, statuses)
 
     def pending_count(self):
         return len(self._rows())
@@ -69,11 +81,13 @@ class OfflineJournal:
     def conflicts(self):
         return self._rows(("CONFLICT",))
 
-    def local_active(self, agms: str):
-        with self._db() as db:
-            row = db.execute("SELECT record FROM observed WHERE agms=?", (agms,)).fetchone()
-            item = json.loads(row[0]) if row else None
-        for op in self._rows():
+    @staticmethod
+    def _local_active_db(db, agms: str, pending=None):
+        row = db.execute("SELECT record FROM observed WHERE agms=?", (agms,)).fetchone()
+        item = json.loads(row[0]) if row else None
+        if pending is None:
+            pending = OfflineJournal._rows_db(db)
+        for op in pending:
             if op["agms"] != agms:
                 continue
             if op["kind"] == "START":
@@ -84,6 +98,10 @@ class OfflineJournal:
             elif op["kind"] == "END" and item and item.get("event_id") == op["start_id"]:
                 item = None
         return item
+
+    def local_active(self, agms: str):
+        with self._db() as db:
+            return self._local_active_db(db, agms)
 
     def auto_close_previous_windows_users(self, computer: str, windows_user: str):
         """On next Windows user launch, durably queue END for previous users.
@@ -123,34 +141,36 @@ class OfflineJournal:
     def enqueue(self, kind, person, position="", direction="", client_id="", reason=""):
         if kind not in ("START", "END"):
             raise ValueError("Invalid event kind")
-        pending = self._rows()
-        if any(x["status"] == "CONFLICT" for x in pending):
-            raise OfflineConflict("Υπάρχει ΑΣΥΜΦΩΝΙΑ συγχρονισμού. Απαιτείται έλεγχος ΑΞΥΠ πριν από νέες ενέργειες.")
-        if kind == "START":
-            if self.local_active(person.agms):
-                raise ValueError("Ο αστυνομικός έχει ήδη ανοικτή θέση.")
-            if any(x["kind"] == "START" and x["position"] == position
-                   and (self.local_active(x["agms"]) or {}).get("event_id") == x["id"]
-                   for x in pending):
-                raise ValueError("Η θέση είναι ήδη δεσμευμένη τοπικά.")
-            if not position or direction not in ("ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"):
-                raise ValueError("Επιλέξτε έγκυρη θέση και κατεύθυνση.")
-            start_ref = ""
-        else:
-            current = self.local_active(person.agms)
-            if not current:
-                raise ValueError("Δεν υπάρχει γνωστή ενεργή θέση για αυτόν τον αστυνομικό.")
-            position = current.get("position", "")
-            direction = current.get("direction", "")
-            start_ref = current.get("event_id", "")
-            if not start_ref:
-                raise ValueError("Η ενεργή θέση δεν διαθέτει ασφαλές αναγνωριστικό έναρξης.")
-        op_id = uuid.uuid4().hex
-        created = datetime.now().isoformat(timespec="seconds")
-        data = self._payload(person, client_id)
-        if reason:
-            data["reason"] = reason
+        # Atomic check+insert protects against independent GUI processes on the
+        # same booth claiming the same place while the central host is offline.
         with self._db() as db:
+            db.execute("BEGIN IMMEDIATE")
+            pending = self._rows_db(db)
+            if any(x["status"] == "CONFLICT" for x in pending):
+                raise OfflineConflict("Υπάρχει ΑΣΥΜΦΩΝΙΑ συγχρονισμού. Απαιτείται έλεγχος ΑΞΥΠ πριν από νέες ενέργειες.")
+            if kind == "START":
+                if self._local_active_db(db, person.agms, pending):
+                    raise ValueError("Ο αστυνομικός έχει ήδη ανοικτή θέση.")
+                for x in pending:
+                    if x["kind"] == "START" and x["position"] == position and (self._local_active_db(db, x["agms"], pending) or {}).get("event_id") == x["id"]:
+                        raise ValueError("Η θέση είναι ήδη δεσμευμένη τοπικά.")
+                if not position or direction not in ("ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"):
+                    raise ValueError("Επιλέξτε έγκυρη θέση και κατεύθυνση.")
+                start_ref = ""
+            else:
+                current = self._local_active_db(db, person.agms, pending)
+                if not current:
+                    raise ValueError("Δεν υπάρχει γνωστή ενεργή θέση για αυτόν τον αστυνομικό.")
+                position = current.get("position", "")
+                direction = current.get("direction", "")
+                start_ref = current.get("event_id", "")
+                if not start_ref:
+                    raise ValueError("Η ενεργή θέση δεν διαθέτει ασφαλές αναγνωριστικό έναρξης.")
+            op_id = uuid.uuid4().hex
+            created = datetime.now().isoformat(timespec="seconds")
+            data = self._payload(person, client_id)
+            if reason:
+                data["reason"] = reason
             db.execute("INSERT INTO operations(id,kind,agms,position,direction,created_at,payload,start_id) VALUES(?,?,?,?,?,?,?,?)",
                        (op_id, kind, person.agms, position, direction, created,
                         json.dumps(data, ensure_ascii=False), start_ref))
