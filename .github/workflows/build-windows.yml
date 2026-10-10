@@ -108,6 +108,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Qt event loop stall acceptance failed ($LASTEXITCODE)" }
           python "tests\watchdog_auto_recovery_regression.py"
           if ($LASTEXITCODE -ne 0) { throw "Independent watchdog recovery failed ($LASTEXITCODE)" }
+          python "tests\booth_buttons_stall_recovery_regression.py"
+          if ($LASTEXITCODE -ne 0) { throw "DISABLED BOOTH BUTTONS FIELD REGRESSION ($LASTEXITCODE)" }
           python "tests\field_handoff_conflict_recovery.py"
           if ($LASTEXITCODE -ne 0) { throw "FIELD HANDOFF RECOVERY FAILED (exit code $LASTEXITCODE)" }
 
@@ -213,11 +215,11 @@ jobs:
           Write-Host "PUBLISHED_EXE_SHA256=$hash"
           Write-Host "PUBLISHED_EXE_URL=https://github.com/$env:REPO/releases/download/$tag/$exe"
 
-      - name: Upload isolated v1.2.7 watchdog Windows EXE
-        if: github.ref == 'refs/heads/feature/v1.2.7-auto-recovery'
+      - name: Upload isolated v1.2.8 booth-controls Windows EXE
+        if: github.ref == 'refs/heads/feature/v1.2.8-frozen-booth-buttons'
         uses: actions/upload-artifact@v4
         with:
-          name: TDE_Katagrafi_Theseon_v1.2.7_AUTO_RECOVERY
+          name: TDE_Katagrafi_Theseon_v1.2.8_BUTTON_FIX
           path: dist/TDE_Katagrafi_Theseon.exe
           if-no-files-found: error
           retention-days: 7
