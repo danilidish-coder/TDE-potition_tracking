@@ -110,3 +110,12 @@ with tempfile.TemporaryDirectory() as d:
     assert report["pending"] == 0 and not report["network_error"], report
     assert store.get_active(p.agms)["event_id"] == first["operation_id"]
 print("FIELD_TRANSPORT_REPLAY: PASS")
+
+source = (ROOT / "src" / "position_tracking.py").read_text(encoding="utf-8")
+heartbeat = source.split("def _communication_io(self, window_state: str):", 1)[1].split("def _communication_tick(self):", 1)[0]
+assert "close_previous_windows_user_positions(" not in heartbeat, "Stale Windows session can close successor on every heartbeat"
+bootstrap = source.split("def _offline_tick(self):", 1)[1].split("def _position_action(self,", 1)[0]
+assert "if not self._central_handoff_verified and _windows_session_is_active():" in bootstrap
+assert "store = self.store or SharedEventStore(" in bootstrap
+assert "self._sync_pool.submit(work)" in bootstrap
+print("WINDOWS_OLD_SESSION_ISOLATION: PASS")
