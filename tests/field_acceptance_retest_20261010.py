@@ -33,6 +33,14 @@ def assert_newer_active(store, person, event):
     assert active and active["event_id"] == event["event_id"], (person.agms, active, event)
 
 
+if len(sys.argv) > 1 and sys.argv[1] == "--child-kill":
+    root = Path(sys.argv[2])
+    journal = MOD.OfflineJournal(root)
+    event = journal.enqueue("START", officer(84001), "8", "ΕΞΟΔΟΣ", "CRASH_RECOVERY_TEST")
+    print(json.dumps(event, ensure_ascii=True), flush=True)
+    time.sleep(20)
+    raise SystemExit(0)
+
 # A: two different exit booths; operator A moves elsewhere before the local
 # old-Windows-user END reaches the central AXYP; B must still claim the booth.
 with tempfile.TemporaryDirectory() as d:
@@ -132,14 +140,6 @@ with tempfile.TemporaryDirectory() as d:
 # C: emulate the operator forcibly terminating the process after enqueue()
 # committed to disk, then reopening on the same machine without any manual fix.
 # It cannot prove the Qt window watchdog, but tests persistence across a kill.
-if len(sys.argv) > 1 and sys.argv[1] == "--child-kill":
-    root = Path(sys.argv[2])
-    journal = MOD.OfflineJournal(root)
-    event = journal.enqueue("START", officer(84001), "8", "ΕΞΟΔΟΣ", "CRASH_RECOVERY_TEST")
-    print(json.dumps(event, ensure_ascii=True), flush=True)
-    time.sleep(20)
-    raise SystemExit(0)
-
 with tempfile.TemporaryDirectory() as d:
     journal_root = Path(d) / "local"
     central = MOD.SharedEventStore(Path(d) / "central" / "TDE_DATA")
@@ -166,4 +166,4 @@ with tempfile.TemporaryDirectory() as d:
     assert reopened.sync(central, MOD.PersonnelRecord)["applied"] == []
     print("FORCED_PROCESS_TERMINATION_RECOVERY: PASS (journal restart, exact IDs)")
 
-print("FIELD_ACCEPTANCE_RETETST_COMPLETE: PASS")
+print("FIELD_ACCEPTANCE_RETEST_COMPLETE: PASS")
