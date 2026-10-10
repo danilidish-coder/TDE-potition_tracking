@@ -22,12 +22,11 @@ from datetime import datetime, date, timedelta, time as dtime
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from position_tracking_offline import OfflineJournal, OfflineConflict
-from position_tracking_bootstrap import cache_windows_client
 from position_tracking_watchdog import run_frozen_watchdog, parent_is_alive
 from xml.etree import ElementTree as ET
 
 APP_NAME = "TDE Krystallopigis - Katagrafi Theseon"
-APP_VERSION = "1.2.9"
+APP_VERSION = "1.2.10"
 SETTINGS_NAME = "position_tracking.settings.json"
 DEFAULT_CUTOFF = "10:00"
 STATISTICS_PIN_SHA256 = "ca444860f0e1ddca9596007253ea43b3a5133780b0a566d9a096a53568c063fb"
@@ -4180,12 +4179,6 @@ def run(args=None, *, watchdog_heartbeat_path: Path | None = None, watchdog_pare
                         socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or "")
                     self._central_handoff_verified = True
                 report = self.offline.sync(store, PersonnelRecord)
-                if self.config.shared_exe_path and time.monotonic() - self._last_bootstrap_check > 300:
-                    self._last_bootstrap_check = time.monotonic()
-                    try:
-                        cache_windows_client(_local_root(), self.config.shared_exe_path)
-                    except Exception:
-                        pass  # cache update must not block shifts
                 return store, report
             self._offline_future = self._sync_pool.submit(work)
 
