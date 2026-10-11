@@ -1,0 +1,106 @@
+name: QA Platform Pilot - fail-closed checks and Windows EXE
+
+on:
+  push:
+    branches: [feature/qa-platform-pilot-v125]
+    paths:
+      - "devcenter/**"
+      - ".github/workflows/quality-gate-pilot.yml"
+      - "src/**"
+      - "tests/**"
+      - "requirements.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-platform-pilot-v125
+  cancel-in-progress: true
+
+jobs:
+  linux-regressions:
+    name: Linux - required tests and stress
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: '1'
+    steps:
+      - name: Checkout exact test branch
+        uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install application dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Verify QA runner rejects failing jobs
+        run: python devcenter/test_qa_gate.py
+      - name: Run ALL required Linux regressions; never suppress failures
+        run: python devcenter/qa_gate.py test --config devcenter/qa.json
+      - name: Save reports, also on failures (artifact quota may prevent upload)
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-pilot-linux-report
+          path: devcenter_reports/
+          if-no-files-found: warn
+          retention-days: 7
+
+  windows-gated-exe:
+    name: Windows - required tests, then EXE only after PASS
+    runs-on: windows-2022
+    timeout-minutes: 45
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: '1'
+    steps:
+      - name: Checkout exact test branch
+        uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install application and build dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install pyinstaller
+      - name: Verify QA runner rejects failing jobs
+        run: python devcenter/test_qa_gate.py
+      - name: Prepare icon
+        run: python tools/generate_network_icon.py
+      - name: Run ALL required Windows tests; build only if all PASS
+        run: python devcenter/qa_gate.py full --config devcenter/qa.json
+      - name: Windows application smoke test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $exe=(Resolve-Path 'dist/TDE_Katagrafi_Theseon.exe').Path
+          $proc=Start-Process -FilePath $exe -PassThru
+          try {
+            Start-Sleep -Seconds 10
+            if ($proc.HasExited) { throw 'EXE terminated unexpectedly' }
+            Write-Host 'WINDOWS_GUI_SMOKE: PASS'
+          } finally {
+            if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+          }
+      - name: Save reports, also on failures (artifact quota may prevent upload)
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-pilot-windows-report
+          path: devcenter_reports/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Save EXE for pilot only; no release or deployment
+        if: success()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-pilot-windows-exe
+          path: dist/TDE_Katagrafi_Theseon.exe
+          if-no-files-found: error
+          retention-days: 7
