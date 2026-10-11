@@ -78,6 +78,7 @@ jobs:
           python "tests\offline_15_clients_restart_stress.py"
           python "tests\offline_single_machine_claim_stress.py"
           python "tests\start_time_correction_edge_regression.py"
+          python "tests\v125_windows_restart_field_diagnostics.py"
 
       - name: Generate network application icon
         shell: powershell
