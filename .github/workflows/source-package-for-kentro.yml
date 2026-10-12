@@ -11,6 +11,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: 33ea13ca2133ddbfb93b1d051d4b25dc35bd954f
       - name: Create exact-source ZIP with separate testing manifest
         shell: bash
         run: |
