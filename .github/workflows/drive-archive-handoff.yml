@@ -1,0 +1,55 @@
+name: Archive released source and EXE to Drive handoff
+on:
+  push:
+    branches: ['archive/drive-v125-20261012']
+permissions:
+  contents: read
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 33ea13ca2133ddbfb93b1d051d4b25dc35bd954f
+      - name: Export pinned released sources without modifying production
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p handoff
+          gh release download 'v1.2.5' -R "$GITHUB_REPOSITORY" -p 'TDE_Katagrafi_Theseon.exe' -D handoff
+          python - <<'PY'
+          import zipfile,hashlib,subprocess,pathlib,json
+          expected="33ea13ca2133ddbfb93b1d051d4b25dc35bd954f"
+          actual=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip()
+          assert actual==expected,(actual,expected)
+          all_files=subprocess.check_output(["git","ls-files"],text=True).splitlines()
+          selected=[p for p in all_files if any(p.startswith(s) for s in ["src/","tests/","tools/"]) or p in ["requirements.txt","DEVELOPMENT_RULES.md","README.md"]]
+          assert len(selected)>5
+          out=pathlib.Path("handoff")/"KATAGRAFI_THESEON_v1.2.5_SOURCE.zip"
+          with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for p in selected:
+                  z.write(p,p)
+              z.writestr("SOURCE_REFERENCE.json",json.dumps({"release":"v1.2.5","tag_commit":expected,"source_files":len(selected),"source_unchanged":True},ensure_ascii=False,indent=2))
+          with zipfile.ZipFile(out) as z:
+              assert z.testzip() is None
+              assert len(z.namelist())==len(selected)+1
+          exe=pathlib.Path("handoff")/"TDE_Katagrafi_Theseon.exe"
+          assert exe.stat().st_size>20000000
+          assert exe.open("rb").read(2)==b"MZ"
+          with open("handoff/SHA256SUMS.txt","w") as f:
+              for p in (exe,out):
+                  f.write(hashlib.sha256(p.read_bytes()).hexdigest()+"  "+p.name+"\n")
+          print("ARCHIVE_RELEASE=v1.2.5")
+          print("SOURCE_FILES="+str(len(selected)))
+          print("SOURCE_SHA256="+hashlib.sha256(out.read_bytes()).hexdigest())
+          print("EXE_SHA256="+hashlib.sha256(exe.read_bytes()).hexdigest())
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KATAGRAFI_THESEON_V125_FOR_DRIVE
+          path: handoff/*
+          retention-days: 30
+          if-no-files-found: error
