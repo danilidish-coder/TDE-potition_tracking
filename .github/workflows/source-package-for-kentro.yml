@@ -1,0 +1,101 @@
+name: Package v1.2.5 source for local validation
+on:
+  push:
+    branches:
+      - handoff/v125-source-zip-kentro-20261012
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create exact-source ZIP with separate testing manifest
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib, subprocess, zipfile
+          from datetime import datetime
+          root = pathlib.Path(".")
+          sha = subprocess.check_output(["git","rev-parse","HEAD"], text=True).strip()
+          expected = "33ea13ca2133ddbfb93b1d051d4b25dc35bd954f"
+          if sha != expected:
+              raise SystemExit(f"ABORT: unexpected source commit {sha}, expected {expected}")
+          tracked = subprocess.check_output(["git","ls-files"],text=True).splitlines()
+          prefixes = ("src/","tests/","tools/",".github/workflows/")
+          documents = {"README.md", "DEVELOPMENT_RULES.md", "VERSION.txt", "requirements.txt"}
+          selected = sorted(p for p in tracked if p.startswith(prefixes) or p in documents)
+          if len(selected) < 20 or "src/position_tracking.py" not in selected or "src/position_tracking_offline.py" not in selected:
+              raise SystemExit("ABORT: source or regression suite incomplete")
+          scripts = sorted(p for p in selected if p.startswith("tests/") and p.endswith(".py"))
+          stress = [p for p in scripts if any(key in p.lower() for key in ("stress","concurrency","load"))]
+          regular = [p for p in scripts if p not in stress and "visual" not in p.lower() and "screenshot" not in p.lower()]
+          if len(regular) < 10 or len(stress) < 3:
+              raise SystemExit(f"ABORT: missing regression suite (functional={len(regular)},stress={len(stress)})")
+          manifest = {
+              "name":"Καταγραφή Θέσεων",
+              "version":"v1.2.5",
+              "language":"Python",
+              "entry":"src/position_tracking.py",
+              "workdir":".",
+              "tests":[{"name":pathlib.Path(p).stem,"command":"python","args":[p],"timeout_seconds":180} for p in regular],
+              "stress":[{"name":pathlib.Path(p).stem,"kind":"parallel","command":"python","args":[p],"parallel":3,"repeats":6,"timeout_seconds":120} for p in stress],
+              "build":{"name":"Δοκιμαστική κατασκευή EXE (όχι παραγωγική έκδοση)","command":"python","args":["-m","PyInstaller","--noconfirm","--clean","--onefile","--windowed","--name","TDE_Katagrafi_Theseon","src/position_tracking.py"],"timeout_seconds":900},
+              "smoke":{"name":"Δοκιμή εκκίνησης EXE","command":"./dist/TDE_Katagrafi_Theseon.exe","expect_contains":"WINDOW_STAYS_OPEN","timeout_seconds":30},
+              "visual":[{"name":"Οπτικός έλεγχος πραγματικού EXE","command":"python","args":["tests/visual_flicker_windows.py","--exe","dist/TDE_Katagrafi_Theseon.exe","--out","visual_checks"],"timeout_seconds":900}]
+          }
+          info = {"release":"v1.2.5","exact_source_commit":sha,"unchanged_repository_files":len(selected),"functional_test_scripts":len(regular),"stress_test_scripts":len(stress),"added_non_source_files":["project-manifest.json","ΟΔΗΓΙΕΣ_ΕΛΕΓΧΟΥ.txt","SOURCE_REFERENCE.json"]}
+          instructions = (
+              "ΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ v1.2.5 — ΠΗΓΑΙΟΣ ΚΩΔΙΚΑΣ ΓΙΑ ΚΕΝΤΡΟ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ\n\n"
+              "1. Ανοίξτε το Κέντρο Προγραμματισμού.\n"
+              "2. Πατήστε «Εισαγωγή έργου ZIP» και επιλέξτε ΑΥΤΟ το ZIP χωρίς αποσυμπίεση.\n"
+              "3. Επιλέξτε «Καταγραφή Θέσεων» από τη λίστα και ελέγξτε την έκδοση v1.2.5.\n"
+              "4. Επιλέξτε «Έλεγχοι και stress tests». Δεν κατασκευάζεται EXE σε αυτό το βήμα.\n"
+              "5. Εξάγετε την αναφορά και δώστε την στο ChatGPT για ανάλυση.\n\n"
+              "Ο αρχικός κώδικας και όλα τα υπάρχοντα τεστ είναι ακριβώς από το tag v1.2.5.\n"
+              "Το project-manifest.json δημιουργήθηκε ΜΟΝΟ για τη λειτουργία της εφαρμογής ελέγχου,\n"
+              "χωρίς τροποποίηση του αρχικού πηγαίου κώδικα ή των δοκιμών.\n"
+              "Απαιτούνται Python και οι αντίστοιχες εξαρτήσεις στον υπολογιστή που τρέχει τα τεστ.\n"
+              "Πρόκειται για υπηρεσιακή εφαρμογή: μη χρησιμοποιείτε πραγματικά δεδομένα ή κοινόχρηστο\n"
+              "φάκελο παραγωγής στις τοπικές δοκιμές. Δεν πιστοποιείται η πραγματική συμπεριφορά SMB.\n"
+              "Μη χρησιμοποιήσετε την «Κατασκευή EXE» για αντικατάσταση υπηρεσιακού προγράμματος.\n"
+          )
+          name = "KATAGRAFI_THESEON_v1.2.5_SOURCE_FOR_KENTRO.zip"
+          out = pathlib.Path(name)
+          with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for p in selected:
+                  data = pathlib.Path(p).read_bytes()
+                  zi = zipfile.ZipInfo(p, (2026,10,12,12,0,0))
+                  zi.compress_type = zipfile.ZIP_DEFLATED
+                  zi.external_attr = 0o100644 << 16
+                  z.writestr(zi,data)
+              extras = {
+                  "project-manifest.json":json.dumps(manifest,ensure_ascii=False,indent=2)+"\n",
+                  "ΟΔΗΓΙΕΣ_ΕΛΕΓΧΟΥ.txt":instructions,
+                  "SOURCE_REFERENCE.json":json.dumps(info,ensure_ascii=False,indent=2)+"\n"
+              }
+              for name2,value in extras.items():
+                  zi=zipfile.ZipInfo(name2,(2026,10,12,12,0,0))
+                  zi.compress_type=zipfile.ZIP_DEFLATED
+                  zi.external_attr=0o100644<<16
+                  z.writestr(zi,value.encode("utf-8"))
+          with zipfile.ZipFile(out) as z:
+              if z.testzip() is not None:raise SystemExit("CRC verification failed")
+              if "release/Καταγραφή Θέσεων.exe" in z.namelist():raise SystemExit("Wrongly included production EXE")
+              if len(z.namelist())!=len(selected)+3:raise SystemExit("Unexpected zip file count")
+              copied={p:hashlib.sha256(z.read(p)).hexdigest() for p in selected}
+              original={p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for p in selected}
+              if copied!=original:raise SystemExit("Source ZIP content mismatch")
+          print("SOURCE_REFERENCE="+json.dumps(info,ensure_ascii=False))
+          print("ZIP_SHA256="+hashlib.sha256(out.read_bytes()).hexdigest())
+          print("ZIP_BYTES="+str(out.stat().st_size))
+          print("ZIP_NAME="+str(out))
+          PY
+      - name: Publish verification ZIP without source changes
+        uses: actions/upload-artifact@v4
+        with:
+          name: KATAGRAFI_THESEON_v125_SOURCE_FOR_KENTRO
+          path: KATAGRAFI_THESEON_v1.2.5_SOURCE_FOR_KENTRO.zip
+          if-no-files-found: error
+          retention-days: 30
