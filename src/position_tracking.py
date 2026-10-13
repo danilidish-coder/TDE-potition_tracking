@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from position_tracking_offline import OfflineJournal, OfflineConflict
 from position_tracking_windows_session import _windows_session_is_active
+from position_tracking_machine_queue import _local_root, _machine_queue_root
 from position_tracking_bootstrap import cache_windows_client
 from xml.etree import ElementTree as ET
 
@@ -99,34 +100,6 @@ def _fallback_settings_path() -> Path:
         return Path(public) / "Documents" / "TDE_Krystallopigis" / SETTINGS_NAME
     appdata = os.environ.get("APPDATA") or str(Path.home())
     return Path(appdata) / "TDE_Krystallopigis" / SETTINGS_NAME
-
-
-def _local_root() -> Path:
-    target = os.environ.get("TDE_POSITION_LOCAL_ROOT")
-    root = Path(target) if target else Path(
-        os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_DATA_HOME") or
-        (Path.home() / ".local" / "share")
-    ) / "TDE_Krystallopigis" / "PositionTracking"
-    root.mkdir(parents=True, exist_ok=True)
-    return root
-
-
-def _machine_queue_root() -> Path:
-    preferred = os.environ.get("TDE_POSITION_MACHINE_ROOT")
-    public = os.environ.get("PUBLIC")
-    path = (Path(preferred) if preferred else
-            Path(public) / "Documents" / "TDE_Krystallopigis" / "PositionTracking_Queue"
-            if public else _local_root() / "machine_queue")
-    try:
-        path.mkdir(parents=True, exist_ok=True)
-        # Standard Windows users can normally write PUBLIC Documents; if
-        # policy blocks it, safely fall back to the user's own state.
-        check = path / (".writecheck_" + uuid.uuid4().hex)
-        check.write_bytes(b"ok")
-        check.unlink()
-        return path
-    except OSError:
-        return _local_root() / "machine_queue"
 
 
 def _settings_path() -> Path:
@@ -5321,7 +5294,12 @@ def run(args=None) -> int:
 
     app = QApplication(list(args or sys.argv))
     app.setApplicationName("TDE Position Tracking")
-    window = MainWindow()
+    try:
+        window = MainWindow()
+    except RuntimeError as exc:
+        # Fail closed on an inaccessible shared queue or old pending records.
+        QMessageBox.critical(None, "ΚΟΙΝΗ ΟΥΡΑ ΘΕΣΕΩΝ — ΑΣΦΑΛΕΙΑ", str(exc))
+        return 2
     window.show()
     return app.exec()
 
