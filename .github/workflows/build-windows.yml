@@ -2,6 +2,14 @@ name: Build Position Tracking Windows EXE
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tools/**"
+      - "tests/**"
+      - ".github/workflows/build-windows.yml"
   push:
     branches:
       - main
@@ -15,13 +23,16 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -35,10 +46,11 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Verify source and test reports
+        id: regressions
         shell: powershell
         run: |
           if (-not (Test-Path "src\position_tracking.py")) { throw "Source file missing" }
-          python -m py_compile "src\position_tracking.py"
+          python -m py_compile "src\position_tracking.py" "src\position_tracking_offline.py" "src\position_tracking_bootstrap.py"
           $r14 = Get-Content "tests\reports\FLEXIBLE_IMPORT_TEST_14_OF_14.txt" -Raw
           $r121 = Get-Content "tests\reports\FLEXIBLE_HARD_STRESS_121_OF_121.txt" -Raw
           $runtime = Get-Content "tests\reports\RUNTIME_SHIFT_CHANGE_TEST.txt" -Raw
@@ -55,6 +67,18 @@ jobs:
           python "tests\report_archive_search_regression.py"
           python "tests\personnel_history_sqlite_regression.py"
           python "tests\communication_control_regression.py"
+          python "tests\shift_end_release_regression.py"
+          python "tests\network_resilience_regression.py"
+          python "tests\shift_smb_lock_concurrency.py"
+          python "tests\client_lifecycle_regression.py"
+          python "tests\windows_user_handoff_regression.py"
+          python "tests\shift_end_actions_regression.py"
+          python "tests\offline_recovery_integration.py"
+          python "tests\offline_user_logoff_machine_queue.py"
+          python "tests\offline_15_clients_restart_stress.py"
+          python "tests\offline_single_machine_claim_stress.py"
+          python "tests\start_time_correction_edge_regression.py"
+          python "tests\v125_windows_restart_field_diagnostics.py"
 
       - name: Generate network application icon
         shell: powershell
@@ -63,15 +87,17 @@ jobs:
           if (-not (Test-Path "build_assets\position_tracking_network.ico")) { throw "Network icon was not created" }
 
       - name: Build Windows application
+        id: build_exe
         shell: powershell
         run: |
-          python -m PyInstaller --noconfirm --clean --windowed --onefile --icon "build_assets\position_tracking_network.ico" --name "PositionTracking_TEST" "src\position_tracking.py"
-          if (-not (Test-Path "dist\PositionTracking_TEST.exe")) { throw "EXE was not created" }
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --icon "build_assets\position_tracking_network.ico" --name "TDE_Katagrafi_Theseon" "src\position_tracking.py"
+          if (-not (Test-Path "dist\TDE_Katagrafi_Theseon.exe")) { throw "EXE was not created" }
 
       - name: Smoke test launch
+        id: smoke
         shell: powershell
         run: |
-          $exe = Resolve-Path "dist\PositionTracking_TEST.exe"
+          $exe = Resolve-Path "dist\TDE_Katagrafi_Theseon.exe"
           $p = Start-Process -FilePath $exe -PassThru
           Start-Sleep -Seconds 10
           if ($p.HasExited) { throw "Application exited unexpectedly during smoke test" }
@@ -80,11 +106,13 @@ jobs:
           Write-Host "EXE SHA256: $((Get-FileHash $exe -Algorithm SHA256).Hash)"
 
       - name: Visual flicker test
+        id: visual
         shell: powershell
         run: |
-          python "tests\visual_flicker_windows.py" --exe "dist\PositionTracking_TEST.exe" --out "visual_flicker"
+          python "tests\visual_flicker_windows.py" --exe "dist\TDE_Katagrafi_Theseon.exe" --out "visual_flicker"
 
       - name: Upload visual flicker evidence
+        if: ${{ false }} # Disabled: artifact quota / incomplete offline acceptance. Retain step for later gated release.
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
@@ -94,6 +122,8 @@ jobs:
           retention-days: 30
 
       - name: Archive Windows EXE
+        continue-on-error: true
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v1.2.5-windows-publish'
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
@@ -102,21 +132,58 @@ jobs:
             [char]0x0020,[char]0x0398,[char]0x03AD,[char]0x03C3,[char]0x03B5,[char]0x03C9,[char]0x03BD
           )
           $finalPath = Join-Path "release" ($greekName + ".exe")
-          Copy-Item "dist\PositionTracking_TEST.exe" $finalPath -Force
+          Copy-Item "dist\TDE_Katagrafi_Theseon.exe" $finalPath -Force
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --all release
           git diff --cached --quiet
           if ($LASTEXITCODE -ne 0) {
             git commit -m "Archive final Windows EXE"
-            git push
+            git push origin HEAD:refs/heads/feature/v1.2.5-windows-publish
           }
 
+      - name: Publish downloadable v1.2.5 Windows EXE
+        continue-on-error: true
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/feature/v1.2.5-windows-publish' }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = 'v1.2.5-rc3'
+          $exe = 'TDE_Katagrafi_Theseon.exe'
+          Copy-Item 'dist/TDE_Katagrafi_Theseon.exe' $exe -Force
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash
+          $notes = "Windows validation build 1.2.5. Automated tests, stress regression, GUI smoke and visual test passed. Version 1.2.3 remains unchanged. On-site testing with the real SMB server and at least two booths is still required. SHA256: $hash"
+          gh release view $tag -R $env:REPO 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            throw "Tag $tag already exists. Will not overwrite a released executable."
+          }
+          gh release create $tag $exe -R $env:REPO --target $env:HEAD_SHA --title 'Position Tracking v1.2.5 - booth validation' --notes $notes --prerelease
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing test EXE failed.' }
+          Write-Host "PUBLISHED_RELEASE_TAG=$tag"
+          Write-Host "PUBLISHED_EXE_SHA256=$hash"
+          Write-Host "PUBLISHED_EXE_URL=https://github.com/$env:REPO/releases/download/$tag/$exe"
+
       - name: Upload Windows test EXE
+        if: ${{ false }} # Disabled: artifact quota / incomplete offline acceptance. Retain step for later gated release.
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: POSITION_TRACKING_WINDOWS_TEST
-          path: dist/PositionTracking_TEST.exe
+          path: dist/TDE_Katagrafi_Theseon.exe
           if-no-files-found: error
           retention-days: 30
+
+      - name: Report isolated Windows build outcome to PR 5
+        if: ${{ always() && github.ref == 'refs/heads/fix/shift-recovery-20261009' }}
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $sha = "$env:GITHUB_SHA"
+          $status = "regressions=${{ steps.regressions.outcome }} | exe=${{ steps.build_exe.outcome }} | smoke=${{ steps.smoke.outcome }} | visual=${{ steps.visual.outcome }}"
+          $message = "Automated Windows check for commit $sha -- $status. This is NOT a production-release approval. Physical SMB/power-loss tests are still required."
+          gh pr comment 5 -R "$env:GITHUB_REPOSITORY" --body "$message"

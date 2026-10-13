@@ -1,0 +1,28 @@
+name: Export released EXE as downloadable chat artifact
+on:
+  push:
+    branches:
+      - feature/v1.2.5-windows-publish
+    paths:
+      - .github/workflows/export-release-asset.yml
+permissions:
+  contents: read
+jobs:
+  export-exe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch exact tested Windows EXE
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir -p payload
+          gh release download v1.2.5-rc4 -R danilidish-coder/TDE-potition_tracking -p TDE_Katagrafi_Theseon.exe -D payload
+          echo '539D3E871DB7B1CFB01D23B2B2DD2801C6734BE3E0507758BF844C2077865A07  payload/TDE_Katagrafi_Theseon.exe' | sha256sum -c -
+      - name: Save EXE as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TDE-Katagrafi-Theseon-v1.2.5-rc4-EXE
+          path: payload/TDE_Katagrafi_Theseon.exe
+          if-no-files-found: error
+          retention-days: 7
