@@ -22,6 +22,7 @@ from datetime import datetime, date, timedelta, time as dtime
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from position_tracking_offline import OfflineJournal, OfflineConflict
+from position_tracking_windows_session import _windows_session_is_active
 from position_tracking_bootstrap import cache_windows_client
 from xml.etree import ElementTree as ET
 
@@ -45,44 +46,6 @@ def _norm_search(value: object) -> str:
     raw = "".join(ch for ch in unicodedata.normalize("NFD", raw) if unicodedata.category(ch) != "Mn")
     return re.sub(r"\s+", " ", raw)
 
-
-def _windows_session_is_active() -> bool:
-    """Return False only for a demonstrably disconnected Windows logon session.
-
-    Locking the screen (Win+L) is not a disconnection. Console and RDP
-    sessions are checked via WTSConnectState, not just console session ID.
-    On an API failure, retain the position rather than closing it wrongly.
-    """
-    if os.name != "nt":
-        return True
-    try:
-        import ctypes
-        from ctypes import wintypes
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        wts = ctypes.WinDLL("wtsapi32", use_last_error=True)
-        session_id = wintypes.DWORD()
-        if not kernel32.ProcessIdToSessionId(
-            kernel32.GetCurrentProcessId(), ctypes.byref(session_id)
-        ):
-            return True
-        buffer = ctypes.c_void_p()
-        returned = wintypes.DWORD()
-        # WTSConnectState=8; WTSDisconnected=4, WTSReset=7, WTSDown=8.
-        if not wts.WTSQuerySessionInformationW(
-            None, session_id.value, 8,
-            ctypes.byref(buffer), ctypes.byref(returned)
-        ):
-            return True
-        try:
-            if not buffer.value or returned.value < 4:
-                return True
-            state = ctypes.cast(buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
-            return state not in (4, 7, 8, 9)
-        finally:
-            if buffer.value:
-                wts.WTSFreeMemory(buffer)
-    except Exception:
-        return True
 
 
 def _safe_name(value: str) -> str:

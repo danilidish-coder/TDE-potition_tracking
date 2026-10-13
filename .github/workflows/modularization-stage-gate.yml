@@ -1,0 +1,41 @@
+name: Modular Position Tracking — Stage Gate
+on:
+  push:
+    branches: [feature/v125-modularization-20261013]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/modularization-stage-gate.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  module-contract:
+    name: Per-module Windows contract and Python compilation
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify every Python module compiles
+        run: python -m compileall -q src
+      - name: Windows WTS contract (11 cases) and real application import mapping
+        run: python tests/windows_session_module_regression.py
+      - name: Ensure release baseline remains v1.2.5
+        shell: pwsh
+        run: |
+          $s=Get-Content src/position_tracking.py -Raw
+          if($s -notmatch 'APP_VERSION = "1.2.5"') {throw "Production version unexpectedly modified"}
+          if(-not(Test-Path src/position_tracking_offline.py)){throw "Offline module missing"}
+          Write-Host 'STAGE1_BASELINE_VERSION_AND_MODULES: PASS'
+  linux-contract:
+    name: Independent Linux module contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m compileall -q src
+      - run: python tests/windows_session_module_regression.py
