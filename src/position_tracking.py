@@ -13,15 +13,20 @@ import sys
 import tempfile
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 import zipfile
 import unicodedata
 from contextlib import contextmanager
 from dataclasses import dataclass, asdict
 from datetime import datetime, date, timedelta, time as dtime
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from position_tracking_offline import OfflineJournal, OfflineConflict
+from position_tracking_watchdog import run_frozen_watchdog, parent_is_alive
 from xml.etree import ElementTree as ET
 
 APP_NAME = "TDE Krystallopigis - Katagrafi Theseon"
+APP_VERSION = "1.2.10"
 SETTINGS_NAME = "position_tracking.settings.json"
 DEFAULT_CUTOFF = "10:00"
 STATISTICS_PIN_SHA256 = "ca444860f0e1ddca9596007253ea43b3a5133780b0a566d9a096a53568c063fb"
@@ -42,20 +47,40 @@ def _norm_search(value: object) -> str:
 
 
 def _windows_session_is_active() -> bool:
-    """True for the interactive Windows session; remains True when merely locked."""
+    """Return False only for a demonstrably disconnected Windows logon session.
+
+    Locking the screen (Win+L) is not a disconnection. Console and RDP
+    sessions are checked via WTSConnectState, not just console session ID.
+    On an API failure, retain the position rather than closing it wrongly.
+    """
     if os.name != "nt":
         return True
     try:
         import ctypes
-        kernel32 = ctypes.windll.kernel32
-        current_session = ctypes.c_ulong()
-        pid = kernel32.GetCurrentProcessId()
-        if not kernel32.ProcessIdToSessionId(pid, ctypes.byref(current_session)):
+        from ctypes import wintypes
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        wts = ctypes.WinDLL("wtsapi32", use_last_error=True)
+        session_id = wintypes.DWORD()
+        if not kernel32.ProcessIdToSessionId(
+            kernel32.GetCurrentProcessId(), ctypes.byref(session_id)
+        ):
             return True
-        active_session = kernel32.WTSGetActiveConsoleSessionId()
-        if active_session == 0xFFFFFFFF:
+        buffer = ctypes.c_void_p()
+        returned = wintypes.DWORD()
+        # WTSConnectState=8; WTSDisconnected=4, WTSReset=7, WTSDown=8.
+        if not wts.WTSQuerySessionInformationW(
+            None, session_id.value, 8,
+            ctypes.byref(buffer), ctypes.byref(returned)
+        ):
             return True
-        return int(current_session.value) == int(active_session)
+        try:
+            if not buffer.value or returned.value < 4:
+                return True
+            state = ctypes.cast(buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
+            return state not in (4, 7, 8, 9)
+        finally:
+            if buffer.value:
+                wts.WTSFreeMemory(buffer)
     except Exception:
         return True
 
@@ -113,16 +138,42 @@ def _fallback_settings_path() -> Path:
     return Path(appdata) / "TDE_Krystallopigis" / SETTINGS_NAME
 
 
-def _settings_path() -> Path:
+def _local_root() -> Path:
+    target = os.environ.get("TDE_POSITION_LOCAL_ROOT")
+    root = Path(target) if target else Path(
+        os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_DATA_HOME") or
+        (Path.home() / ".local" / "share")
+    ) / "TDE_Krystallopigis" / "PositionTracking"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _machine_queue_root() -> Path:
+    preferred = os.environ.get("TDE_POSITION_MACHINE_ROOT")
+    public = os.environ.get("PUBLIC")
+    path = (Path(preferred) if preferred else
+            Path(public) / "Documents" / "TDE_Krystallopigis" / "PositionTracking_Queue"
+            if public else _local_root() / "machine_queue")
     try:
-        return _runtime_root() / SETTINGS_NAME
-    except Exception:
-        return _fallback_settings_path()
+        path.mkdir(parents=True, exist_ok=True)
+        # Standard Windows users can normally write PUBLIC Documents; if
+        # policy blocks it, safely fall back to the user's own state.
+        check = path / (".writecheck_" + uuid.uuid4().hex)
+        check.write_bytes(b"ok")
+        check.unlink()
+        return path
+    except OSError:
+        return _local_root() / "machine_queue"
+
+
+def _settings_path() -> Path:
+    return _local_root() / SETTINGS_NAME
 
 
 @dataclass
 class AppConfig:
     central_root: str = ""
+    shared_exe_path: str = ""
     personnel_file: str = ""
     cutoff: str = DEFAULT_CUTOFF
     positions: list[str] | None = None
@@ -143,10 +194,20 @@ class AppConfig:
     @classmethod
     def load(cls) -> "AppConfig":
         path = _settings_path()
+        if not path.is_file():
+            # Migration: recover the shared EXE settings only while reachable.
+            try:
+                shared = _app_dir() / ".tde_runtime" / SETTINGS_NAME
+                if shared.is_file():
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(shared, path)
+            except OSError:
+                pass
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             return cls(
                 central_root=_clean(data.get("central_root")),
+                shared_exe_path=_clean(data.get("shared_exe_path")),
                 personnel_file=_clean(data.get("personnel_file")),
                 cutoff=_clean(data.get("cutoff")) or DEFAULT_CUTOFF,
                 positions=[_clean(x) for x in data.get("positions", []) if _clean(x)] or None,
@@ -471,14 +532,21 @@ class SharedEventStore:
         self.comm_commands = self.communications / "commands"
         self.comm_command_acks = self.communications / "command_acks"
         self.shift_db = self.root / "shift_reports.sqlite3"
+        self.pending_index = self.root / "pending_sessions"
+        self.corrections = self.root / "start_corrections"
         for p in (
             self.events, self.active, self.locks, self.reports, self.shifts, self.audit,
             self.backups, self.current_docs, self.archive, self.statistics,
             self.communications, self.comm_clients, self.comm_messages, self.comm_acks,
-            self.comm_commands, self.comm_command_acks,
+            self.comm_commands, self.comm_command_acks, self.pending_index, self.corrections,
         ):
             p.mkdir(parents=True, exist_ok=True)
         self._init_shift_db()
+        # Recover END events left unindexed after a process or SQLite interruption.
+        try:
+            self.reconcile_pending_sessions()
+        except Exception:
+            pass
 
     def _active_path(self, agms: str) -> Path:
         return self.active / f"{_safe_name(agms)}.json"
@@ -486,34 +554,69 @@ class SharedEventStore:
     def _lock_path(self, agms: str) -> Path:
         return self.locks / f"{_safe_name(agms)}.lock"
 
+    @staticmethod
     @contextmanager
-    def officer_lock(self, agms: str, timeout: float = 6.0):
-        path = self._lock_path(agms)
-        deadline = time.monotonic() + timeout
-        fd = None
-        while True:
-            try:
-                fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.write(fd, f"{socket.gethostname()}|{os.environ.get('USERNAME') or os.environ.get('USER') or ''}|{time.time()}".encode("utf-8", "ignore"))
-                break
-            except FileExistsError:
-                try:
-                    if time.time() - path.stat().st_mtime > 60:
-                        path.unlink(missing_ok=True)
-                        continue
-                except OSError:
-                    pass
-                if time.monotonic() >= deadline:
-                    raise BusyError("Η καταχώριση χρησιμοποιείται αυτή τη στιγμή από άλλο σταθμό. Δοκιμάστε ξανά.")
-                time.sleep(0.15)
+    def _file_lock(path: Path, timeout: float, busy_message: str):
+        """OS-held byte-range lock. The lock file stays in place on SMB.
+
+        Unlike stale-file mtime locks, Windows releases this lock when the
+        owning process dies or its SMB handle is disconnected. Never unlink
+        another process's lock based on its age.
+        """
+        import errno
+        path.parent.mkdir(parents=True, exist_ok=True)
         try:
+            fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o666)
+        except OSError as exc:
+            raise BusyError(f"Δεν είναι διαθέσιμος ο κοινόχρηστος φάκελος: {exc}") from exc
+        locked = False
+        try:
+            # Never write to the shared lock file before acquiring its OS
+            # byte-range lock. Two Windows processes raced in this pre-lock
+            # write and raised EACCES, even though the lock was available.
+            # Windows byte-range locks are valid beyond EOF.
+            deadline = time.monotonic() + timeout
+            while True:
+                try:
+                    os.lseek(fd, 0, os.SEEK_SET)
+                    if os.name == "nt":
+                        import msvcrt
+                        msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+                    else:
+                        import fcntl
+                        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    locked = True
+                    break
+                except OSError as exc:
+                    contention = exc.errno in (errno.EACCES, errno.EAGAIN) or getattr(exc, "winerror", None) in (32, 33, 36)
+                    if not contention:
+                        raise BusyError(f"Αποτυχία κοινόχρηστου κλειδώματος: {exc}") from exc
+                    if time.monotonic() >= deadline:
+                        raise BusyError(busy_message) from exc
+                    time.sleep(0.15)
             yield
         finally:
-            try:
-                if fd is not None:
+            if locked:
+                try:
+                    os.lseek(fd, 0, os.SEEK_SET)
+                    if os.name == "nt":
+                        import msvcrt
+                        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+                    else:
+                        import fcntl
+                        fcntl.flock(fd, fcntl.LOCK_UN)
+                finally:
                     os.close(fd)
-            finally:
-                path.unlink(missing_ok=True)
+            else:
+                os.close(fd)
+
+    @contextmanager
+    def officer_lock(self, agms: str, timeout: float = 6.0):
+        with self._file_lock(
+            self._lock_path(agms), timeout,
+            "Η καταχώριση χρησιμοποιείται από άλλο σταθμό. Δοκιμάστε ξανά."
+        ):
+            yield
 
     @staticmethod
     def _atomic_json(path: Path, data: dict):
@@ -527,7 +630,8 @@ class SharedEventStore:
     def local_client_id() -> str:
         computer = _safe_name(socket.gethostname())
         user = _safe_name(os.environ.get("USERNAME") or os.environ.get("USER") or "USER")
-        return f"{computer}__{user}"
+        # Distinguish two Windows sessions/processes sharing the same user.
+        return f"{computer}__{user}__{os.getpid()}"
 
     def write_client_heartbeat(self, client_id: str, extra: dict | None = None) -> dict:
         payload = {
@@ -689,33 +793,11 @@ class SharedEventStore:
 
     @contextmanager
     def _shift_db_write_lock(self, timeout: float = 10.0):
-        """Serialize SQLite writes across the shared runtime folder."""
-        path = self.locks / "shift_reports.sqlite.lock"
-        deadline = time.monotonic() + timeout
-        fd = None
-        while True:
-            try:
-                fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.write(fd, f"{socket.gethostname()}|{time.time()}".encode("utf-8", "ignore"))
-                break
-            except FileExistsError:
-                try:
-                    if time.time() - path.stat().st_mtime > 60:
-                        path.unlink(missing_ok=True)
-                        continue
-                except OSError:
-                    pass
-                if time.monotonic() >= deadline:
-                    raise BusyError("Το αρχείο βαρδιών χρησιμοποιείται από άλλο σταθμό. Δοκιμάστε ξανά.")
-                time.sleep(0.15)
-        try:
+        with self._file_lock(
+            self.locks / "shift_reports.sqlite.lock", timeout,
+            "Το αρχείο βαρδιών χρησιμοποιείται από άλλο σταθμό. Δοκιμάστε ξανά."
+        ):
             yield
-        finally:
-            try:
-                if fd is not None:
-                    os.close(fd)
-            finally:
-                path.unlink(missing_ok=True)
 
     @contextmanager
     def _shift_db_connect(self):
@@ -815,6 +897,35 @@ class SharedEventStore:
         with self._shift_db_write_lock():
             with self._shift_db_connect() as con:
                 self._upsert_personnel_session_con(con, start, end)
+
+    def _has_end_receipt(self, active: dict) -> bool:
+        start_id = _safe_name(active.get("event_id"))
+        receipt = self.pending_index / f"{start_id}.json"
+        if not receipt.is_file():
+            return False
+        try:
+            data = json.loads(receipt.read_text(encoding="utf-8"))
+            return _clean(data.get("start", {}).get("event_id")) == _clean(active.get("event_id"))
+        except Exception as exc:
+            raise BusyError(f"Αδύνατος έλεγχος προσωρινής λήξης {start_id}: {exc}") from exc
+
+    def reconcile_pending_sessions(self) -> int:
+        """Recover committed END events after a crash, without dropping history."""
+        done = 0
+        for path in sorted(self.pending_index.glob("*.json")):
+            data = json.loads(path.read_text(encoding="utf-8"))
+            start, end = data["start"], data["end"]
+            agms = _clean(start.get("agms"))
+            with self.officer_lock(agms):
+                active_path = self._active_path(agms)
+                if active_path.is_file():
+                    current = json.loads(active_path.read_text(encoding="utf-8"))
+                    if _clean(current.get("event_id")) == _clean(start.get("event_id")):
+                        active_path.unlink()
+                self._store_personnel_session(start, end)
+                path.unlink(missing_ok=True)
+                done += 1
+        return done
 
     @staticmethod
     def _session_row_dict(row) -> dict:
@@ -1088,14 +1199,89 @@ class SharedEventStore:
         except Exception:
             return ""
 
+    def _effective_start_timestamp(self, event_id: str, timestamp: str) -> str:
+        path = self.corrections / f"{_safe_name(event_id)}.json"
+        if not path.is_file():
+            return timestamp
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if _clean(data.get("start_event_id")) != _clean(event_id):
+            raise BusyError("Ασυμφωνία στα στοιχεία διόρθωσης ώρας.")
+        return _clean(data["corrected_start_at"])
+
+    def _apply_start_correction(self, event: dict) -> dict:
+        if _clean(event.get("kind")).upper() != "START":
+            return event
+        revised = self._effective_start_timestamp(_clean(event.get("event_id")), _clean(event.get("timestamp")))
+        if revised == _clean(event.get("timestamp")):
+            return event
+        result = dict(event)
+        result["original_timestamp"] = event["timestamp"]
+        result["timestamp"] = revised
+        return result
+
+    def correct_active_start(self, agms: str, new_when: datetime, officer: PersonnelRecord, reason: str) -> dict:
+        """Audited logical correction; immutable raw START event remains intact."""
+        reason = _clean(reason)
+        if len(reason) < 5:
+            raise ValueError("Συμπληρώστε αιτιολογία τουλάχιστον 5 χαρακτήρων.")
+        if new_when > datetime.now():
+            raise ValueError("Δεν επιτρέπεται μελλοντική ώρα έναρξης.")
+        with self.officer_lock(agms):
+            active = self.get_active(agms)
+            if not active:
+                raise ValueError("Η θέση έχει ήδη κλείσει ή δεν υπάρχει.")
+            old_when = datetime.fromisoformat(active["timestamp"])
+            if new_when.date() != old_when.date():
+                raise ValueError("Για ασφάλεια, η διόρθωση περιορίζεται στην ίδια ημερομηνία.")
+            event_id = _clean(active.get("event_id"))
+            if not event_id:
+                raise ValueError("Δεν βρέθηκε αναγνωριστικό έναρξης.")
+            correction = {
+                "start_event_id": event_id, "agms": agms,
+                "previous_start_at": active["timestamp"],
+                "corrected_start_at": new_when.isoformat(timespec="seconds"),
+                "corrected_by": self._person_payload(officer),
+                "reason": reason,
+                "recorded_at": datetime.now().isoformat(timespec="seconds"),
+            }
+            path = self.corrections / f"{_safe_name(event_id)}.json"
+            if path.exists():
+                previous = json.loads(path.read_text(encoding="utf-8"))
+                correction["original_start_at"] = previous.get("original_start_at", previous.get("previous_start_at"))
+            else:
+                correction["original_start_at"] = active["timestamp"]
+            self._atomic_json(path, correction)
+            self.log_admin_action("ACTIVE_START_TIME_CORRECTED", correction)
+            return correction
+
     def get_active(self, agms: str) -> dict | None:
         path = self._active_path(agms)
+        if not self.active.is_dir():
+            raise BusyError("Ο κοινός φάκελος ενεργών θέσεων δεν είναι διαθέσιμος.")
         try:
-            return json.loads(path.read_text(encoding="utf-8"))
+            item = json.loads(path.read_text(encoding="utf-8"))
+            return None if self._has_end_receipt(item) else self._apply_start_correction(item)
         except FileNotFoundError:
             return None
-        except Exception:
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            # Fail closed: an unreadable shared active file is NOT a free booth.
+            raise BusyError(f"Δεν είναι ασφαλής η ανάγνωση ενεργής θέσης {agms}: {exc}") from exc
+
+    def _existing_operation_event(self, op_id: str, when: datetime) -> dict | None:
+        if not op_id:
             return None
+        # A retry after a server acknowledgement was lost must never record
+        # another START/END. Shared lock for AGMS protects this lookup.
+        folder = self.events / f"{when:%Y}" / f"{when:%m}" / f"{when:%Y-%m-%d}"
+        prefix = f"{when:%Y%m%d_%H%M%S}_"
+        for path in folder.glob(f"{prefix}*_{_safe_name(op_id)}.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                if data.get("event_id") == op_id:
+                    return data
+            except (OSError, ValueError):
+                raise BusyError("Δεν διαβάζεται η προηγούμενη καταχώριση συγχρονισμού.")
+        return None
 
     def _write_event(self, event: dict) -> Path:
         dt = datetime.fromisoformat(event["timestamp"])
@@ -1105,7 +1291,7 @@ class SharedEventStore:
         self._atomic_json(path, event)
         return path
 
-    def start(self, person: PersonnelRecord, position: str, direction: str, when: datetime | None = None) -> dict:
+    def start(self, person: PersonnelRecord, position: str, direction: str, when: datetime | None = None, client_id: str = "", event_id: str = "", origin_computer: str = "", origin_user: str = "") -> dict:
         when = when or datetime.now()
         position = _clean(position)
         direction = _clean(direction).upper()
@@ -1114,10 +1300,36 @@ class SharedEventStore:
         if direction not in {"ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"}:
             raise ValueError("Επιλέξτε κατεύθυνση ΕΙΣΟΔΟΣ ή ΕΞΟΔΟΣ.")
         with self.officer_lock(person.agms):
+            previous = self._existing_operation_event(event_id, when)
+            if previous:
+                if previous.get("kind") != "START" or previous.get("agms") != person.agms:
+                    raise BusyError("Ασυμφωνία αναγνωριστικού START.")
+                current = self.get_active(person.agms)
+                if current and _clean(current.get("event_id")) == event_id:
+                    return previous
+                if current:
+                    raise BusyError("Η παλιά έναρξη αντικαταστάθηκε. Δεν επιτρέπεται επανακατάληψη.")
+                # If START was recorded but its active file was interrupted,
+                # recover only if the original shift was never ended.
+                if self._has_end_receipt(previous):
+                    return previous
+                with self._shift_db_connect() as db:
+                    closed = db.execute(
+                        "SELECT 1 FROM personnel_sessions WHERE start_event_id=? LIMIT 1", (event_id,)
+                    ).fetchone()
+                if closed:
+                    return previous
+                with self.officer_lock("__POSITION_START__"):
+                    if any(_clean(x.get("position")) == position for x in self.active_all()):
+                        raise BusyError("Η θέση έχει ήδη καταληφθεί στο μεταξύ.")
+                    self._atomic_json(self._active_path(person.agms), previous)
+                return previous
             # Serialize START operations across all stations so two PCs cannot
             # claim the same physical position at the same moment.
             with self.officer_lock("__POSITION_START__"):
                 current = self.get_active(person.agms)
+                if current and event_id and current.get("event_id") == event_id:
+                    return current
                 if current:
                     raise ValueError(
                         f"Υπάρχει ήδη ανοικτή θέση για {person.full_name}: "
@@ -1142,7 +1354,7 @@ class SharedEventStore:
                     )
                 event = {
                     "version": 2,
-                    "event_id": uuid.uuid4().hex,
+                    "event_id": event_id or uuid.uuid4().hex,
                     "kind": "START",
                     "timestamp": when.isoformat(timespec="seconds"),
                     "agms": person.agms,
@@ -1152,27 +1364,56 @@ class SharedEventStore:
                     "full_name": person.full_name,
                     "position": position,
                     "direction": direction,
-                    "computer": socket.gethostname(),
-                    "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+                    "computer": origin_computer or socket.gethostname(),
+                    "user": origin_user or os.environ.get("USERNAME") or os.environ.get("USER") or "",
+                    "client_id": _clean(client_id),
                 }
                 path = self._write_event(event)
                 event["event_file"] = str(path)
-                self._atomic_json(self._active_path(person.agms), event)
-            try:
-                self.sync_active_shift()
-            except Exception:
-                pass
-            return event
+                try:
+                    self._atomic_json(self._active_path(person.agms), event)
+                except Exception:
+                    # Do not leave a phantom START if the active marker failed.
+                    path.unlink(missing_ok=True)
+                    raise
+        try:
+            self.sync_active_shift()
+        except Exception:
+            # START was durably recorded. Do not report its failure merely
+            # because synchronizing the shift membership is delayed.
+            pass
+        return event
 
-    def end(self, person: PersonnelRecord, when: datetime | None = None) -> dict:
+    def end(self, person: PersonnelRecord, when: datetime | None = None, expected_start_event_id: str = "", end_reason: str = "", end_officer: PersonnelRecord | None = None, event_id: str = "", origin_computer: str = "", origin_user: str = "") -> dict:
         when = when or datetime.now()
         with self.officer_lock(person.agms):
+            previous = self._existing_operation_event(event_id, when)
+            if previous:
+                if previous.get("kind") != "END" or previous.get("agms") != person.agms:
+                    raise BusyError("Ασυμφωνία αναγνωριστικού END.")
+                current = self.get_active(person.agms)
+                if current and _clean(current.get("event_id")) == _clean(previous.get("start_event_id")):
+                    # Repair interruption between END event and active release.
+                    receipt = self.pending_index / f"{_safe_name(current.get('event_id'))}.json"
+                    self._atomic_json(receipt, {"start": current, "end": previous})
+                    self._active_path(person.agms).unlink(missing_ok=True)
+                    try:
+                        self._store_personnel_session(current, previous)
+                    except Exception:
+                        pass  # durable receipt is reconciled on subsequent startup
+                    else:
+                        receipt.unlink(missing_ok=True)
+                elif current:
+                    raise BusyError("Η θέση άλλαξε μετά την προηγούμενη ΛΗΞΗ.")
+                return previous
             current = self.get_active(person.agms)
             if not current:
                 raise ValueError(f"Δεν υπάρχει ανοικτή θέση για {person.full_name}.")
+            if expected_start_event_id and _clean(current.get("event_id")) != _clean(expected_start_event_id):
+                raise BusyError("Η θέση άλλαξε χρήστη πριν επιβεβαιωθεί η λήξη. Δεν τροποποιήθηκε η νέα καταχώριση.")
             event = {
                 "version": 2,
-                "event_id": uuid.uuid4().hex,
+                "event_id": event_id or uuid.uuid4().hex,
                 "kind": "END",
                 "timestamp": when.isoformat(timespec="seconds"),
                 "start_event_id": current.get("event_id", ""),
@@ -1183,22 +1424,102 @@ class SharedEventStore:
                 "full_name": current.get("full_name", person.full_name),
                 "position": current.get("position", ""),
                 "direction": current.get("direction", ""),
-                "computer": socket.gethostname(),
-                "user": os.environ.get("USERNAME") or os.environ.get("USER") or "",
+                "computer": origin_computer or socket.gethostname(),
+                "user": origin_user or os.environ.get("USERNAME") or os.environ.get("USER") or "",
             }
+            if end_reason:
+                event["end_reason"] = _clean(end_reason)
+            if end_officer:
+                event["end_officer"] = self._person_payload(end_officer)
             self._write_event(event)
-            self._store_personnel_session(current, event)
+            # Durable receipt before releasing a booth; history indexing can be
+            # retried later if SQLite is locked or temporarily unavailable.
+            receipt = self.pending_index / f"{_safe_name(current.get('event_id'))}.json"
+            self._atomic_json(receipt, {"start": current, "end": event})
             self._active_path(person.agms).unlink(missing_ok=True)
+            try:
+                self._store_personnel_session(current, event)
+            except Exception:
+                event["session_index_pending"] = True
+            else:
+                receipt.unlink(missing_ok=True)
             return event
 
     def active_all(self) -> list[dict]:
+        if not self.active.is_dir():
+            raise BusyError("Δεν είναι διαθέσιμος ο κοινός φάκελος ενεργών θέσεων.")
         result: list[dict] = []
         for path in sorted(self.active.glob("*.json")):
             try:
-                result.append(json.loads(path.read_text(encoding="utf-8")))
-            except Exception:
-                pass
+                item = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                raise BusyError(f"Δεν διαβάζεται η δέσμευση {path.name}: {exc}") from exc
+            if not self._has_end_receipt(item):
+                result.append(self._apply_start_correction(item))
         return sorted(result, key=lambda x: (_clean(x.get("direction")), _clean(x.get("position")), _clean(x.get("full_name"))))
+
+    def close_previous_windows_user_positions(self, computer: str, windows_user: str) -> list[dict]:
+        """Auto-close only earlier Windows accounts on this exact workstation.
+
+        A locked screen, idle Windows session, or another station is NOT a
+        handoff. If either Windows account cannot be identified, fail safely
+        rather than guessing. A shared lock handles concurrent instances of
+        the new account. Exact START IDs prevent closing a replacement record.
+        """
+        current_computer = _clean(computer).casefold()
+        current_user = _clean(windows_user).casefold()
+        if not current_computer or not current_user:
+            return []
+        completed = []
+        with self.officer_lock("__WINDOWS_USER_HANDOFF__", timeout=15.0):
+            for item in self.active_all():
+                recorded_computer = _clean(item.get("computer")).casefold()
+                recorded_user = _clean(item.get("user")).casefold()
+                if recorded_computer != current_computer or not recorded_user or recorded_user == current_user:
+                    continue
+                start_id = _clean(item.get("event_id"))
+                agms = _clean(item.get("agms"))
+                if not start_id or not agms:
+                    continue
+                person = PersonnelRecord(
+                    agms=agms, rank=_clean(item.get("rank")),
+                    surname=_clean(item.get("surname")), given_name=_clean(item.get("given_name")),
+                )
+                try:
+                    ended = self.end(
+                        person, expected_start_event_id=start_id,
+                        end_reason="WINDOWS_USER_HANDOFF_RECOVERY",
+                    )
+                except ValueError:
+                    # An operator already closed the old START while recovering.
+                    if self.get_active(agms) is None:
+                        continue
+                    raise
+                except BusyError:
+                    # A concurrent END/START may have replaced this session.
+                    latest = self.get_active(agms)
+                    if latest is None or _clean(latest.get("event_id")) != start_id:
+                        continue
+                    raise
+                details = {
+                    "computer": computer,
+                    "previous_windows_user": _clean(item.get("user")),
+                    "new_windows_user": windows_user,
+                    "agms": agms,
+                    "position": _clean(item.get("position")),
+                    "start_event_id": start_id,
+                    "end_event_id": _clean(ended.get("event_id")),
+                    "observed_at": _clean(ended.get("timestamp")),
+                    "end_time_note": "Time of detection; actual departure time unverified",
+                }
+                completed.append(details)
+                try:
+                    self.log_admin_action("AUTO_END_WINDOWS_USER_HANDOFF", details)
+                except Exception:
+                    # The END event carries an immutable end_reason even if the
+                    # supplemental administrative log is temporarily unavailable.
+                    pass
+        return completed
 
     def iter_events(self, start_dt: datetime, end_dt: datetime) -> list[dict]:
         result: list[dict] = []
@@ -1209,7 +1530,7 @@ class SharedEventStore:
             if folder.exists():
                 for path in sorted(folder.glob("*.json")):
                     try:
-                        e = json.loads(path.read_text(encoding="utf-8"))
+                        e = self._apply_start_correction(json.loads(path.read_text(encoding="utf-8")))
                         ts = datetime.fromisoformat(e.get("timestamp", ""))
                         if start_dt <= ts < end_dt:
                             result.append(e)
@@ -1224,7 +1545,7 @@ class SharedEventStore:
             return result
         for path in sorted(self.events.rglob("*.json")):
             try:
-                event = json.loads(path.read_text(encoding="utf-8"))
+                event = self._apply_start_correction(json.loads(path.read_text(encoding="utf-8")))
                 if _clean(event.get("timestamp")):
                     result.append(event)
             except Exception:
@@ -1290,11 +1611,16 @@ class SharedEventStore:
 
     def current_shift(self) -> dict | None:
         path = self._current_shift_path()
+        if not self.shifts.is_dir():
+            raise BusyError("Ο κοινός φάκελος βαρδιών δεν είναι διαθέσιμος.")
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             return data if _clean(data.get("status")).upper() == "ACTIVE" else None
-        except Exception:
+        except FileNotFoundError:
             return None
+        except Exception as exc:
+            # A read failure is not proof that no shift exists.
+            raise BusyError(f"Δεν είναι ασφαλής η ανάγνωση τρέχουσας βάρδιας: {exc}") from exc
 
     def current_report_shift(self) -> dict | None:
         """Return the active/last shift; finalized history itself lives in SQLite."""
@@ -1326,68 +1652,69 @@ class SharedEventStore:
         initial_approved: list[str] | tuple[str, ...] | None = None,
         initial_excluded: list[str] | tuple[str, ...] | None = None,
     ) -> dict:
-        if self.current_shift():
-            raise ValueError("Υπάρχει ήδη ενεργή βάρδια. Πρέπει πρώτα να γίνει ΛΗΞΗ ΒΑΡΔΙΑΣ.")
-        when = when or datetime.now()
-        active_now = self.active_all()
-        active_by_agms = {}
-        for item in active_now:
-            agms = _clean(item.get("agms"))
-            if agms and agms not in active_by_agms:
-                active_by_agms[agms] = item
+        with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
+            if self.current_shift():
+                raise ValueError("Υπάρχει ήδη ενεργή βάρδια. Πρέπει πρώτα να γίνει ΛΗΞΗ ΒΑΡΔΙΑΣ.")
+            when = when or datetime.now()
+            active_now = self.active_all()
+            active_by_agms = {}
+            for item in active_now:
+                agms = _clean(item.get("agms"))
+                if agms and agms not in active_by_agms:
+                    active_by_agms[agms] = item
 
-        if initial_approved is None and initial_excluded is None:
-            approved = list(active_by_agms)
-            excluded = []
-        else:
-            approved = []
-            seen = set()
-            for value in initial_approved or []:
-                agms = _clean(value)
-                if agms and agms in active_by_agms and agms not in seen:
-                    approved.append(agms); seen.add(agms)
-            excluded = []
-            for value in initial_excluded or []:
-                agms = _clean(value)
-                if agms and agms in active_by_agms and agms not in seen:
-                    excluded.append(agms); seen.add(agms)
-            for agms in active_by_agms:
-                if agms not in seen:
-                    excluded.append(agms)
+            if initial_approved is None and initial_excluded is None:
+                approved = list(active_by_agms)
+                excluded = []
+            else:
+                approved = []
+                seen = set()
+                for value in initial_approved or []:
+                    agms = _clean(value)
+                    if agms and agms in active_by_agms and agms not in seen:
+                        approved.append(agms); seen.add(agms)
+                excluded = []
+                for value in initial_excluded or []:
+                    agms = _clean(value)
+                    if agms and agms in active_by_agms and agms not in seen:
+                        excluded.append(agms); seen.add(agms)
+                for agms in active_by_agms:
+                    if agms not in seen:
+                        excluded.append(agms)
 
-        # Κρατάμε την πραγματική ώρα έναρξης ΟΛΩΝ όσων είναι ήδη ενεργοί
-        # κατά την έναρξη της βάρδιας, ακόμη κι αν αρχικά εξαιρεθούν.
-        # Έτσι μια μεταγενέστερη διόρθωση ΕΞΑΙΡΕΣΗ -> ΑΠΟΔΟΧΗ
-        # επαναφέρει πλήρως την πραγματική αρχική ώρα εργασίας.
-        initial_active = {}
-        for agms, item in active_by_agms.items():
-            initial_active[agms] = {
-                "timestamp": _clean(item.get("timestamp")),
-                "event_id": _clean(item.get("event_id")),
+            # Κρατάμε την πραγματική ώρα έναρξης ΟΛΩΝ όσων είναι ήδη ενεργοί
+            # κατά την έναρξη της βάρδιας, ακόμη κι αν αρχικά εξαιρεθούν.
+            # Έτσι μια μεταγενέστερη διόρθωση ΕΞΑΙΡΕΣΗ -> ΑΠΟΔΟΧΗ
+            # επαναφέρει πλήρως την πραγματική αρχική ώρα εργασίας.
+            initial_active = {}
+            for agms, item in active_by_agms.items():
+                initial_active[agms] = {
+                    "timestamp": _clean(item.get("timestamp")),
+                    "event_id": _clean(item.get("event_id")),
+                }
+
+            shift = {
+                "version": 2,
+                "shift_id": f"SHIFT_{when:%Y%m%d_%H%M%S_%f}",
+                "status": "ACTIVE",
+                "start_at": when.isoformat(timespec="seconds"),
+                "start_officer": self._person_payload(officer),
+                "approved": approved,
+                "excluded": excluded,
+                "pending": [],
+                "initial_active": initial_active,
+                "created_at": datetime.now().isoformat(timespec="seconds"),
             }
+            self._atomic_json(self._current_shift_path(), shift)
+            self.log_admin_action("SHIFT_STARTED", {
+                "shift_id": shift["shift_id"],
+                "officer_agms": officer.agms,
+                "initial_people": len(approved),
+                "initial_excluded": len(excluded),
+            })
+            return shift
 
-        shift = {
-            "version": 2,
-            "shift_id": f"SHIFT_{when:%Y%m%d_%H%M%S_%f}",
-            "status": "ACTIVE",
-            "start_at": when.isoformat(timespec="seconds"),
-            "start_officer": self._person_payload(officer),
-            "approved": approved,
-            "excluded": excluded,
-            "pending": [],
-            "initial_active": initial_active,
-            "created_at": datetime.now().isoformat(timespec="seconds"),
-        }
-        self._atomic_json(self._current_shift_path(), shift)
-        self.log_admin_action("SHIFT_STARTED", {
-            "shift_id": shift["shift_id"],
-            "officer_agms": officer.agms,
-            "initial_people": len(approved),
-            "initial_excluded": len(excluded),
-        })
-        return shift
-
-    def sync_active_shift(self) -> dict | None:
+    def _sync_active_shift_locked(self) -> dict | None:
         shift = self.current_shift()
         if not shift:
             return None
@@ -1406,39 +1733,147 @@ class SharedEventStore:
             self._atomic_json(self._current_shift_path(), shift)
         return shift
 
-    def set_shift_member_state(self, agms: str, state: str) -> dict:
-        shift = self.current_shift()
-        if not shift:
-            raise ValueError("Δεν υπάρχει ενεργή βάρδια.")
-        agms = _clean(agms)
-        state = _clean(state).upper()
-        if state not in {"APPROVED", "EXCLUDED"}:
-            raise ValueError("Μη έγκυρη κατάσταση μέλους βάρδιας.")
-        for key in ("approved", "excluded", "pending"):
-            shift[key] = [x for x in shift.get(key, []) if _clean(x) != agms]
-        shift["approved" if state == "APPROVED" else "excluded"].append(agms)
-        shift["updated_at"] = datetime.now().isoformat(timespec="seconds")
-        self._atomic_json(self._current_shift_path(), shift)
-        self.log_admin_action("SHIFT_MEMBER_STATE", {"shift_id": shift["shift_id"], "agms": agms, "state": state})
-        return shift
+    def sync_active_shift(self) -> dict | None:
+        with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
+            return self._sync_active_shift_locked()
 
-    def end_officer_shift(self, officer: PersonnelRecord, when: datetime | None = None) -> dict:
-        shift = self.sync_active_shift()
-        if not shift:
-            raise ValueError("Δεν υπάρχει ενεργή βάρδια.")
-        if shift.get("pending"):
-            raise ValueError("Υπάρχουν άτομα σε ΑΝΑΜΟΝΗ. Κάντε πρώτα ΑΠΟΔΟΧΗ ή ΕΞΑΙΡΕΣΗ.")
-        when = when or datetime.now()
-        shift["status"] = "FINALIZED"
-        shift["end_at"] = when.isoformat(timespec="seconds")
-        shift["end_officer"] = self._person_payload(officer)
-        shift["finalized_at"] = datetime.now().isoformat(timespec="seconds")
-        # Το ιστορικό βαρδιών αποθηκεύεται σε SQLite. Το CURRENT_SHIFT.json
-        # μένει μόνο ως ελαφρύ ζωντανό αρχείο συγχρονισμού μεταξύ σταθμών.
-        self._atomic_json(self._current_shift_path(), shift)
-        self._store_shift_snapshot(shift, make_current_report=True)
-        self.log_admin_action("SHIFT_ENDED", {"shift_id": shift["shift_id"], "officer_agms": officer.agms, "approved": len(shift.get("approved", [])), "excluded": len(shift.get("excluded", []))})
-        return shift
+    def set_shift_member_state(self, agms: str, state: str) -> dict:
+        with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
+            shift = self.current_shift()
+            if not shift:
+                raise ValueError("Δεν υπάρχει ενεργή βάρδια.")
+            agms = _clean(agms)
+            state = _clean(state).upper()
+            if state not in {"APPROVED", "EXCLUDED"}:
+                raise ValueError("Μη έγκυρη κατάσταση μέλους βάρδιας.")
+            for key in ("approved", "excluded", "pending"):
+                shift[key] = [x for x in shift.get(key, []) if _clean(x) != agms]
+            shift["approved" if state == "APPROVED" else "excluded"].append(agms)
+            shift["updated_at"] = datetime.now().isoformat(timespec="seconds")
+            self._atomic_json(self._current_shift_path(), shift)
+            self.log_admin_action("SHIFT_MEMBER_STATE", {"shift_id": shift["shift_id"], "agms": agms, "state": state})
+            return shift
+
+    def end_officer_shift_member(
+        self, officer: PersonnelRecord, agms: str, expected_shift_id: str,
+        expected_start_event_id: str,
+    ) -> dict:
+        """Individually end a confirmed, approved member without finalizing shift."""
+        agms = _clean(agms)
+        if not agms or not expected_start_event_id:
+            raise BusyError("Η επιλεγμένη θέση δεν έχει έγκυρο αναγνωριστικό.")
+        with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
+            shift = self.current_shift()
+            if not shift or _clean(shift.get("shift_id")) != _clean(expected_shift_id):
+                raise BusyError("Η βάρδια άλλαξε. Ελέγξτε ξανά την τρέχουσα λίστα.")
+            if agms not in {_clean(x) for x in shift.get("approved", [])}:
+                raise BusyError("Ο αστυνομικός δεν ανήκει πλέον στους αποδεκτούς της βάρδιας.")
+            active = self.get_active(agms)
+            if not active or _clean(active.get("event_id")) != _clean(expected_start_event_id):
+                raise BusyError("Η ενεργή θέση άλλαξε. Δεν καταχωρίστηκε λανθασμένη λήξη.")
+            member = PersonnelRecord(
+                agms=agms, rank=_clean(active.get("rank")),
+                surname=_clean(active.get("surname")), given_name=_clean(active.get("given_name")),
+            )
+            event = self.end(
+                member, expected_start_event_id=expected_start_event_id,
+                end_reason="SHIFT_SINGLE_BY_OFFICER", end_officer=officer,
+            )
+            try:
+                self.log_admin_action("SHIFT_SINGLE_END_POSITION", {
+                    "shift_id": expected_shift_id, "officer_agms": officer.agms,
+                    "member_agms": agms, "position": _clean(active.get("position")),
+                    "start_event_id": expected_start_event_id,
+                    "end_event_id": _clean(event.get("event_id")),
+                })
+            except Exception:
+                # Audit actor and reason are also embedded in durable END event.
+                pass
+            return event
+
+    def end_officer_shift(
+        self, officer: PersonnelRecord, when: datetime | None = None,
+        expected_active_start_ids: dict[str, str] | None = None,
+        expected_shift_id: str = "",
+    ) -> dict:
+        with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
+            shift = self._sync_active_shift_locked()
+            if not shift:
+                raise ValueError("Δεν υπάρχει ενεργή βάρδια.")
+            if expected_shift_id and _clean(shift.get("shift_id")) != _clean(expected_shift_id):
+                raise BusyError("Η βάρδια άλλαξε. Ανανεώστε τη λίστα πριν συνεχίσετε.")
+            if shift.get("pending"):
+                raise ValueError("Υπάρχουν άτομα σε ΑΝΑΜΟΝΗ. Κάντε πρώτα ΑΠΟΔΟΧΗ ή ΕΞΑΙΡΕΣΗ.")
+            if expected_active_start_ids is not None:
+                approved = set(map(_clean, shift.get("approved", [])))
+                actual = {
+                    _clean(item.get("agms")): _clean(item.get("event_id"))
+                    for item in self.active_all()
+                    if _clean(item.get("agms")) in approved
+                }
+                if actual != expected_active_start_ids:
+                    raise BusyError(
+                        "Οι ενεργές θέσεις άλλαξαν μετά την επιβεβαίωση. "
+                        "Ελέγξτε ξανά τον κατάλογο πριν από τη λήξη βάρδιας."
+                    )
+            when = when or datetime.now()
+            # A finalized roster must not leave its selected officers blocking the
+            # physical desks. Close only APPROVED active records, through the same
+            # audited END path used by the normal operator action. This operation
+            # is deliberately retryable: already closed records are skipped.
+            closed_agms = []
+            for agms in sorted(set(_clean(a) for a in shift.get("approved", []))):
+                if not agms:
+                    continue
+                current = self.get_active(agms)
+                if not current:
+                    continue
+                started = datetime.fromisoformat(current["timestamp"])
+                if started > when:
+                    raise ValueError(
+                        f"Η έναρξη του ΑΓΜΣ {agms} είναι μεταγενέστερη της λήξης βάρδιας."
+                    )
+                member = PersonnelRecord(
+                    agms=agms,
+                    rank=_clean(current.get("rank")),
+                    surname=_clean(current.get("surname")),
+                    given_name=_clean(current.get("given_name")),
+                )
+                expected_start = (
+                    expected_active_start_ids.get(agms, "")
+                    if expected_active_start_ids is not None
+                    else _clean(current.get("event_id"))
+                )
+                if not expected_start or _clean(current.get("event_id")) != _clean(expected_start):
+                    raise BusyError(
+                        "Η ενεργή καταχώριση άλλαξε μετά την επιβεβαίωση. "
+                        "Δεν πραγματοποιήθηκε λήξη νεότερης θέσης."
+                    )
+                self.end(
+                    member, when=when, expected_start_event_id=expected_start,
+                    end_reason="SHIFT_FINALIZED_BY_OFFICER", end_officer=officer,
+                )
+                self.log_admin_action("SHIFT_AUTO_END_POSITION", {
+                    "shift_id": shift["shift_id"],
+                    "officer_agms": officer.agms,
+                    "member_agms": agms,
+                    "end_at": when.isoformat(timespec="seconds"),
+                    "reason": "FINALIZE_SELECTED_SHIFT_MEMBER",
+                })
+                closed_agms.append(agms)
+            shift["closed_active_agms"] = closed_agms
+            shift["status"] = "FINALIZED"
+            shift["end_at"] = when.isoformat(timespec="seconds")
+            shift["end_officer"] = self._person_payload(officer)
+            shift["finalized_at"] = datetime.now().isoformat(timespec="seconds")
+            # Το ιστορικό βαρδιών αποθηκεύεται σε SQLite. Το CURRENT_SHIFT.json
+            # μένει μόνο ως ελαφρύ ζωντανό αρχείο συγχρονισμού μεταξύ σταθμών.
+            # Persist the finalized report before replacing CURRENT_SHIFT.
+            # If SQLite is unavailable, the shift remains ACTIVE and retryable.
+            self._store_shift_snapshot(shift, make_current_report=True)
+            self._atomic_json(self._current_shift_path(), shift)
+            self.log_admin_action("SHIFT_ENDED", {"shift_id": shift["shift_id"], "officer_agms": officer.agms, "approved": len(shift.get("approved", [])), "excluded": len(shift.get("excluded", []))})
+            return shift
 
     def shift_sessions_v2(self, shift: dict) -> list[dict]:
         approved = {_clean(x) for x in shift.get("approved", []) if _clean(x)}
@@ -1446,7 +1881,12 @@ class SharedEventStore:
             return []
         start_at = datetime.fromisoformat(shift["start_at"])
         end_at = datetime.fromisoformat(shift.get("end_at") or datetime.now().isoformat(timespec="seconds"))
-        initial = shift.get("initial_active", {}) or {}
+        initial = {a: dict(item) for a, item in (shift.get("initial_active", {}) or {}).items()}
+        for info in initial.values():
+            if _clean(info.get("event_id")):
+                info["timestamp"] = self._effective_start_timestamp(
+                    _clean(info["event_id"]), _clean(info.get("timestamp"))
+                )
         search_start = start_at
         for agms in approved:
             try:
@@ -2244,7 +2684,7 @@ def build_shift_html(store: SharedEventStore, day: date, cutoff: str) -> str:
 </head><body><pre>{_escape_html(text)}</pre></body></html>"""
 
 
-def run(args=None) -> int:
+def run(args=None, *, watchdog_heartbeat_path: Path | None = None, watchdog_parent_pid: int = 0) -> int:
     from PySide6.QtCore import Qt, QDate, QDateTime, QTime, QTimer, QRectF, QPointF, QByteArray
     from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen, QIcon, QPixmap, QPalette, QPainterPath
     from PySide6.QtSvg import QSvgRenderer
@@ -2594,6 +3034,8 @@ def run(args=None) -> int:
             self.store = store
             self.people_by_agms = people_by_agms
             self.officer_getter = officer_getter
+            self._live_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TDE-live-map")
+            self._live_future = None
             self.setWindowTitle("ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ - Ζωντανή εικόνα θέσεων")
             self.resize(1100, 820)
             self.setStyleSheet("""
@@ -2613,14 +3055,18 @@ def run(args=None) -> int:
             action_row=QHBoxLayout()
             self.active_person=QComboBox()
             self.active_person.setMinimumHeight(40)
-            self.active_person.setMinimumWidth(520)
+            self.active_person.setMinimumWidth(350)
             self.end_active_btn=QPushButton("ΛΗΞΗ ΕΝΕΡΓΗΣ ΘΕΣΗΣ")
             self.end_active_btn.setMinimumHeight(40)
             self.end_active_btn.setStyleSheet("font-weight:900")
             self.end_active_btn.clicked.connect(self._end_selected_active)
+            self.edit_start_btn=QPushButton("ΔΙΟΡΘΩΣΗ ΩΡΑΣ ΕΝΑΡΞΗΣ")
+            self.edit_start_btn.setMinimumHeight(40)
+            self.edit_start_btn.clicked.connect(self._correct_selected_start)
             action_row.addWidget(QLabel("Ενεργός αστυνομικός:"))
             action_row.addWidget(self.active_person,1)
             action_row.addWidget(self.end_active_btn)
+            action_row.addWidget(self.edit_start_btn)
             lay.addLayout(action_row)
 
             self.timer=QTimer(self); self.timer.timeout.connect(self.refresh); self.timer.start(2000)
@@ -2631,6 +3077,45 @@ def run(args=None) -> int:
             if not agms:
                 return None
             return self.store.get_active(agms)
+
+        def _correct_selected_start(self):
+            officer=self.officer_getter() if callable(self.officer_getter) else None
+            if not officer:
+                QMessageBox.warning(self,"ΑΞΥΠ","Εισαγάγετε έγκυρο Α.Γ.Μ.Σ. ΑΞΥΠ.")
+                return
+            active=self._selected_active()
+            if not active:
+                QMessageBox.warning(self,"Διόρθωση","Επιλέξτε ενεργό αστυνομικό.")
+                return
+            started=datetime.fromisoformat(active["timestamp"])
+            proposed,ok=QInputDialog.getText(
+                self,"ΔΙΟΡΘΩΣΗ ΩΡΑΣ ΕΝΑΡΞΗΣ",
+                "Πραγματική ώρα έναρξης (ΗΗ/ΜΜ/ΕΕΕΕ ΩΩ:ΛΛ):",
+                QLineEdit.Normal,started.strftime("%d/%m/%Y %H:%M"),
+            )
+            if not ok: return
+            try:
+                revised=datetime.strptime(_clean(proposed),"%d/%m/%Y %H:%M")
+            except ValueError:
+                QMessageBox.warning(self,"Διόρθωση","Χρησιμοποιήστε ΗΗ/ΜΜ/ΕΕΕΕ ΩΩ:ΛΛ.")
+                return
+            reason,ok=QInputDialog.getText(
+                self,"Αιτιολογία διόρθωσης",
+                "Αιτιολογία (π.χ. προσωρινή διακοπή εφαρμογής):",
+            )
+            if not ok: return
+            if QMessageBox.question(
+                self,"Επιβεβαίωση",
+                f"ΑΓΜΣ: {active.get('agms')}\nΠροηγούμενη: {started:%d/%m/%Y %H:%M}\n"
+                f"Νέα: {revised:%d/%m/%Y %H:%M}\nΑιτία: {_clean(reason)}\n\nΝα αποθηκευτεί η διόρθωση;",
+                QMessageBox.Yes | QMessageBox.No,QMessageBox.No,
+            )!=QMessageBox.Yes: return
+            try:
+                self.store.correct_active_start(_clean(active.get("agms")),revised,officer,reason)
+                self.refresh()
+                QMessageBox.information(self,"Διόρθωση","Η νέα ώρα καταγράφηκε με ιστορικό αλλαγής.")
+            except Exception as exc:
+                QMessageBox.critical(self,"Διόρθωση",str(exc))
 
         def _end_selected_active(self):
             officer=self.officer_getter() if callable(self.officer_getter) else None
@@ -2690,8 +3175,24 @@ def run(args=None) -> int:
             except Exception as exc:
                 QMessageBox.critical(self,"Δεν καταχωρίστηκε",str(exc))
 
+        def closeEvent(self, event):
+            self.timer.stop()
+            self._live_pool.shutdown(wait=False, cancel_futures=True)
+            super().closeEvent(event)
+
         def refresh(self):
-            items=self.store.active_all()
+            future = self._live_future
+            if future is None:
+                self._live_future = self._live_pool.submit(self.store.active_all)
+                return
+            if not future.done():
+                return
+            self._live_future = None
+            try:
+                items = future.result()
+            except Exception:
+                self.updated.setText("ΑΠΩΛΕΙΑ ΣΥΝΔΕΣΗΣ — αναμονή επαναφοράς")
+                return
             self.map.set_active(items)
             current_agms=_clean(self.active_person.currentData())
             self.active_person.blockSignals(True)
@@ -2710,6 +3211,7 @@ def run(args=None) -> int:
                     self.active_person.setCurrentIndex(idx)
             self.active_person.blockSignals(False)
             self.end_active_btn.setEnabled(bool(items))
+            self.edit_start_btn.setEnabled(bool(items))
 
             recommended = self.map.recommended_dialog_width()
             screen = QApplication.primaryScreen()
@@ -2743,7 +3245,30 @@ def run(args=None) -> int:
             self._message_dialog_active = False
             self._app_started_at = datetime.now().isoformat(timespec="seconds")
             self.client_id = SharedEventStore.local_client_id()
-            self.setWindowTitle("Τ.Δ.Ε. Κρυσταλλοπηγής - Καταγραφή Θέσεων")
+            self._network_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="TDE-network")
+            # A stalled SMB communications request must not block durable replay.
+            self._sync_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TDE-sync")
+            self._last_sync_error = ""
+            # Do not restart the same officer's async status lookup every
+            # time an unchanged central sync completes. That reset kept
+            # START/END disabled forever if SMB was slower than the timer.
+            self._last_operator_sync_signature = None
+            self._central_handoff_verified = False
+            # Network heartbeat/shift polling must never starve a booth action
+            # when the SMB host disconnects or an old worker blocks in I/O.
+            self._position_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TDE-position")
+            self._state_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="TDE-state")
+            self._position_operation_future = None
+            self._last_bootstrap_check = 0.0
+            self._offline_future = None
+            self._offline_polling = False
+            self._pending_central_store = None
+            self.offline = OfflineJournal(_machine_queue_root())
+            self._agms_query_serial = 0
+            self._shift_status_future = None
+            self._communication_future = None
+            self._shift_future = None
+            self.setWindowTitle(f"Τ.Δ.Ε. Κρυσταλλοπηγής - Καταγραφή Θέσεων v{APP_VERSION}")
             emblem_icon = _police_emblem_pixmap(96)
             if not emblem_icon.isNull():
                 self.setWindowIcon(QIcon(emblem_icon))
@@ -2759,6 +3284,10 @@ def run(args=None) -> int:
             self.communication_timer.timeout.connect(self._communication_tick)
             self.communication_timer.start(2500)
             QApplication.instance().aboutToQuit.connect(self._cleanup_client)
+            self.offline_timer = QTimer(self)
+            self.offline_timer.timeout.connect(self._offline_tick)
+            self.offline_timer.start(3000)
+            self._offline_tick()
             self._communication_tick()
 
         def _build(self):
@@ -2874,6 +3403,10 @@ def run(args=None) -> int:
             self.messages_btn.clicked.connect(self._open_messages)
             right.addWidget(self.comm_status)
             right.addWidget(self.messages_btn)
+            self.offline_conflicts_btn = QPushButton("ΕΛΕΓΧΟΣ OFFLINE ΑΣΥΜΦΩΝΙΩΝ")
+            self.offline_conflicts_btn.setMinimumHeight(38)
+            self.offline_conflicts_btn.clicked.connect(self._offline_conflicts_dialog)
+            right.addWidget(self.offline_conflicts_btn)
 
             columns.addWidget(self.operator_card, 1); columns.addWidget(self.officer_card, 1)
             outer.addLayout(columns, 1)
@@ -2916,22 +3449,60 @@ def run(args=None) -> int:
             self.showMinimized()
 
         def _cleanup_client(self):
+            try:
+                self._network_pool.shutdown(wait=False, cancel_futures=True)
+                self._sync_pool.shutdown(wait=False, cancel_futures=True)
+                self._position_pool.shutdown(wait=False, cancel_futures=True)
+                self._state_pool.shutdown(wait=False, cancel_futures=True)
+            except Exception:
+                pass
             if self.store:
                 try:
                     self.store.remove_client_heartbeat(self.client_id)
                 except Exception:
                     pass
 
+        def _end_own_active_positions(self) -> int:
+            """Close only START records created by this exact app process."""
+            if not self.store:
+                return 0
+            mine = [
+                item for item in self.store.active_all()
+                if _clean(item.get("client_id")) == self.client_id
+            ]
+            for item in mine:
+                member = PersonnelRecord(
+                    agms=_clean(item.get("agms")),
+                    rank=_clean(item.get("rank")),
+                    surname=_clean(item.get("surname")),
+                    given_name=_clean(item.get("given_name")),
+                )
+                self.store.end(member, expected_start_event_id=_clean(item.get("event_id")))
+            return len(mine)
+
         def _request_real_exit(self):
             answer = QMessageBox.question(
                 self,
                 "Έξοδος από το πρόγραμμα",
-                "Να κλείσει πραγματικά η εφαρμογή;\n\n"
-                "Αν κλείσει, δεν θα λαμβάνει μηνύματα / οδηγίες του Αξιωματικού Υπηρεσίας.",
+                "Να κλείσει πραγματικά η εφαρμογή?\\n\\n"
+                "Οι ενεργές θέσεις που ανοίχθηκαν από αυτό το παράθυρο "
+                "θα λάβουν ΛΗΞΗ πριν κλείσει το πρόγραμμα.\\n"
+                "Αν δεν είναι διαθέσιμος ο κεντρικός φάκελος, η έξοδος "
+                "δεν θα ολοκληρωθεί με ψευδή επιβεβαίωση.",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
             if answer != QMessageBox.Yes:
+                return
+            try:
+                self._end_own_active_positions()
+            except Exception as exc:
+                QMessageBox.critical(
+                    self, "Η λήξη δεν καταχωρίστηκε",
+                    f"Δεν επιβεβαιώθηκε η αποδέσμευση της θέσης.\\n{exc}\\n"
+                    "Ελέγξτε τον κεντρικό υπολογιστή ή ζητήστε από τον ΑΞΥΠ "
+                    "να ολοκληρώσει τη θέση από τη ζωντανή εικόνα."
+                )
                 return
             self._force_exit = True
             self._cleanup_client()
@@ -2971,47 +3542,73 @@ def run(args=None) -> int:
                 labels[cid] = f"{computer} — {user}{worker_text}"
             return labels
 
+        def _communication_io(self, window_state: str):
+            """Shared-folder IO must not run on the Qt GUI thread."""
+            session_active = _windows_session_is_active()
+            if not session_active:
+                # Background application from a disconnected Windows login
+                # must not masquerade as a live workstation.
+                try:
+                    self.store.remove_client_heartbeat(self.client_id)
+                except Exception:
+                    pass
+                return [], [], []
+            # No handoff from a periodic heartbeat: an older, disconnected
+            # Windows session might still be running. It must never close
+            # the newer Windows user's active booth on this computer.
+            self.store.write_client_heartbeat(self.client_id, {
+                "app_started_at": self._app_started_at,
+                "window_state": window_state,
+                "windows_session_active": session_active,
+            })
+            online = self.store.online_clients()
+            commands = self.store.pending_commands(self.client_id)
+            pending = self.store.pending_messages(self.client_id)
+            return online, commands, pending
+
         def _communication_tick(self):
             if not self.store:
                 return
-            if not _windows_session_is_active():
-                self._force_exit = True
-                self._cleanup_client()
-                QApplication.quit()
-                return
-            try:
-                state = "ΕΛΑΧΙΣΤΟΠΟΙΗΜΕΝΟ" if self.isMinimized() else "ΑΝΟΙΧΤΟ"
-                self.store.write_client_heartbeat(self.client_id, {
-                    "app_started_at": self._app_started_at,
-                    "window_state": state,
-                })
-                online = self.store.online_clients()
-                if hasattr(self, "comm_status"):
-                    self.comm_status.setText(f"ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ — ενεργοί σταθμοί: {len(online)}")
-            except Exception:
-                return
-
-            try:
-                commands = self.store.pending_commands(self.client_id)
+            future = self._communication_future
+            if future is not None:
+                if not future.done():
+                    return
+                self._communication_future = None
+                try:
+                    online, commands, pending = future.result()
+                    if hasattr(self, "comm_status"):
+                        self.comm_status.setText(
+                            f"ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ — ενεργοί σταθμοί: {len(online)}"
+                        )
+                except Exception:
+                    if hasattr(self, "comm_status"):
+                        self.comm_status.setText("ΜΗΝΥΜΑΤΑ / ΟΔΗΓΙΕΣ — ΕΛΕΓΧΟΣ ΣΥΝΔΕΣΗΣ")
+                    return
                 if commands:
                     command = commands[0]
                     if _clean(command.get("type")).upper() == "CLOSE_APP":
-                        self.store.acknowledge_command(_clean(command.get("command_id")), self.client_id)
+                        try:
+                            self._end_own_active_positions()
+                            self.store.acknowledge_command(
+                                _clean(command.get("command_id")), self.client_id
+                            )
+                        except Exception:
+                            if hasattr(self, "comm_status"):
+                                self.comm_status.setText(
+                                    "ΕΚΚΡΕΜΕΙ ΛΗΞΗ ΘΕΣΗΣ — δεν εκτελέστηκε απομακρυσμένο κλείσιμο"
+                                )
+                            return
                         self._force_exit = True
                         self._cleanup_client()
                         QApplication.quit()
                         return
-            except Exception:
-                pass
-
-            if self._message_dialog_active:
-                return
-            try:
-                pending = self.store.pending_messages(self.client_id)
-            except Exception:
-                pending = []
-            if pending:
-                self._show_message_alarm(pending[0])
+                if pending and not self._message_dialog_active:
+                    self._show_message_alarm(pending[0])
+            if self._communication_future is None:
+                state = "ΕΛΑΧΙΣΤΟΠΟΙΗΜΕΝΟ" if self.isMinimized() else "ΑΝΟΙΧΤΟ"
+                self._communication_future = self._network_pool.submit(
+                    self._communication_io, state
+                )
 
         def _show_message_alarm(self, message: dict):
             if not self.store:
@@ -3270,10 +3867,15 @@ def run(args=None) -> int:
 
         def _find_personnel_file(self) -> Path | None:
             candidates = []
+            # Cached roster first, so a powered-off shared host never blocks
+            # the operator window during Windows account login.
+            cache = _local_root() / "roster"
+            for name in ("ΠΡΟΣΩΠΙΚΟ.xlsx", "ΠΡΟΣΩΠΙΚΟ.xlsm", "PROSOPIKO.xlsx", "PROSOPIKO.xlsm"):
+                candidates.append(cache / name)
             legacy = Path(self.config.personnel_file) if _clean(self.config.personnel_file) else None
-            if legacy and legacy.is_file():
+            if legacy:
                 candidates.append(legacy)
-            for base in (_runtime_root(), _app_dir() / "CONFIG", _app_dir()):
+            for base in (_app_dir() / "CONFIG", _app_dir(), Path(self.config.central_root)):
                 for name in ("ΠΡΟΣΩΠΙΚΟ.xlsx", "ΠΡΟΣΩΠΙΚΟ.xlsm", "PROSOPIKO.xlsx", "PROSOPIKO.xlsm"):
                     candidates.append(base / name)
             for path in candidates:
@@ -3284,28 +3886,49 @@ def run(args=None) -> int:
         def _apply_config(self):
             self.position.clear(); self.position.addItems(self.config.positions or [])
             self._position_changed(self.position.currentText())
+            if not self.config.central_root:
+                self.config.central_root = str(_app_dir() / ".tde_runtime")
+            # Never touch a possibly disconnected UNC path on the GUI thread.
+            self.store = None
             try:
-                self.store = SharedEventStore(_runtime_root())
-                self.config.central_root = str(_runtime_root())
-            except Exception as exc:
-                self.store = None
-                self.info.setText(f"Πρόβλημα .tde_runtime: {exc}")
+                self.offline.auto_close_previous_windows_users(
+                    socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or "")
+            except Exception:
+                pass
+            if getattr(sys, "frozen", False) and not self.config.shared_exe_path:
+                self.config.shared_exe_path = str(Path(sys.executable).resolve())
             personnel = self._find_personnel_file()
             if personnel:
                 try:
-                    self._load_people(str(personnel)); self.config.personnel_file = str(personnel)
+                    self._load_people(str(personnel))
+                    if not self.config.personnel_file:
+                        self.config.personnel_file = str(personnel)
                 except Exception as exc:
                     self.info.setText(f"Πρόβλημα προσωπικού: {exc}")
             self.config.save()
             self._refresh_info(); self._agms_changed(); self._refresh_shift_status()
 
         def _refresh_info(self):
-            if self.store and self.people:
-                self.info.setText(f"Σύστημα έτοιμο — Λίστα προσωπικού: {len(self.people)} άτομα")
-            elif not self.store:
-                self.info.setText("Δεν είναι διαθέσιμος ο φάκελος δεδομένων.")
+            conflicts = self.offline.conflicts()
+            pending = self.offline._rows(("PENDING",))
+            if not self.store:
+                problem = _clean(getattr(self, "_last_sync_error", ""))
+                self.info.setText(
+                    f"ΚΕΝΤΡΙΚΟΣ: ΧΩΡΙΣ ΣΥΝΔΕΣΗ — ΤΟΠΙΚΑ: {len(pending)} ΕΚΚΡΕΜΕΙΣ / "
+                    f"{len(conflicts)} ΑΣΥΜΦΩΝΙΕΣ. "
+                    + (f"ΑΙΤΙΑ: {problem}" if problem else "Αναμονή σύνδεσης.")
+                )
+            elif conflicts or pending:
+                problem = _clean(getattr(self, "_last_sync_error", ""))
+                self.info.setText(
+                    ("ΚΕΝΤΡΙΚΟΣ: ΣΦΑΛΜΑ ΣΥΓΧΡΟΝΙΣΜΟΥ" if problem else "ΚΕΝΤΡΙΚΟΣ: ΠΡΟΣΒΑΣΙΜΟΣ")
+                    + f" — ΤΟΠΙΚΑ: {len(pending)} ΕΚΚΡΕΜΕΙΣ / {len(conflicts)} ΑΣΥΜΦΩΝΙΕΣ. "
+                    + (f"ΑΙΤΙΑ: {problem}" if problem else "Οι μη επιβεβαιωμένες κινήσεις ΔΕΝ φαίνονται στον ΑΞΥΠ.")
+                )
+            elif self.people:
+                self.info.setText(f"ΚΕΝΤΡΙΚΟΣ: ΣΥΝΔΕΔΕΜΕΝΟΣ — ΣΥΓΧΡΟΝΙΣΜΕΝΟ — προσωπικό: {len(self.people)}")
             else:
-                self.info.setText("Δεν έχει επιλεγεί λίστα προσωπικού.")
+                self.info.setText("ΚΕΝΤΡΙΚΟΣ: ΣΥΝΔΕΔΕΜΕΝΟΣ — δεν έχει επιλεγεί λίστα προσωπικού.")
 
         def _save_config(self):
             self.config.positions = [self.position.itemText(i) for i in range(self.position.count()) if _clean(self.position.itemText(i))]
@@ -3314,6 +3937,13 @@ def run(args=None) -> int:
         def _load_people(self, path: str):
             self.people = PersonnelRepository.load(path)
             self._people_by_agms = {_clean(p.agms): p for p in self.people}
+            try:
+                cached = _local_root() / "roster" / Path(path).name
+                cached.parent.mkdir(parents=True, exist_ok=True)
+                if Path(path).resolve() != cached.resolve():
+                    shutil.copy2(path, cached)
+            except OSError:
+                pass
             self._agms_changed(); self._officer_changed()
 
         def _choose_personnel_list(self):
@@ -3344,21 +3974,88 @@ def run(args=None) -> int:
             self._refresh_shift_status()
 
         def _agms_changed(self, *_):
-            p = self._selected()
-            if not p:
+            self._agms_query_serial = getattr(self, "_agms_query_serial", 0) + 1
+            serial = self._agms_query_serial
+            person = self._selected()
+            self.start_btn.setEnabled(False)
+            self.end_btn.setEnabled(False)
+            if not person:
                 self.person_name.setText("—")
-                self.active_status.setText("Ο Α.Γ.Μ.Σ. δεν βρέθηκε στο προσωπικό" if _clean(self.agms_input.text()) else "Πληκτρολογήστε Α.Γ.Μ.Σ.")
-                self.start_btn.setEnabled(False); self.end_btn.setEnabled(False)
+                self.active_status.setText(
+                    "Ο Α.Γ.Μ.Σ. δεν βρέθηκε στο προσωπικό"
+                    if _clean(self.agms_input.text()) else "Πληκτρολογήστε Α.Γ.Μ.Σ."
+                )
                 return
-            self.person_name.setText(_clean(f"{p.rank} {p.surname} {p.given_name}"))
-            active = self.store.get_active(p.agms) if self.store else None
-            if active:
-                ts = _clean(active.get("timestamp","")).replace("T"," ")
-                self.active_status.setText(f"ΕΝΕΡΓΗ: ΘΕΣΗ {active.get('position','')} — {active.get('direction','')} — από {ts}")
-                self.start_btn.setEnabled(False); self.end_btn.setEnabled(True)
-            else:
-                self.active_status.setText("Δεν υπάρχει ανοικτή καταχώριση")
-                self.start_btn.setEnabled(bool(self.store)); self.end_btn.setEnabled(False)
+            self.person_name.setText(_clean(f"{person.rank} {person.surname} {person.given_name}"))
+            if self._position_operation_future is not None:
+                self.active_status.setText("ΚΑΤΑΧΩΡΙΣΗ ΣΕ ΕΞΕΛΙΞΗ — μην την επαναλάβετε.")
+                return
+            local = self.offline.local_active(person.agms)
+            affected = [
+                x for x in self.offline.conflicts()
+                if x["agms"] == person.agms
+            ]
+            if affected:
+                self.active_status.setText(
+                    f"ΑΣΥΜΦΩΝΙΑ ΓΙΑ ΑΓΜΣ {person.agms} — "
+                    "ΕΝΑΡΞΗ/ΛΗΞΗ ΠΡΟΣΩΡΙΝΑ ΑΝΕΝΕΡΓΕΣ. "
+                    "Απαιτείται έλεγχος από ΑΞΥΠ, χωρίς διαγραφή τοπικών στοιχείων."
+                )
+                return
+            person_pending = any(
+                x["agms"] == person.agms
+                for x in self.offline._rows(("PENDING",))
+            )
+            if not self.store or person_pending:
+                self.active_status.setText(
+                    (f"ΤΟΠΙΚΗ ΘΕΣΗ {local.get('position','')} — ΕΚΚΡΕΜΕΙ ΚΕΝΤΡΙΚΗ ΕΠΙΒΕΒΑΙΩΣΗ"
+                     if local else "ΕΚΤΟΣ ΣΥΝΔΕΣΗΣ — νέα έναρξη θα παραμείνει ΠΡΟΣΩΡΙΝΗ")
+                )
+                self.end_btn.setEnabled(bool(local))
+                self.start_btn.setEnabled(not bool(local))
+                return
+            self.active_status.setText("ΕΛΕΓΧΟΣ ΕΝΕΡΓΗΣ ΘΕΣΗΣ — αναμονή κεντρικού.")
+            def load_remote():
+                record = self.store.get_active(person.agms)
+                self.offline.remember(person.agms, record)
+                return record
+            future = self._state_pool.submit(load_remote)
+            query_started = time.monotonic()
+
+            def poll():
+                if serial != self._agms_query_serial:
+                    return
+                if not future.done():
+                    if time.monotonic() - query_started > 3.0:
+                        local = self.offline.local_active(person.agms)
+                        self.active_status.setText("ΔΙΚΤΥΟ ΧΩΡΙΣ ΑΠΟΚΡΙΣΗ — τοπική λειτουργία με εκκρεμή επιβεβαίωση")
+                        self.start_btn.setEnabled(not bool(local))
+                        self.end_btn.setEnabled(bool(local))
+                        return
+                    QTimer.singleShot(200, poll)
+                    return
+                try:
+                    active = future.result()
+                except Exception:
+                    local = self.offline.local_active(person.agms)
+                    self.active_status.setText("ΧΩΡΙΣ ΣΥΝΔΕΣΗ — τοπικές εγγραφές ΕΚΚΡΕΜΟΥΝ")
+                    self.start_btn.setEnabled(not bool(local))
+                    self.end_btn.setEnabled(bool(local))
+                    return
+                if self._position_operation_future is not None:
+                    return
+                if active:
+                    ts = _clean(active.get("timestamp", "")).replace("T", " ")
+                    self.active_status.setText(
+                        f"ΕΝΕΡΓΗ: ΘΕΣΗ {active.get('position','')} — "
+                        f"{active.get('direction','')} — από {ts}"
+                    )
+                    self.end_btn.setEnabled(True)
+                else:
+                    self.active_status.setText("Δεν υπάρχει ανοικτή καταχώριση")
+                    self.start_btn.setEnabled(True)
+
+            QTimer.singleShot(100, poll)
 
         @staticmethod
         def _suggested_direction(position: str) -> str:
@@ -3374,31 +4071,178 @@ def run(args=None) -> int:
             idx = self.direction.findText(suggested)
             if idx >= 0: self.direction.setCurrentIndex(idx)
 
-        def _start(self):
-            p = self._selected()
-            if not p or not self.store:
-                QMessageBox.warning(self, "Έλεγχος", "Επιλέξτε λίστα προσωπικού."); return
-            pos = _clean(self.position.currentText())
-            direction = _clean(self.direction.currentText()).upper()
-            try:
-                if pos not in {str(i) for i in range(1,15)}: raise ValueError("Επιλέξτε θέση 1 έως 14.")
-                e = self.store.start(p,pos,direction)
-                QMessageBox.information(self,"Καταχώριση",f"ΕΝΑΡΞΗ: ΘΕΣΗ {pos} — {direction}\nΏρα: {e['timestamp'].replace('T',' ')}")
+        def _offline_conflicts_dialog(self):
+            officer = self._officer_selected()
+            if not officer:
+                QMessageBox.warning(self, "ΑΞΥΠ", "Συμπληρώστε πρώτα έγκυρο ΑΓΜΣ ΑΞΥΠ.")
+                return
+            conflicts = self.offline.conflicts()
+            if not conflicts:
+                QMessageBox.information(self, "Offline", "Δεν υπάρχουν εκκρεμείς ασυμφωνίες.")
+                return
+            dlg = QDialog(self)
+            dlg.setWindowTitle("ΑΞΥΠ — ΑΣΥΜΦΩΝΙΕΣ ΣΥΓΧΡΟΝΙΣΜΟΥ")
+            dlg.resize(820, 520)
+            lay = QVBoxLayout(dlg)
+            label = QLabel("Η παρακάτω τοπική εγγραφή ΔΕΝ καταχωρίστηκε κεντρικά. "
+                           "Ελέγξτε την πραγματική εργασία πριν απορρίψετε την εγγραφή.")
+            label.setWordWrap(True)
+            lay.addWidget(label)
+            listing = QListWidget()
+            for rec in conflicts:
+                listing.addItem(f"{rec['created_at']} | ΑΓΜΣ {rec['agms']} | "
+                                f"{rec['kind']} | ΘΕΣΗ {rec['position']} | {rec['error']}")
+                listing.item(listing.count()-1).setData(Qt.UserRole, rec['id'])
+            lay.addWidget(listing, 1)
+            row = QHBoxLayout()
+            reject = QPushButton("ΑΠΟΡΡΙΨΗ ΜΕ ΑΙΤΙΟΛΟΓΙΑ")
+            close = QPushButton("ΚΛΕΙΣΙΜΟ")
+            row.addWidget(reject); row.addWidget(close); lay.addLayout(row)
+            def resolve():
+                item = listing.currentItem()
+                if not item:
+                    return
+                reason, ok = QInputDialog.getText(dlg, "Αιτιολογία", "Γιατί απορρίπτεται η τοπική εγγραφή;")
+                if not ok: return
+                if QMessageBox.question(dlg, "ΕΠΙΒΕΒΑΙΩΣΗ",
+                    "Η καταχώριση δεν θα μεταφερθεί κεντρικά. Διατηρείται στο ιστορικό. Συνέχεια;",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No) != QMessageBox.Yes:
+                    return
+                try:
+                    self.offline.resolve_conflict(_clean(item.data(Qt.UserRole)), officer.agms, reason)
+                    dlg.accept()
+                    self._refresh_info()
+                    self._agms_changed()
+                except Exception as exc:
+                    QMessageBox.critical(dlg, "Ασυμφωνία", str(exc))
+            reject.clicked.connect(resolve)
+            close.clicked.connect(dlg.reject)
+            dlg.exec()
+
+        def _offline_tick(self):
+            if self._offline_future is not None:
+                if not self._offline_future.done():
+                    return
+                future = self._offline_future
+                self._offline_future = None
+                try:
+                    connected, result = future.result()
+                    self.store = connected
+                    self._last_sync_error = result.get("network_error", "")
+                    if result.get("conflicts"):
+                        self.info.setText("ΑΣΥΜΦΩΝΙΑ ΑΠΟΣΥΝΔΕΔΕΜΕΝΩΝ ΚΑΤΑΧΩΡΙΣΕΩΝ — έλεγχος ΑΞΥΠ")
+                    signature = (
+                        True, self._last_sync_error,
+                        result.get("pending", 0),
+                        tuple(sorted(x["id"] for x in result.get("conflicts", []))),
+                    )
+                    refresh_operator = bool(result.get("applied"))
+                    self._refresh_info()
+                except Exception as exc:
+                    self.store = None
+                    self._last_sync_error = str(exc)[:240]
+                    signature = (False, self._last_sync_error)
+                    refresh_operator = False
+                    self._refresh_info()
+                # Previously this was unconditional. Every 3-second tick
+                # disabled BOTH controls and started a fresh remote lookup.
+                # If SMB took >=3 sec, the timeout callback was invalidated
+                # on each tick. Allow an in-flight lookup to finish/time out.
+                if signature != self._last_operator_sync_signature or refresh_operator:
+                    self._last_operator_sync_signature = signature
+                    self._agms_changed()
+            if self._offline_future is not None:
+                return
+            if not self.config.central_root:
+                return
+            def work():
+                if not Path(self.config.central_root).is_dir():
+                    raise BusyError("Ο κεντρικός φάκελος δεν είναι διαθέσιμος.")
+                # Avoid reinitializing shared SQLite and directories every
+                # three seconds on all 15 clients; it causes SMB lock churn.
+                store = self.store or SharedEventStore(self.config.central_root)
+                if not _windows_session_is_active():
+                    # An old, disconnected Windows logon must not replay the
+                    # new user's shared machine queue before that user has
+                    # performed the safe central handoff.
+                    return store, {
+                        "applied": [], "pending": self.offline.pending_count(),
+                        "conflicts": self.offline.conflicts(), "network_error": "",
+                    }
+                # Close the old Windows user's central START before applying
+                # the new user's offline START at the same physical booth.
+                # Store checks computer, Windows account and exact START id.
+                if not self._central_handoff_verified and _windows_session_is_active():
+                    # Once per NEW application session. Never let an older
+                    # background Windows session keep closing its successor.
+                    store.close_previous_windows_user_positions(
+                        socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or "")
+                    self._central_handoff_verified = True
+                report = self.offline.sync(store, PersonnelRecord)
+                return store, report
+            self._offline_future = self._sync_pool.submit(work)
+
+        def _position_action(self, kind: str, person: PersonnelRecord, position: str = "", direction: str = ""):
+            if self._position_operation_future is not None:
+                QMessageBox.warning(self, "Καταχώριση", "Υπάρχει ήδη εντολή σε εξέλιξη.")
+                return
+            self.start_btn.setEnabled(False)
+            self.end_btn.setEnabled(False)
+            self.active_status.setText("ΤΟΠΙΚΗ ΑΠΟΘΗΚΕΥΣΗ ΚΑΤΑΧΩΡΙΣΗΣ…")
+            def work():
+                # Never wait on a sleeping/disconnected SMB host while a booth
+                # action is being recorded. Store the operation locally first;
+                # a separate network worker performs idempotent central replay.
+                result = self.offline.enqueue(kind, person, position, direction, self.client_id)
+                result["pending_sync"] = True
+                result["conflict"] = any(
+                    x["agms"] == person.agms
+                    for x in self.offline.conflicts()
+                )
+                return result
+            future = self._position_pool.submit(work)
+            self._position_operation_future = future
+            def poll():
+                if not future.done():
+                    QTimer.singleShot(200, poll)
+                    return
+                self._position_operation_future = None
+                try:
+                    outcome = future.result()
+                except Exception as exc:
+                    QMessageBox.critical(self, "Δεν καταχωρίστηκε", str(exc))
+                else:
+                    if outcome.get("conflict"):
+                        QMessageBox.warning(self, "ΑΣΥΜΦΩΝΙΑ", "Απαιτείται έλεγχος ΑΞΥΠ. Η τοπική εγγραφή δεν διαγράφηκε.")
+                    elif outcome["pending_sync"]:
+                        QMessageBox.warning(self, "ΕΚΚΡΕΜΕΙ ΣΥΓΧΡΟΝΙΣΜΟΣ", "Η καταχώριση φυλάχθηκε ΤΟΠΙΚΑ. Δεν έχει ακόμη επιβεβαιωθεί κεντρικά.")
+                    else:
+                        QMessageBox.information(self, "Καταχώριση", f"{kind}: Η καταχώριση επιβεβαιώθηκε κεντρικά.")
+                self._refresh_info()
                 self._agms_changed()
-                QTimer.singleShot(150, self._check_shift_updates)
-            except Exception as exc:
-                QMessageBox.critical(self,"Δεν καταχωρίστηκε",str(exc))
+                # Launch central reconciliation asynchronously; the button
+                # remains responsive regardless of central SMB availability.
+                self._offline_tick()
+            QTimer.singleShot(100, poll)
+
+        def _start(self):
+            person = self._selected()
+            if not person:
+                QMessageBox.warning(self, "Έλεγχος", "Επιλέξτε λίστα προσωπικού.")
+                return
+            position = _clean(self.position.currentText())
+            direction = _clean(self.direction.currentText()).upper()
+            if position not in {str(i) for i in range(1, 15)}:
+                QMessageBox.warning(self, "Θέση", "Επιλέξτε θέση 1 έως 14.")
+                return
+            self._position_action("START", person, position, direction)
 
         def _end(self):
-            p = self._selected()
-            if not p or not self.store:
-                QMessageBox.warning(self, "Έλεγχος", "Επιλέξτε λίστα προσωπικού."); return
-            try:
-                e=self.store.end(p)
-                QMessageBox.information(self,"Καταχώριση",f"ΛΗΞΗ καταχωρίστηκε στις {e['timestamp'].replace('T',' ')}")
-                self._agms_changed()
-            except Exception as exc:
-                QMessageBox.critical(self,"Δεν καταχωρίστηκε",str(exc))
+            person = self._selected()
+            if not person:
+                QMessageBox.warning(self, "Έλεγχος", "Επιλέξτε λίστα προσωπικού.")
+                return
+            self._position_action("END", person)
 
         def _preview_list_dialog(self, title: str, intro: str, agms_list: list[str], allow_exclude: bool) -> tuple[bool,list[str],list[str]]:
             dlg=QDialog(self); dlg.setWindowTitle(title); dlg.resize(620,480)
@@ -3492,86 +4336,392 @@ def run(args=None) -> int:
             self._refresh_shift_status()
             return True
 
+        def _confirm_and_end_officer_shift(self, officer: PersonnelRecord) -> bool:
+            """Per-person END and group END inside shift close; live map unchanged."""
+            if not self.store:
+                return False
+            previous = getattr(self, "_shift_closure_future", None)
+            if previous is not None and not previous.done():
+                QMessageBox.warning(
+                    self, "Εκκρεμής καταχώριση",
+                    "Υπάρχει προηγούμενη εντολή λήξης σε εξέλιξη. "
+                    "Ελέγξτε ξανά την κατάσταση αφού ολοκληρωθεί.",
+                )
+                return False
+
+            dlg = QDialog(self)
+            dlg.setWindowTitle("ΛΗΞΗ ΒΑΡΔΙΑΣ — ΕΚΚΡΕΜΕΙΣ ΘΕΣΕΙΣ")
+            dlg.resize(920, 670)
+            lay = QVBoxLayout(dlg)
+            lay.setContentsMargins(20, 18, 20, 18)
+            lay.setSpacing(12)
+            heading = QLabel("ΑΣΤΥΝΟΜΙΚΟΙ ΠΟΥ ΔΕΝ ΕΧΟΥΝ ΚΑΝΕΙ ΛΗΞΗ")
+            heading.setStyleSheet("font-size:17px;font-weight:800")
+            lay.addWidget(heading)
+            status = QLabel("Έλεγχος ενεργών θέσεων…")
+            status.setWordWrap(True)
+            lay.addWidget(status)
+            pending_note = QLabel("")
+            pending_note.setWordWrap(True)
+            lay.addWidget(pending_note)
+            positions_list = QListWidget()
+            positions_list.setAlternatingRowColors(True)
+            lay.addWidget(positions_list, 1)
+            excluded_note = QLabel("")
+            excluded_note.setWordWrap(True)
+            lay.addWidget(excluded_note)
+            footer = QHBoxLayout()
+            refresh_btn = QPushButton("ΑΝΑΝΕΩΣΗ")
+            group_btn = QPushButton("ΟΜΑΔΙΚΗ ΛΗΞΗ")
+            finalize_btn = QPushButton("ΟΛΟΚΛΗΡΩΣΗ ΒΑΡΔΙΑΣ")
+            cancel_btn = QPushButton("ΚΛΕΙΣΙΜΟ")
+            for button in (refresh_btn, group_btn, finalize_btn, cancel_btn):
+                button.setMinimumHeight(42)
+                footer.addWidget(button)
+            lay.addLayout(footer)
+
+            worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="TDE-shift-close")
+            state = {"future": None, "kind": "", "shift": None,
+                     "active": [], "excluded": [], "row_buttons": [],
+                     "finalized": False, "pending": False}
+
+            def full_name(item: dict) -> str:
+                name = _clean(
+                    f"{item.get('rank', '')} {item.get('surname', '')} {item.get('given_name', '')}"
+                )
+                return name or _clean(item.get("full_name")) or f"ΑΓΜΣ {_clean(item.get('agms'))}"
+
+            def position_label(item: dict) -> str:
+                return (
+                    f"{full_name(item)}  |  ΘΕΣΗ {_clean(item.get('position'))}"
+                    f" — {_clean(item.get('direction'))}  |  "
+                    f"ΕΝΑΡΞΗ {_clean(item.get('timestamp')).replace('T', ' ')}"
+                )
+
+            def set_busy(message: str):
+                status.setText(message)
+                refresh_btn.setEnabled(False)
+                group_btn.setEnabled(False)
+                finalize_btn.setEnabled(False)
+                for button in state["row_buttons"]:
+                    button.setEnabled(False)
+
+            def submit(kind: str, task):
+                if state["future"] is not None:
+                    return
+                set_busy("Επικοινωνία με τον κεντρικό φάκελο — αναμονή επιβεβαίωσης…")
+                state["kind"] = kind
+                future = worker.submit(task)
+                state["future"] = future
+                if kind in {"single", "finalize"}:
+                    self._shift_closure_future = future
+
+            def load_data():
+                shift = self.store.sync_active_shift()
+                active = self.store.active_all() if shift else []
+                return shift, active
+
+            def reload():
+                submit("load", load_data)
+
+            def selected_member_end(item: dict):
+                if state["future"] is not None:
+                    return
+                name = full_name(item)
+                confirm = QMessageBox.question(
+                    dlg, "ΜΕΜΟΝΩΜΕΝΗ ΛΗΞΗ",
+                    f"{position_label(item)}\n\n"
+                    f"Να καταχωριστεί ΛΗΞΗ μόνο για τον/την {name};\n"
+                    "Η βάρδια θα παραμείνει ανοικτή.",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+                )
+                if confirm != QMessageBox.Yes:
+                    return
+                shift_id = _clean(state["shift"].get("shift_id"))
+                agms = _clean(item.get("agms"))
+                start_id = _clean(item.get("event_id"))
+                submit(
+                    "single",
+                    lambda: self.store.end_officer_shift_member(
+                        officer, agms, shift_id, start_id
+                    ),
+                )
+
+            def finalize_shift(group: bool):
+                if state["future"] is not None or not state["shift"]:
+                    return
+                pending = bool(state["shift"].get("pending"))
+                if pending:
+                    QMessageBox.warning(
+                        dlg, "Άτομα σε αναμονή",
+                        "Υπάρχουν άτομα σε ΑΝΑΜΟΝΗ. "
+                        "Ολοκληρώστε πρώτα την ΑΠΟΔΟΧΗ ή ΕΞΑΙΡΕΣΗ από τον πίνακα ΑΞΥΠ.",
+                    )
+                    return
+                items = list(state["active"])
+                if not group and items:
+                    return
+                if group and not items:
+                    return
+                if group:
+                    names = "\n".join(f"• {position_label(x)}" for x in items)
+                    question = (
+                        "Να καταχωριστεί ΟΜΑΔΙΚΗ ΛΗΞΗ στους παρακάτω αστυνομικούς;\n\n"
+                        f"{names}\n\n"
+                        "Θα ολοκληρωθεί και η βάρδια. Οι ΕΞΑΙΡΕΜΕΝΟΙ δεν θα επηρεαστούν."
+                    )
+                else:
+                    question = (
+                        "Δεν υπάρχουν πλέον ανοικτές θέσεις στους ΑΠΟΔΕΚΤΟΥΣ.\n\n"
+                        "Να ολοκληρωθεί η βάρδια;"
+                    )
+                confirm = QMessageBox.question(
+                    dlg, "ΕΠΙΒΕΒΑΙΩΣΗ ΛΗΞΗΣ ΒΑΡΔΙΑΣ", question,
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+                )
+                if confirm != QMessageBox.Yes:
+                    return
+                shift_id = _clean(state["shift"].get("shift_id"))
+                snapshot = {
+                    _clean(x.get("agms")): _clean(x.get("event_id"))
+                    for x in items
+                }
+                submit(
+                    "finalize",
+                    lambda: self.store.end_officer_shift(
+                        officer, expected_active_start_ids=snapshot,
+                        expected_shift_id=shift_id,
+                    ),
+                )
+
+            def render(shift: dict | None, active: list[dict]):
+                positions_list.clear()
+                state["row_buttons"] = []
+                state["shift"] = shift
+                state["active"] = []
+                state["excluded"] = []
+                if not shift:
+                    status.setText("Δεν υπάρχει ενεργή βάρδια.")
+                    pending_note.setText("")
+                    excluded_note.setText("")
+                    group_btn.setEnabled(False)
+                    finalize_btn.setEnabled(False)
+                    refresh_btn.setEnabled(True)
+                    return
+                approved = {_clean(x) for x in shift.get("approved", [])}
+                state["active"] = [x for x in active if _clean(x.get("agms")) in approved]
+                state["excluded"] = [x for x in active if _clean(x.get("agms")) not in approved]
+                state["pending"] = bool(shift.get("pending"))
+                if state["pending"]:
+                    pending_note.setText(
+                        "ΠΡΟΣΟΧΗ: Υπάρχουν αστυνομικοί σε ΑΝΑΜΟΝΗ. "
+                        "Αποφασίστε ΑΠΟΔΟΧΗ ή ΕΞΑΙΡΕΣΗ στον πίνακα ΑΞΥΠ "
+                        "πριν ολοκληρώσετε τη βάρδια."
+                    )
+                else:
+                    pending_note.setText("")
+                for item in state["active"]:
+                    row_widget = QWidget()
+                    row_lay = QHBoxLayout(row_widget)
+                    row_lay.setContentsMargins(8, 4, 8, 4)
+                    label = QLabel(position_label(item))
+                    label.setWordWrap(True)
+                    row_lay.addWidget(label, 1)
+                    button = QPushButton("ΛΗΞΗ")
+                    button.setMinimumWidth(100)
+                    button.setMinimumHeight(38)
+                    button.clicked.connect(
+                        lambda checked=False, rec=dict(item): selected_member_end(rec)
+                    )
+                    row_lay.addWidget(button)
+                    entry = QListWidgetItem()
+                    entry.setSizeHint(row_widget.sizeHint())
+                    positions_list.addItem(entry)
+                    positions_list.setItemWidget(entry, row_widget)
+                    state["row_buttons"].append(button)
+                count = len(state["active"])
+                status.setText(
+                    f"Εκκρεμούν {count} λήξεις για την τρέχουσα βάρδια."
+                    if count else "Όλοι οι ΑΠΟΔΕΚΤΟΙ έχουν κάνει ΛΗΞΗ."
+                )
+                if state["excluded"]:
+                    excluded_note.setText(
+                        "ΕΞΑΙΡΕΜΕΝΟΙ / ΕΚΤΟΣ ΒΑΡΔΙΑΣ — ΔΕΝ ΘΑ ΚΛΕΙΣΟΥΝ:\n"
+                        + "\n".join(position_label(x) for x in state["excluded"])
+                    )
+                else:
+                    excluded_note.setText("")
+                enabled = not state["pending"]
+                refresh_btn.setEnabled(True)
+                group_btn.setEnabled(enabled and count > 0)
+                finalize_btn.setEnabled(enabled and count == 0)
+                for button in state["row_buttons"]:
+                    button.setEnabled(enabled)
+
+            def poll():
+                future = state["future"]
+                if future is None:
+                    return
+                if not future.done():
+                    return
+                kind = state["kind"]
+                state["future"] = None
+                state["kind"] = ""
+                try:
+                    output = future.result()
+                except Exception as exc:
+                    QMessageBox.critical(
+                        dlg, "Δεν επιβεβαιώθηκε η καταχώριση",
+                        f"{exc}\n\nΕλέγξτε ξανά την κατάσταση πριν επαναλάβετε.",
+                    )
+                    if kind != "load":
+                        reload()
+                    else:
+                        status.setText("Δεν είναι διαθέσιμα τα κεντρικά δεδομένα.")
+                        refresh_btn.setEnabled(True)
+                    return
+                if kind == "load":
+                    render(*output)
+                elif kind == "single":
+                    reload()
+                elif kind == "finalize":
+                    state["finalized"] = True
+                    self._refresh_shift_status()
+                    QMessageBox.information(
+                        dlg, "Η ΒΑΡΔΙΑ ΟΛΟΚΛΗΡΩΘΗΚΕ",
+                        "Η βάρδια οριστικοποιήθηκε και αποθηκεύτηκε.\n"
+                        f"Αυτόματες λήξεις με την ολοκλήρωση: "
+                        f"{len(output.get('closed_active_agms', []))}.",
+                    )
+                    dlg.accept()
+
+            refresh_btn.clicked.connect(reload)
+            group_btn.clicked.connect(lambda: finalize_shift(True))
+            finalize_btn.clicked.connect(lambda: finalize_shift(False))
+            cancel_btn.clicked.connect(dlg.reject)
+            timer = QTimer(dlg)
+            timer.timeout.connect(poll)
+            timer.start(180)
+            reload()
+            try:
+                dlg.exec()
+            finally:
+                timer.stop()
+                worker.shutdown(wait=False, cancel_futures=True)
+            return bool(state["finalized"])
+
         def _end_officer_shift_ui(self):
             if not self.store:
                 return
-            p=self._officer_selected()
-            if not p:
-                QMessageBox.warning(self,"Έλεγχος","Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."); return
-            shift=self.store.sync_active_shift()
-            if not shift:
-                QMessageBox.information(self,"Βάρδια","Δεν υπάρχει ενεργή βάρδια."); return
-            if shift.get("pending"):
-                self._resolve_pending_members()
-                shift=self.store.sync_active_shift()
-                if shift and shift.get("pending"):
-                    return
-            approved=list(shift.get("approved",[]))
-            ok,_,_=self._preview_list_dialog(
-                "ΕΠΙΒΕΒΑΙΩΣΗ ΛΗΞΗΣ ΒΑΡΔΙΑΣ",
-                "Αυτά είναι τα άτομα που θα συμπεριληφθούν στην τελική βάρδια. Επιβεβαιώστε για να ολοκληρωθεί η λήξη.",
-                approved, False
-            )
-            if not ok: return
-            try:
-                final=self.store.end_officer_shift(p)
-                self._refresh_shift_status()
-                QMessageBox.information(
-                    self,
-                    "Λήξη βάρδιας",
-                    "Η βάρδια ολοκληρώθηκε και αποθηκεύτηκε στο αρχείο αναφορών (SQLite)."
+            officer = self._officer_selected()
+            if not officer:
+                QMessageBox.warning(
+                    self, "Έλεγχος",
+                    "Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."
                 )
-                self._close_remaining_clients_dialog()
+                return
+            try:
+                self._confirm_and_end_officer_shift(officer)
             except Exception as exc:
-                QMessageBox.critical(self,"Λήξη βάρδιας",str(exc))
+                QMessageBox.critical(self, "Λήξη βάρδιας", str(exc))
 
         def _refresh_shift_status(self):
-            if not hasattr(self,"shift_status"): return
-            shift=self.store.current_shift() if self.store else None
-            p=self._officer_selected() if hasattr(self,"officer_agms") else None
-            if not shift:
-                report_shift = self.store.current_report_shift() if self.store else None
-                if report_shift and _clean(report_shift.get("status")).upper() == "FINALIZED":
-                    ended = _clean(report_shift.get("end_at"))
-                    try:
-                        ended_dt = datetime.fromisoformat(ended)
-                        ended_text = f"{ended_dt:%d/%m/%Y %H:%M}"
-                    except Exception:
-                        ended_text = ended.replace("T", " ") if ended else "—"
-                    self.shift_status.setText(
-                        f"Η προηγούμενη βάρδια έληξε {ended_text}.\n"
-                        "Η αναφορά της παραμένει ΤΡΕΧΟΥΣΑ μέχρι την έναρξη της επόμενης."
-                    )
-                else:
-                    self.shift_status.setText("Δεν υπάρχει ενεργή βάρδια.")
-                self.start_shift_btn.setEnabled(bool(p and self.store))
+            if not hasattr(self, "shift_status"):
+                return
+            if not self.store:
+                self.shift_status.setText("ΑΝΑΜΟΝΗ ΣΥΝΔΕΣΗΣ ΜΕ ΤΑ ΚΕΝΤΡΙΚΑ ΔΕΔΟΜΕΝΑ")
+                self.start_shift_btn.setEnabled(False)
                 self.end_shift_btn.setEnabled(False)
                 return
-            st=datetime.fromisoformat(shift["start_at"])
-            off=shift.get("start_officer") or {}
-            name=_clean(f"{off.get('rank','')} {off.get('full_name','')}")
-            pending=len(shift.get("pending",[]))
-            text=f"Ενεργή βάρδια από {st:%d/%m/%Y %H:%M}\n{name}"
-            if pending: text += f"\nΑναμονή επιβεβαίωσης: {pending}"
-            self.shift_status.setText(text)
+            previous = getattr(self, "_shift_status_future", None)
+            if previous is not None and not previous.done():
+                return
             self.start_shift_btn.setEnabled(False)
-            self.end_shift_btn.setEnabled(bool(p))
+            self.end_shift_btn.setEnabled(False)
+
+            def read_status():
+                shift = self.store.current_shift()
+                final = None if shift else self.store.current_report_shift()
+                return shift, final
+
+            future = self._state_pool.submit(read_status)
+            self._shift_status_future = future
+
+            def poll():
+                if self._shift_status_future is not future:
+                    return
+                if not future.done():
+                    QTimer.singleShot(200, poll)
+                    return
+                self._shift_status_future = None
+                try:
+                    shift, report_shift = future.result()
+                except Exception:
+                    self.shift_status.setText(
+                        "ΑΝΑΜΟΝΗ ΣΥΝΔΕΣΗΣ ΜΕ ΤΑ ΚΕΝΤΡΙΚΑ ΔΕΔΟΜΕΝΑ"
+                    )
+                    self.start_shift_btn.setEnabled(False)
+                    self.end_shift_btn.setEnabled(False)
+                    return
+                officer = self._officer_selected()
+                if not shift:
+                    if report_shift and _clean(report_shift.get("status")).upper() == "FINALIZED":
+                        ended = _clean(report_shift.get("end_at"))
+                        try:
+                            ended_dt = datetime.fromisoformat(ended)
+                            ended_text = f"{ended_dt:%d/%m/%Y %H:%M}"
+                        except Exception:
+                            ended_text = ended.replace("T", " ") if ended else "—"
+                        self.shift_status.setText(
+                            f"Η προηγούμενη βάρδια έληξε {ended_text}.\\n"
+                            "Η αναφορά της παραμένει ΤΡΕΧΟΥΣΑ μέχρι την έναρξη της επόμενης."
+                        )
+                    else:
+                        self.shift_status.setText("Δεν υπάρχει ενεργή βάρδια.")
+                    self.start_shift_btn.setEnabled(bool(officer))
+                    self.end_shift_btn.setEnabled(False)
+                    return
+                started = datetime.fromisoformat(shift["start_at"])
+                starter = shift.get("start_officer") or {}
+                name = _clean(f"{starter.get('rank','')} {starter.get('full_name','')}")
+                pending = len(shift.get("pending", []))
+                msg = f"Ενεργή βάρδια από {started:%d/%m/%Y %H:%M}\\n{name}"
+                if pending:
+                    msg += f"\\nΑναμονή επιβεβαίωσης: {pending}"
+                self.shift_status.setText(msg)
+                self.start_shift_btn.setEnabled(False)
+                self.end_shift_btn.setEnabled(bool(officer))
+
+            QTimer.singleShot(100, poll)
 
         def _check_shift_updates(self):
-            if not self.store: return
-            shift=self.store.sync_active_shift()
+            if not self.store:
+                return
+            future = self._shift_future
+            if future is None:
+                self._shift_future = self._network_pool.submit(self.store.sync_active_shift)
+                return
+            if not future.done():
+                return
+            self._shift_future = None
+            try:
+                shift = future.result()
+            except Exception:
+                if hasattr(self, "shift_status"):
+                    self.shift_status.setText("ΑΝΑΜΟΝΗ ΣΥΝΔΕΣΗΣ ΜΕ ΚΕΝΤΡΙΚΑ ΔΕΔΟΜΕΝΑ")
+                return
             if not shift:
                 if self._last_shift_signature != "NO_SHIFT":
                     self._last_shift_signature = "NO_SHIFT"
                     self._refresh_shift_status()
                 return
-            signature=json.dumps({
-                "approved":shift.get("approved",[]),
-                "excluded":shift.get("excluded",[]),
-                "pending":shift.get("pending",[])
-            },ensure_ascii=False,sort_keys=True)
-            if signature!=self._last_shift_signature:
-                self._last_shift_signature=signature
+            signature = json.dumps({
+                "approved": shift.get("approved", []),
+                "excluded": shift.get("excluded", []),
+                "pending": shift.get("pending", [])
+            }, ensure_ascii=False, sort_keys=True)
+            if signature != self._last_shift_signature:
+                self._last_shift_signature = signature
                 self._refresh_shift_status()
             if shift.get("pending") and not self._pending_prompt_active:
                 self._resolve_pending_members()
@@ -3705,13 +4855,8 @@ def run(args=None) -> int:
                 if not p:
                     QMessageBox.warning(dlg, "Έλεγχος", "Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."); return
                 try:
-                    shift = self.store.end_officer_shift(p)
-                    QMessageBox.information(
-                        dlg,
-                        "Λήξη βάρδιας",
-                        "Η βάρδια ολοκληρώθηκε και αποθηκεύτηκε στο αρχείο αναφορών (SQLite)."
-                    )
-                    refresh_members()
+                    if self._confirm_and_end_officer_shift(p):
+                        refresh_members()
                 except Exception as exc:
                     QMessageBox.critical(dlg, "Λήξη βάρδιας", str(exc))
 
@@ -4276,8 +5421,42 @@ def run(args=None) -> int:
     app.setApplicationName("TDE Position Tracking")
     window = MainWindow()
     window.show()
+    if watchdog_heartbeat_path is not None:
+        # This timer executes on the actual Qt GUI thread, not a background
+        # worker. It stops ticking if a GUI action blocks on Windows SMB.
+        # The independent watchdog can then kill/restart this process.
+        heartbeat = QTimer(window)
+        heartbeat.setInterval(1250)
+
+        def announce_responsiveness():
+            if watchdog_parent_pid and not parent_is_alive(watchdog_parent_pid):
+                # The supervisor was terminated; do not orphan this old GUI.
+                # No shift END is issued by a normal QApplication.quit().
+                app.quit()
+                return
+            try:
+                watchdog_heartbeat_path.parent.mkdir(parents=True, exist_ok=True)
+                watchdog_heartbeat_path.touch()
+            except OSError:
+                # If local writes fail, the watcher will eventually recognize
+                # the missing heartbeat. Do not touch the central SMB share.
+                pass
+
+        heartbeat.timeout.connect(announce_responsiveness)
+        heartbeat.start()
+        announce_responsiveness()
     return app.exec()
 
 
 if __name__ == "__main__":
+    if getattr(sys, "frozen", False):
+        if len(sys.argv) == 4 and sys.argv[1] == "--tde-watched-child":
+            raise SystemExit(run(
+                [sys.executable],
+                watchdog_heartbeat_path=Path(sys.argv[2]),
+                watchdog_parent_pid=int(sys.argv[3]),
+            ))
+        # The EXE always starts an independent watcher, even when launched
+        # via the existing desktop shortcut. No admin/install is required.
+        raise SystemExit(run_frozen_watchdog(sys.executable, _local_root()))
     raise SystemExit(run())
