@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 import tempfile
 import sqlite3
+from contextlib import closing
 
 ROOT=Path(__file__).resolve().parents[1]
 SPEC=importlib.util.spec_from_file_location('position_tracking_machine_queue',ROOT/'src'/'position_tracking_machine_queue.py')
@@ -41,17 +42,19 @@ with tempfile.TemporaryDirectory() as root:
                 else:raise AssertionError('Unsafe silent per-user fallback')
     legacy=a/'TDE_Krystallopigis'/'PositionTracking'/'machine_queue'/'position_outbox.sqlite3'
     legacy.parent.mkdir(parents=True,exist_ok=True)
-    with sqlite3.connect(legacy) as db:
+    with closing(sqlite3.connect(legacy)) as db:
         db.execute('CREATE TABLE operations (id TEXT PRIMARY KEY,status TEXT)')
         db.execute("INSERT INTO operations VALUES ('original-event-id','PENDING')")
+        db.commit()
     with patch.dict(os.environ,{'PUBLIC':str(public),'LOCALAPPDATA':str(a),
                                 'TDE_POSITION_MACHINE_ROOT':''},clear=False):
         try:mq._machine_queue_root()
         except RuntimeError as exc:assert 'ΕΚΚΡΕΜΕΙΣ' in str(exc),str(exc)
         else:raise AssertionError('Hidden unsent original event was ignored')
-    with sqlite3.connect(legacy) as db:
+    with closing(sqlite3.connect(legacy)) as db:
         assert db.execute('SELECT COUNT(*) FROM operations').fetchone()[0]==1
         db.execute("UPDATE operations SET status='APPLIED'")
+        db.commit()
     assert resolve(a)==path
     assert resolve(b,base/'EXPLICIT-BOOTH-08')==base/'EXPLICIT-BOOTH-08'
     legacy.write_text('CORRUPT_SQLITE',encoding='utf-8')

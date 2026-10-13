@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import uuid
+from contextlib import closing
 from pathlib import Path
 
 def _local_root() -> Path:
@@ -62,7 +63,9 @@ def _machine_queue_root() -> Path:
     legacy = _local_root() / "machine_queue" / "position_outbox.sqlite3"
     if legacy.exists() and legacy.resolve() != (path / legacy.name).resolve():
         try:
-            with sqlite3.connect(f"file:{legacy.as_posix()}?mode=ro", uri=True, timeout=2) as db:
+            # sqlite3.Connection.__exit__ commits; it DOES NOT close the handle.
+            # On Windows that held the legacy outbox file open (WinError 32).
+            with closing(sqlite3.connect(f"file:{legacy.as_posix()}?mode=ro", uri=True, timeout=2)) as db:
                 outstanding = db.execute(
                     "SELECT COUNT(*) FROM operations WHERE status IN ('PENDING', 'CONFLICT')"
                 ).fetchone()[0]
