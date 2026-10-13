@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from position_tracking_offline import OfflineJournal, OfflineConflict
 from position_tracking_windows_session import _windows_session_is_active
 from position_tracking_machine_queue import _local_root, _machine_queue_root
-from position_tracking_handoff import close_previous_windows_user_positions
+from position_tracking_handoff import close_previous_windows_user_positions, reconcile_handoff_before_replay
 from position_tracking_bootstrap import cache_windows_client
 from xml.etree import ElementTree as ET
 
@@ -3138,6 +3138,7 @@ def run(args=None) -> int:
             self._offline_future = None
             self._offline_polling = False
             self._pending_central_store = None
+            self._handoff_initial_error = ""
             self.offline = OfflineJournal(_machine_queue_root())
             self._agms_query_serial = 0
             self._shift_status_future = None
@@ -3419,12 +3420,9 @@ def run(args=None) -> int:
         def _communication_io(self, window_state: str):
             """Shared-folder IO must not run on the Qt GUI thread."""
             session_active = _windows_session_is_active()
-            # Do NOT close on Windows idle/lock/session-disconnected status:
-            # only a verified DIFFERENT Windows account on the same computer
-            # constitutes a handoff. This check also runs after SMB reconnect.
-            self.store.close_previous_windows_user_positions(
-                socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or ""
-            )
+            # Central closures are owned only by the offline-sync worker.
+            # Running an independent heartbeat-side close here could overtake
+            # the original unsent END and discard its timestamp/event ID.
             self.store.write_client_heartbeat(self.client_id, {
                 "app_started_at": self._app_started_at,
                 "window_state": window_state,
@@ -3762,8 +3760,8 @@ def run(args=None) -> int:
             try:
                 self.offline.auto_close_previous_windows_users(
                     socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or "")
-            except Exception:
-                pass
+            except Exception as exc:
+                self._handoff_initial_error = str(exc)
             if getattr(sys, "frozen", False) and not self.config.shared_exe_path:
                 self.config.shared_exe_path = str(Path(sys.executable).resolve())
             personnel = self._find_personnel_file()
@@ -3778,6 +3776,11 @@ def run(args=None) -> int:
             self._refresh_info(); self._agms_changed(); self._refresh_shift_status()
 
         def _refresh_info(self):
+            if self._handoff_initial_error:
+                self.info.setText(
+                    "ΕΚΚΡΕΜΕΙ Η ΑΛΛΑΓΗ ΧΡΗΣΤΗ WINDOWS — " + self._handoff_initial_error
+                )
+                return
             if not self.store:
                 self.info.setText("ΧΩΡΙΣ ΚΕΝΤΡΙΚΟ — τοπικές εκκρεμείς εγγραφές, θα γίνει συγχρονισμός μόλις επιστρέψει η σύνδεση.")
             elif self.offline.conflicts():
@@ -3975,12 +3978,18 @@ def run(args=None) -> int:
                 try:
                     connected, result = future.result()
                     self.store = connected
+                    self._handoff_initial_error = ""
                     if result.get("conflicts"):
                         self.info.setText("ΑΣΥΜΦΩΝΙΑ ΑΠΟΣΥΝΔΕΔΕΜΕΝΩΝ ΚΑΤΑΧΩΡΙΣΕΩΝ — έλεγχος ΑΞΥΠ")
                     self._refresh_info()
-                except Exception:
+                except Exception as exc:
                     self.store = None
                     self._refresh_info()
+                    self.info.setText(
+                        "ΔΕΝ ΟΛΟΚΛΗΡΩΘΗΚΕ Ο ΣΥΓΧΡΟΝΙΣΜΟΣ / HANDOFF: "
+                        + str(exc)[:220]
+                        + " — οι εκκρεμείς εγγραφές παραμένουν αποθηκευμένες."
+                    )
                 self._agms_changed()
             if self._offline_future is not None:
                 return
@@ -3990,13 +3999,10 @@ def run(args=None) -> int:
                 if not Path(self.config.central_root).is_dir():
                     raise BusyError("Ο κεντρικός φάκελος δεν είναι διαθέσιμος.")
                 store = SharedEventStore(self.config.central_root)
-                report = self.offline.sync(store, PersonnelRecord)
-                if not report.get("pending"):
-                    try:
-                        store.close_previous_windows_user_positions(
-                            socket.gethostname(), os.environ.get("USERNAME") or os.environ.get("USER") or "")
-                    except Exception:
-                        pass
+                report = reconcile_handoff_before_replay(
+                    store, self.offline, PersonnelRecord, socket.gethostname(),
+                    os.environ.get("USERNAME") or os.environ.get("USER") or "",
+                )
                 if self.config.shared_exe_path and time.monotonic() - self._last_bootstrap_check > 300:
                     self._last_bootstrap_check = time.monotonic()
                     try:
@@ -4007,6 +4013,13 @@ def run(args=None) -> int:
             self._offline_future = self._network_pool.submit(work)
 
         def _position_action(self, kind: str, person: PersonnelRecord, position: str = "", direction: str = ""):
+            if self._handoff_initial_error:
+                QMessageBox.warning(
+                    self, "ΑΝΑΜΟΝΗ ΣΥΜΦΩΝΙΑΣ WINDOWS",
+                    "Δεν επιβεβαιώθηκε η λήξη του προηγούμενου χρήστη. "
+                    + self._handoff_initial_error,
+                )
+                return
             if self._position_operation_future is not None:
                 QMessageBox.warning(self, "Καταχώριση", "Υπάρχει ήδη εντολή σε εξέλιξη.")
                 return

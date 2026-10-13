@@ -92,6 +92,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Windows session module contract failed" }
           python "tests\client_lifecycle_regression.py"
           if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
+          python "tests\windows_handoff_replay_order_regression.py"
+          if ($LASTEXITCODE -ne 0) { throw "Windows handoff replay ordering and multi-booth safety regression failed" }
           python "tests\windows_handoff_module_regression.py"
           if ($LASTEXITCODE -ne 0) { throw "Handoff module stage 3a contract failed" }
           python "tests\windows_user_handoff_regression.py"

@@ -28,6 +28,8 @@ jobs:
         run: python tests/machine_queue_module_regression.py
       - name: Isolated Windows handoff module stage 3a contract
         run: python tests/windows_handoff_module_regression.py
+      - name: Windows handoff replay ordering and 14 booths
+        run: python tests/windows_handoff_replay_order_regression.py
       - name: Ensure release baseline remains v1.2.5
         shell: pwsh
         run: |
@@ -48,3 +50,4 @@ jobs:
       - run: python tests/shared_file_lock_concurrency_regression.py
       - run: python tests/machine_queue_module_regression.py
       - run: python tests/windows_handoff_module_regression.py
+      - run: python tests/windows_handoff_replay_order_regression.py
