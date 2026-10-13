@@ -29,3 +29,6 @@
 Απομονώθηκε `src/position_tracking_windows_session.py` **με ακριβώς την παλιά συνάρτηση**, χωρίς αλλαγή λογικής. Η εφαρμογή εισάγει αυτή τη συνάρτηση από το module.
 Νέο `tests/windows_session_module_regression.py` ελέγχει 10 WTS states, αποτυχία API και έναν μοναδικό ορισμό της συνάρτησης.
 **Δεν υπάρχει νέα εγκεκριμένη παραγωγική έκδοση.**
+
+### Πραγματικό εύρημα από γενικό Windows regression (13/10/2026)
+Το αρχικό full Windows CI απέτυχε στο παλαιό `tests/shift_smb_lock_concurrency.py` (PermissionError σε `os.write(fd, b"\\x00")` ΠΡΙΝ το `msvcrt.locking`). Συνεπώς το Stage 1 ΔΕΝ θεωρήθηκε πλήρως ολοκληρωμένο μόνο με το module test. Η προετοιμασία byte αφαιρέθηκε (Windows byte-range locks δεν χρειάζονται προεγγραφή) και προστέθηκε `tests/shared_file_lock_concurrency_regression.py` με 6 γύρους x 12 ταυτόχρονους χειριστές σε καινούρια lock files. Ο επανέλεγχος Windows απαιτείται πριν επιτραπεί το Stage 2.

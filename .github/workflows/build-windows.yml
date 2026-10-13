@@ -82,6 +82,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\network_resilience_regression.py"
           if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
+          python "tests\shared_file_lock_concurrency_regression.py"
+          if ($LASTEXITCODE -ne 0) { throw "Windows SMB lock contention regression failed" }
           python "tests\shift_smb_lock_concurrency.py"
           if ($LASTEXITCODE -ne 0) { throw "Python regression failed (exit code $LASTEXITCODE)" }
           python "tests\windows_session_module_regression.py"

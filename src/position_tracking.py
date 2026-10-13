@@ -534,11 +534,11 @@ class SharedEventStore:
             raise BusyError(f"Δεν είναι διαθέσιμος ο κοινόχρηστος φάκελος: {exc}") from exc
         locked = False
         try:
-            try:
-                if os.fstat(fd).st_size == 0:
-                    os.write(fd, b"\x00")
-            except OSError as exc:
-                raise BusyError(f"Αδύνατη προετοιμασία κλειδώματος: {exc}") from exc
+            # Never write a bootstrap byte BEFORE acquiring the OS lock.
+            # On Windows/SMB a concurrent owner may already lock byte 0;
+            # os.write(fd, b"\x00") then fails with EACCES and was treated as
+            # a fatal error rather than normal lock contention. Both Windows
+            # byte-range locks and POSIX flock support empty lock files.
             deadline = time.monotonic() + timeout
             while True:
                 try:
