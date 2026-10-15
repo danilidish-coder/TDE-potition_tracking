@@ -5,6 +5,22 @@ import os
 import subprocess
 
 
+def use_physical_pixel_coordinates():
+    """Keep Win32 geometry/clicks in the same pixels as ImageGrab screenshots."""
+    user = ctypes.WinDLL('user32', use_last_error=True)
+    user.SetThreadDpiAwarenessContext.argtypes = [wintypes.HANDLE]
+    user.SetThreadDpiAwarenessContext.restype = wintypes.HANDLE
+    if not user.SetThreadDpiAwarenessContext(ctypes.c_void_p(-4)):
+        raise ctypes.WinError(ctypes.get_last_error())
+
+
+def theme_button_point(bbox, dpi):
+    left, top, right, bottom = bbox
+    scale = dpi / 96.0
+    return (right - round((28 + 20 + 86 + 16 + 108 / 2) * scale),
+            top + round((22 + 12 + 34 / 2) * scale))
+
+
 def descendant_pids(root_pid, processes):
     result = {root_pid}
     while True:

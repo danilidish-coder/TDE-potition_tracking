@@ -5,7 +5,10 @@ import sys
 import time
 import unittest
 
-from support.windows_visual_processes import descendant_pids, process_snapshot, stop_process_tree
+from support.windows_visual_processes import (
+    descendant_pids, process_snapshot, stop_process_tree,
+    use_physical_pixel_coordinates, theme_button_point,
+)
 
 
 class VisualProcessContract(unittest.TestCase):
@@ -14,6 +17,14 @@ class VisualProcessContract(unittest.TestCase):
 
     def test_out_of_order_snapshot_and_cycle_terminate(self):
         self.assertEqual(descendant_pids(10, [(12, 11), (11, 10), (10, 12)]), {10, 11, 12})
+
+    def test_theme_click_scales_to_physical_monitor_pixels(self):
+        self.assertEqual(theme_button_point((10, 20, 1210, 820), 96), (1006, 71))
+        self.assertEqual(theme_button_point((10, 20, 1810, 1220), 144), (1504, 96))
+
+    @unittest.skipUnless(os.name == 'nt', 'Actual Windows DPI API contract')
+    def test_native_physical_pixel_context(self):
+        use_physical_pixel_coordinates()
 
     @unittest.skipUnless(os.name == 'nt', 'Actual Windows process API contract')
     def test_native_snapshot_contains_current_process(self):

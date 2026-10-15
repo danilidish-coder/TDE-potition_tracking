@@ -12,7 +12,12 @@ from pathlib import Path
 from typing import Optional
 
 from PIL import ImageGrab, ImageStat
-from support.windows_visual_processes import descendant_pids, process_snapshot, stop_process_tree
+from support.windows_visual_processes import (
+    descendant_pids, process_snapshot, stop_process_tree,
+    use_physical_pixel_coordinates, theme_button_point,
+)
+
+use_physical_pixel_coordinates()
 
 user32 = ctypes.windll.user32
 SW_RESTORE = 9
@@ -39,6 +44,8 @@ user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(RECT)]
 user32.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(POINT)]
 user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
 user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+user32.GetDpiForWindow.argtypes = [wintypes.HWND]
+user32.GetDpiForWindow.restype = wintypes.UINT
 
 
 @dataclass
@@ -108,6 +115,11 @@ def frame_metrics(img, prev_small=None):
 
 def capture_sequence(hwnd: int, seconds: float, interval: float = 0.025):
     bbox = client_bbox(hwnd)
+    desktop = (user32.GetSystemMetrics(76), user32.GetSystemMetrics(77),
+               user32.GetSystemMetrics(78), user32.GetSystemMetrics(79))
+    x, y, width, height = desktop
+    if not (x <= bbox[0] < bbox[2] <= x + width and y <= bbox[1] < bbox[3] <= y + height):
+        raise RuntimeError(f"Visual client area {bbox} is clipped by desktop {desktop}")
     samples = []
     raw = []
     prev = None
@@ -241,13 +253,10 @@ def write_csv(samples, path: Path):
 def click_theme(hwnd: int):
     user32.ShowWindow(hwnd, SW_RESTORE)
     user32.SetForegroundWindow(hwnd)
-    left, top, right, bottom = client_bbox(hwnd)
-    width = right-left
     # The last 86px of the header belong to the Greece map, not the
     # theme button. The main window has 28px outer and 20px header margins,
     # a 16px widget gap, and a 108px theme-button minimum width.
-    x = left + width - (28 + 20 + 86 + 16 + 108 // 2)
-    y = top + 22 + 12 + 34 // 2
+    x, y = theme_button_point(client_bbox(hwnd), user32.GetDpiForWindow(hwnd))
     user32.SetCursorPos(x, y)
     time.sleep(0.05)
     user32.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
@@ -264,18 +273,7 @@ def wait_for_window(pid: int, timeout=20.0):
     raise RuntimeError("Main window not found")
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--exe", required=True)
-    ap.add_argument("--out", required=True)
-    args = ap.parse_args()
-
-    exe = str(Path(args.exe).resolve())
-    out = Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
-
-    report = {"startup_runs": [], "theme_toggles": [], "capture_supported": True}
-
+def _run_visual_tests(exe, out, report):
     for run in range(1, 21):
         p = subprocess.Popen([exe], cwd=str(Path(exe).parent))
         try:
@@ -288,7 +286,8 @@ def main():
             owner = wintypes.DWORD()
             user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
             summary.update(root_pid=p.pid, window_pid=owner.value,
-                           bbox_before=before_bbox, bbox_after=client_bbox(hwnd))
+                           bbox_before=before_bbox, bbox_after=client_bbox(hwnd),
+                           window_dpi=user32.GetDpiForWindow(hwnd))
             report["startup_runs"].append(summary)
             write_csv(samples, out / f"startup_{run:02d}.csv")
             save_worst(raw, samples, out, f"startup_{run:02d}")
@@ -337,6 +336,26 @@ def main():
     if report["startup_endpoint_flicker_runs"] or report["theme_endpoint_flicker_toggles"]:
         raise RuntimeError("Visible flicker or unintended third-state frames detected.")
     return 0
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--exe", required=True)
+    ap.add_argument("--out", required=True)
+    args = ap.parse_args()
+    exe = str(Path(args.exe).resolve())
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    report = {"startup_runs": [], "theme_toggles": [], "capture_supported": True}
+    try:
+        return _run_visual_tests(exe, out, report)
+    except Exception as exc:
+        report["error"] = {"type": type(exc).__name__, "message": str(exc)}
+        raise
+    finally:
+        # Preserve partial runs and the actual error even if capture/window
+        # discovery fails before the usual final summary is produced.
+        (out / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":

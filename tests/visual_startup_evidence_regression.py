@@ -1,7 +1,11 @@
 """Exercise screenshot evidence on Linux without importing Windows APIs."""
 import ast
+import argparse
+import json
+import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from PIL import Image
@@ -17,6 +21,21 @@ check = namespace["startup_endpoint_check"]
 
 
 class StartupEvidenceContract(unittest.TestCase):
+    def test_capture_failure_preserves_partial_report_and_original_error(self):
+        main_node = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'main')
+        def fail(exe, out, report):
+            report['startup_runs'].append({'run': 1, 'frames': 0})
+            raise RuntimeError('injected clipped desktop')
+        scope = {'Path': Path, 'argparse': argparse, 'json': json, '_run_visual_tests': fail}
+        exec(compile(ast.Module(body=[main_node], type_ignores=[]), str(SOURCE), 'exec'), scope)
+        with tempfile.TemporaryDirectory() as temporary:
+            with patch.object(sys, 'argv', ['visual', '--exe', 'test.exe', '--out', temporary]):
+                with self.assertRaisesRegex(RuntimeError, 'injected clipped desktop'):
+                    scope['main']()
+            report = json.loads((Path(temporary) / 'report.json').read_text())
+            self.assertEqual(report['error']['message'], 'injected clipped desktop')
+            self.assertEqual(report['startup_runs'], [{'run': 1, 'frames': 0}])
+
     def test_stable_frames_keep_references_without_false_failure(self):
         image = Image.new("RGB", (32, 24), "white")
         with tempfile.TemporaryDirectory() as directory:
