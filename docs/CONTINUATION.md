@@ -1,100 +1,119 @@
-# Modular development — exact continuation checkpoint
+# Continuation checkpoint — STOP, 2026-10-15
 
-## Scope and protection
+Development is paused by the user's explicit instruction. This checkpoint saves
+completed work only. Do not start another module, diagnosis/fix cycle, CI run or
+production release today. Resume only on the user's next instruction.
 
-Work only on `feature/v125-modularization-20261013`. Complete correctness fixes,
-modularization, actual tests and a development Windows EXE autonomously. Make
-small independently checked changes; do not waive failures or claim unexecuted
-checks. Do not change main, production v1.2.5, real operational data or publish a
-production release. Main was verified as
-`3c7a785a4008caa7b4fc1c7fd8d240cb8653ff99`. Use the existing checkout and Python
-3.12 `.venv`; no reinstall/worktree is needed. User explicitly permits independent
-safe work while a separate problem is being diagnosed, without calling it passed.
+## Branch and exact commits
 
-## Current state and first pending action
+Use the existing checkout and existing Python 3.12 `.venv`; do not reinstall.
+Work exclusively on `feature/v125-modularization-20261013`.
 
-This revision contains a locally validated candidate; it is NOT a completed
-modularization or a production-ready build. First: push the unpublished commits
-on this branch, await their exact Windows/Linux runs, fetch the diagnostic-only
-CI commits, and inspect full reports. Never force-push over remote work.
+- Latest application source: `ec80b132c35c48f25a3b3601ad74a3290f769825`
+  (pure theme module extraction, locally validated; native CI pending).
+- Last Windows/Linux tested source: `22bc3bde7a69482fdac3d97fae5ab9538bfe1a81`
+  (strict byte-identical prelaunch desktop classification).
+- Personnel module: `1e7f2f20e6fa894a8db92b5dc38649397ebfd091`.
+- Atomic offline replay/cache fix: `ccbb27132a510b7105282487ff3e053b769a8f2c`.
+- Smoke process-tree cleanup: `fcce6a4d527f5290b5e605bd64c61d3aefb41c55`.
+- START marker acknowledgement durability fix:
+  `c81b91aa3fc7153ce5a2e1dd9893af05f5ef50a8`.
+- Windows evidence commit: `43d92a9ad520bd4ef0a0145ea9c9dd9df9aaad6e`.
+- Linux evidence commit: `0c588874d47903b2a52ff3ce46ed7fd4c4d6e8ff`.
 
-- Atomic cache correctness commit: `ccbb271` (rebased before publication).
-- Smoke bootloader-tree cleanup: `fcce6a4` (rebased before publication).
-- This next commit adds physical pixel geometry, DPI-scaled clicks, a complete
-  CI desktop, clipping rejection and preservation of partial visual reports.
-- Full local suite after all candidate changes: **34 scripts PASS**. The native
-  visual-process contract has 6 cases: 3 portable pass and 3 Windows-only cases
-  explicitly skip on Linux. Real native cases must pass in Windows CI.
-- Compileall src/tests/tools and git diff --check passed. No install was run.
-- Source/app version, production EXE and release workflow were checked unchanged
-  relative to original task base `129e8cb` (application logic changed only here
-  on the isolated feature branch).
+The documentation checkpoint is the commit containing this file; obtain its exact
+SHA with `git log -1 --format=%H -- docs/CONTINUATION.md`. It follows the source
+commit above and is deliberately marked `[skip ci]` to save work without starting
+a new verification cycle today. No force push is needed.
 
-No current strict startup visual PASS has yet been established. The historical
-last full workflow SUCCESS is source `9dbbb21`, Windows run `38800196045`, Linux
-`38800195521`, module gate `38800195516`: 31 scripts on both platforms, EXE
-build/smoke, 0/20 startup anomalies, 0/30 theme anomalies, 30/30 actual toggles.
-Subsequent audit found startup-harness limitations, so that SUCCESS does NOT
-certify 20 fresh/unclipped startups under the improved protocol.
+## Actual checks and failures
 
-## Verified fixes and evidence
+Latest source `ec80b132...`:
 
-1. `position_tracking_rendering.coherent_widget_update`: one top-level update
-   transaction, polish/layout while disabled, synchronous whole-tree repaint.
-   No processEvents, hiding, screenshots-as-overlays or threshold changes. Old
-   `129e8cb` fails the real Qt paint-order contract; corrected app passes. Tests
-   cover nested/disabled/exception states, queued-action non-reentry and 60 real
-   application theme changes/persisted config in isolated directories.
-2. `SharedEventStore.start` preserves durable START if active replace committed
-   but its acknowledgement was lost, or marker/share state is unreadable. It
-   removes the event only after confirmed absent marker/access to its directory,
-   preserving the original before-write no-phantom behavior. Three store fault
-   cases cover restart, same-ID retry, history and physical-booth exclusion.
-   Commit `c81b91a` passed 32 scripts on both Linux `38801316804` and Windows
-   `38801316650`; full Windows nevertheless FAILED its startup visual test.
-3. Atomic cache candidate: conditional PENDING→APPLIED and observed-state update
-   in one SQLite transaction. It also ignores a delayed already-applied replay
-   so an old START cannot resurrect after a newer END. Three actual SQLite
-   abort/concurrent replay cases fail on the old module and pass locally now.
-   Windows validation of THIS change is still required.
-4. CI failures diagnosed/fixed, not waived: Linux lacked libEGL.so.1 (CI now
-   installs libegl1/libopengl0); captured Windows station subprocesses used cp1252
-   (runner now explicitly uses UTF-8 throughout nested processes; Greek JSON
-   round-trip contract added). Raw failed diagnostics remain under docs/validation.
+- Completed local suite: **36 scripts PASS**. Saved exact results and provenance:
+  `docs/validation/local-theme-20261015/`. Three native Windows process cases skip
+  on Linux; these skips are not Windows validation.
+- Completed `compileall src tests tools` and `git diff --check`: PASS.
+- Its own Windows build, smoke, visual test, Linux CI and module gate: **PENDING**.
+  Do not transfer an earlier revision's results to this source.
 
-## Startup visual investigation and current correction
+Previous source `22bc3bde...`:
 
-User inspected original run 38794439758: toggle 24 had mixed light/dark rows.
-After the rendering correction, three subsequent 30-toggle runs reported ZERO
-endpoint theme anomalies, all clicks confirmed. Do not generalize this to every
-field display or treat legacy pixel-change diagnostics as unintended flicker.
+- Linux run **38806871712**: **35 scripts PASS**;
+  `docs/validation/linux-38806871712-1/results.json`.
+- Windows run **38806871707**: **35 scripts PASS**, EXE build and smoke PASS,
+  but the complete workflow **FAILED** at `tests/visual_flicker_windows.py`:
+  `RuntimeError: Visible flicker or unintended third-state frames detected.`
+- Strict startup endpoint anomalies: **12/20**; recognized byte-identical initial
+  desktop loading runs: **0**. Strict theme endpoint anomalies: **0/30**;
+  actual theme clicks confirmed: **30/30**. Legacy pixel-change diagnostics are
+  not the strict endpoint acceptance results.
+- Full report, provenance, regression outcomes and diagnostic contact sheets:
+  `docs/validation/windows-visual-38806871707-1/`.
+  Run: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/38806871707
 
-Run `38801316650` (c81b91a) still had 9/20 startup anomalies. Contact sheets
-showed runner desktop/console before first UI and initial layout movement. Audit
-found wait_for_window(pid) ignored PID and terminated only the onefile parent.
+The startup problem is **UNRESOLVED**. Earlier run 38805076037 on
+`29b0a1fa538a69df32220af50c234a83708bd8cb` passed 34 portable scripts and
+build/smoke but failed 15/20 startups. Inspected frames included desktop/console
+before complete UI; this motivated capturing an actual prelaunch reference.
+The latest exact-reference classifier did not recognize those frames as unchanged
+desktop. Do not claim the remaining 12 anomalies are normal loading or confirmed
+application repaint defects without inspecting their actual evidence.
 
-Fresh-process correction `fcc315e`, Windows `38803245321`, Linux `38803244931`,
-module gate `38803244930`: all 33 portable scripts passed, including actual
-Windows snapshot/taskkill contracts. Whole Windows run FAILED: 15/20 startup
-anomalies, 0/30 theme anomalies, 30/30 clicks. Distinct root/child PIDs prove fresh
-launches. Suspect windows had identical bbox before/after `[8,31,1036,751]`;
-most differed only at t=0 and matched the endpoint by about 40ms. Contact sheets
-show initial layout reflow, not mixed-theme colors. Do NOT ignore that first frame.
+Historical run 38800196045 reported all checks passing on
+`9dbbb21fce2e9f9d938fca6659f01cdeeffecc62`, but subsequent harness audits found
+PID/cleanup/viewport limitations. It does not certify the improved startup test.
 
-Current test-only correction uses per-monitor physical pixels consistently with
-ImageGrab, scales clicks by GetDpiForWindow, REJECTS clipped client areas, and sets
-CI desktop to 1920x1080. Smoke and visual cleanup kill the owned bootloader tree.
-No frame, interval, endpoint threshold or failure criterion was removed. Partial
-report.json plus exact errors are now saved in finally even on early capture or
-window errors; a regression confirms the error still propagates.
+## Completed implementation and module boundaries
 
-Inspect actual new DPI/geometry/report data. If Set-DisplayResolution is unavailable,
-diagnose its platform error; do not disable the clipping guard. A supported-display
-CI test does NOT prove adaptive layout on undersized/high-DPI field desktops.
+- `position_tracking_rendering`: coherent top-level theme mutation, polish/layout
+  and synchronous repaint, with paint-order, nesting, exception and real app tests.
+- `position_tracking_personnel`: unchanged personnel records, read-only OOXML
+  repository and roster import; legacy entry exports retained; six contracts.
+- `position_tracking_theme`: unchanged theme dictionaries and stylesheet function;
+  independent import, normalization and actual Qt pixel contracts (three cases).
+- Existing modules retained: common, Windows session, machine queue, handoff,
+  offline journal and bootstrap. See `docs/ARCHITECTURE_AUDIT.md` for boundaries.
+- START history survives ambiguous committed marker acknowledgements; three
+  fault/retry cases. Offline PENDING-to-APPLIED transition and observed cache now
+  commit atomically; three SQLite abort/delayed replay cases.
+- CI runs every root regression script, preserves exact failures, uses UTF-8,
+  and retains Windows visual evidence even on failure. Native process ownership,
+  tree cleanup, physical DPI geometry, clipping rejection and partial-report
+  retention have explicit contracts.
 
-## Commands and access
+No visual check was removed. Original application endpoint threshold remains
+0.08. Only byte-identical initial prelaunch desktop frames may be launch latency;
+partial/black/mixed UI, desktop returning after app pixels, zero frames and
+only-desktop captures still fail. Raw frames/distances remain evidence.
 
-From repository root:
+## First action tomorrow and remaining work
+
+1. Read this checkpoint and verify Git branch/HEAD against origin; no reinstall
+   and no repeat of completed extractions. Inspect the saved failing startup
+   sequences from run 38806871707, including reference versus first/worst/final
+   images and geometry. Establish why exact desktop comparison recognized zero
+   loading runs before selecting a correction; do not loosen criteria.
+2. Verify the saved theme revision on its own native Windows/Linux CI and module
+   gate. All three workflows support `workflow_dispatch`; select this feature
+   branch. Do not dispatch today. GitHub API/artifact access was blocked in this
+   environment, while Git HTTPS and public Actions pages worked. Use available
+   authenticated workflow access tomorrow; do not claim a dispatch succeeded
+   without a real run. The CI Git evidence transport can recover reports without
+   asking the user to download them. Full screenshots are Actions artifacts with
+   one-day retention; diagnostic thumbnails/reports are committed and persistent.
+3. Fix only the evidenced cause in a small change, preserve failing evidence and
+   require full PASS before continuing development. Full modularization remains
+   incomplete: configuration/runtime paths, shared-store services/locks,
+   shifts/history, reporting and Qt views/controllers remain in the entry module
+   (approximately 4,837 lines after theme extraction). No next unit was begun.
+4. Final development EXE download artifact is still pending (current EXE upload
+   is disabled). No production release is authorized. Field SMB/ACL, host power
+   loss, Windows session/reboot, shift boundary, extended UI responsiveness,
+   small/high-DPI screens and real printing remain unverified acceptance work;
+   temporary-directory simulations do not certify operational deployments.
+
+For a later authorized verification cycle:
 
 ```sh
 XDG_CACHE_HOME=/tmp/tde-cache .venv/bin/python tools/run_regressions.py --out /tmp/tde-validation
@@ -102,105 +121,13 @@ XDG_CACHE_HOME=/tmp/tde-cache .venv/bin/python tools/run_regressions.py --out /t
 git diff --check
 ```
 
-The runner executes every root tests/*.py separately except the mandatory desktop
-EXE visual test (its own Windows step). Helpers live under tests/support. Do not
-count a helper/zero-test script as validation. Exact results/logs go to --out.
-Windows/Linux full suites and separate module gates run on feature pushes.
+CI may append diagnostics-only commits on this same branch. Fetch and preserve
+them; rebase only unpublished local commits, never overwrite remote work.
 
-GitHub API and artifact download are blocked here; Git HTTPS read/push works.
-Public github.com Actions pages expose status/job annotations. CI appends exact
-results and failed .txt logs to docs/validation/linux-<run>-<attempt>, and reports/
-thumbnail sheets/provenance to windows-visual-<run>-<attempt>. Full screenshots
-remain in uniquely named Actions artifacts, one-day retention. Evidence writers
-append only if tested source/configuration matches; docs-only parallel evidence
-commits are preserved. Fetch and fast-forward or rebase only unpublished local
-commits over those docs-only commits. Do not ask the user to retrieve files while
-this supported Git evidence route can recover them. No credentials are logged.
+## Protected state
 
-## Remaining architecture work
-
-Read ARCHITECTURE_AUDIT.md. Existing six original modules: common, Windows session,
-machine queue, handoff, offline journal, bootstrap; rendering is the new isolated
-Qt service. Main still contains configuration, personnel/roster, shared-store
-services, reports and the nested UI. Full modularization remains UNFINISHED.
-
-Next extraction after required gates: personnel/value records and OOXML/roster
-import, with legacy exports retained. Four compatibility cases already passed
-against old code in /tmp/tde_personnel_contract.py: Greek headers, leading-zero
-IDs, duplicate merging, headerless known-ID roster, frozen records and invalid
-files/read-only input. Move/adapt to repository tests, add direct module/facade
-identity contract. The personnel module does not yet exist.
-
-Then isolate settings/runtime paths; shared locks/communication, active positions,
-shifts/history; report formats; Qt assets/theme/views/controllers; reduce entry
-point to composition and compatibility exports. Use explicit dependencies with
-no service importing the entry point. One coherent unit per change, full relevant
-checks between units; no mechanical renaming of the monolith as completion.
-
-Final development EXE must be uploaded as a test artifact after all required
-checks and functional scenarios; no production release/tag update. Real multi-PC
-SMB/ACL, host power loss, Windows lock/disconnect/logoff/reboot, 10:00 shift boundary,
-long-running UI responsiveness, small/high-DPI displays, real printing and original
-START/END identity/history checks remain field acceptance. Simulations do not
-certify those. Update this checkpoint with exact SHAs/runs and the first pending
-action after each stage. Do not claim full completion while these required
-implementation/gate tasks remain.
-
-## Independent personnel module candidate
-
-The personnel/value/OOXML boundary is now implemented locally in
-`src/position_tracking_personnel.py` with unchanged class bodies and legacy exports.
-`tests/personnel_module_regression.py` has six passing contracts, including independent
-import without the entry point or Qt. Full local suite after extraction: 35 scripts
-PASS. No source/data format behavior was changed. This candidate needs its own Windows
-build/portable/visual run before being considered fully verified.
-
-The earlier physical-capture/atomic-cache revision `29b0a1f` has passed Linux (34 scripts)
-and its module gate; Windows run 238 is still pending at this checkpoint. Preserve its
-exact diagnostics, then rebase only this unpublished personnel commit over any docs-only
-CI additions and push it for its own required checks. Do not describe pending Windows
-checks as passed or the whole modularization as complete. Next independent unit after
-these gates: pure theme palette/stylesheet data, then settings/runtime paths and the
-remaining services/controllers listed in ARCHITECTURE_AUDIT.md.
-
-## Latest measured result and exact desktop classification candidate
-
-Windows `38805076037` on `29b0a1f` passed all 34 portable scripts, including atomic
-cache recovery and native DPI/tree contracts. The full run FAILED only startup
-analysis: 15 startup anomalies, zero theme anomalies, 30 confirmed clicks. Actual
-geometry is now fully visible `[380,160,1540,880]` at 96 DPI on a 1920x1080 desktop.
-Most anomalies are a single first screenshot of the Windows desktop/runner console
-(distance ~0.529958), followed by complete stable UI by ~45–55ms. Images were
-inspected at docs/validation/windows-visual-38805076037-1/contact_02.png. This is
-not evidence of a mixed application-theme frame; earlier clipped capture geometry
-obscured which pixels were actually being observed.
-
-The current test refinement captures the actual desktop BEFORE each EXE launch.
-Only byte-identical desktop frames before any application pixels are classified
-as launch latency. All frames/images/raw distances remain retained and reported,
-with desktop-loading vs application-frame counts and a separate application
-maximum distance. Every application frame still uses the original .08 threshold.
-Black/partial/mixed UI and return to desktop AFTER app pixels remain failures.
-A desktop-only or zero-frame capture is a hard failure. Seven synthetic image/
-retention/error contracts verify these distinctions, without sleeps, threshold
-relaxation or discarding evidence. Actual Windows verification of exact desktop
-matches is still pending; if background changes prevent an exact match, the test
-must continue to fail and retain evidence rather than broaden that match rule.
-
-Personnel extraction and this test-only refinement are separate commits. Both
-need their own next full Windows/Linux results; do not treat a prior 34-script
-run as validation of the new 35-script personnel revision. First pending: push
-these local commits, inspect reports and code provenance, then update this
-checkpoint with the exact successful source/run IDs or the remaining failure.
-
-## Independent theme module candidate
-
-`position_tracking_theme.py` now contains the unchanged palette/style definitions;
-`run` imports them explicitly. Three new contracts verify no-Qt standalone import,
-existing normalization/default behavior, and real rendered Qt background pixels.
-AST comparison confirms exact palette/style definitions including literal CSS values.
-The existing whole-application theme contract remains enabled. Local portable suite
-now has 36 scripts. This unpublished unit must follow the pending 35-script source
-`22bc3bd` diagnostics and receive its own full CI. No other UI controller was moved.
-After those gates, next unit is settings/runtime filesystem policy; the rest of the
-monolith and field acceptance remain explicitly unfinished.
+Remote main remains `3c7a785a4008caa7b4fc1c7fd8d240cb8653ff99`.
+`release/`, `VERSION.txt`, and the production release workflow are unchanged from
+original task base `129e8cb`. No production v1.2.5 binary, tag, release or main
+was changed; no real operational data was used or edited. All work is confined
+to the development branch. Stop after publishing this checkpoint.
