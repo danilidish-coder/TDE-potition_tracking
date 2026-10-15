@@ -1296,8 +1296,22 @@ class SharedEventStore:
                 try:
                     self._atomic_json(self._active_path(person.agms), event)
                 except Exception:
-                    # Do not leave a phantom START if the active marker failed.
-                    path.unlink(missing_ok=True)
+                    # SMB can commit replace() and lose its acknowledgement.
+                    # Never erase the durable START when a marker exists, or
+                    # when its state cannot be read safely. The original ID
+                    # lets a pending offline operation reconcile on retry.
+                    try:
+                        self._active_path(person.agms).read_text(encoding="utf-8")
+                    except FileNotFoundError:
+                        try:
+                            if self.active.is_dir():
+                                # Confirmed pre-commit failure: retain the old
+                                # guarantee that no phantom START is reported.
+                                path.unlink(missing_ok=True)
+                        except OSError:
+                            pass  # uncertain share state: preserve evidence
+                    except OSError:
+                        pass
                     raise
         try:
             self.sync_active_shift()

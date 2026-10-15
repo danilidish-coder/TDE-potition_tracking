@@ -111,3 +111,24 @@ Do not claim completion until full modularization, valid Windows/Linux checks an
 development EXE functional scenarios succeed. Real multi-machine SMB/ACL/session
 and extended field-use tests must be reported separately, not equated with local
 simulations. Production publication remains a separate human approval.
+
+## Rendering gate completed; next correctness change
+
+Full application/code commit `9dbbb21fce2e9f9d938fca6659f01cdeeffecc62`
+passed Windows run `38800196045`, Linux `38800195521`, module gate `38800195516`.
+Evidence is in `docs/validation/windows-visual-38800196045-1` and Linux equivalent.
+31/31 scripts passed on both platforms. Windows EXE build/smoke PASS; startup
+endpoint anomalies 0/20; theme endpoint anomalies 0/30; theme clicks 30/30.
+The legacy per-frame theme-difference metric is diagnostic only, as before;
+normal intended light/dark transitions still register there. Acceptance rules
+were not changed. Contact sheets were inspected; the rendering correction is
+verified for this run, without claiming permanent/field-wide absence of flicker.
+
+Current next change: `start_marker_ack_regression.py` adds three actual store
+fault scenarios. Baseline loses START history in both after-commit cases.
+`SharedEventStore.start` now deletes the event only after confirming no active
+marker and an accessible active directory; an existing/unreadable marker or an
+uncertain share preserves the event and rethrows the original failure. Retry
+uses the original operation ID; before-commit no-phantom behavior is preserved.
+Run full local/Windows/Linux gates before marking it complete or extracting the
+next module. This does not claim SMB server power-loss durability in the field.
