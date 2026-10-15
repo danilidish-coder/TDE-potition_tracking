@@ -209,8 +209,11 @@ def click_theme(hwnd: int):
     user32.SetForegroundWindow(hwnd)
     left, top, right, bottom = client_bbox(hwnd)
     width = right-left
-    x = left + width - 70
-    y = top + 40
+    # The last 86px of the header belong to the Greece map, not the
+    # theme button. The main window has 28px outer and 20px header margins,
+    # a 16px widget gap, and a 108px theme-button minimum width.
+    x = left + width - (28 + 20 + 86 + 16 + 108 // 2)
+    y = top + 22 + 12 + 34 // 2
     user32.SetCursorPos(x, y)
     time.sleep(0.05)
     user32.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
@@ -299,6 +302,11 @@ def main():
 
     (out / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(report, indent=2))
+    # Prevent a false-green visual test when it never clicked the theme button.
+    if report["theme_clicks_confirmed"] < 28:
+        raise RuntimeError("Visual test did not activate the actual theme button reliably.")
+    if report["startup_endpoint_flicker_runs"] or report["theme_endpoint_flicker_toggles"]:
+        raise RuntimeError("Visible flicker or unintended third-state frames detected.")
     return 0
 
 
