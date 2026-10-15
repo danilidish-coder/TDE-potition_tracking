@@ -60,9 +60,12 @@ jobs:
           PYDIAGNOSTICS
           git fetch origin "$GITHUB_REF_NAME"
           if [ "$(git rev-parse FETCH_HEAD)" != "$GITHUB_SHA" ]; then
-            echo "Branch advanced; refusing to overwrite newer work."
-            exit 0
+            if ! git diff --quiet "$GITHUB_SHA" FETCH_HEAD -- src tests tools requirements.txt .github/workflows; then
+              echo "Tested code/configuration changed; refusing to append stale evidence."
+              exit 0
+            fi
           fi
+          git checkout -B "$GITHUB_REF_NAME" FETCH_HEAD
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -- "$out"

@@ -117,9 +117,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Evidence branch fetch failed" }
           $tip = git rev-parse FETCH_HEAD
           if ($tip -ne $env:GITHUB_SHA) {
-            Write-Warning 'Branch advanced; refusing to overwrite newer work. Full evidence remains in the artifact.'
-            exit 0
+            git diff --quiet "$env:GITHUB_SHA" FETCH_HEAD -- src tests tools requirements.txt .github/workflows
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning 'Tested code/configuration changed; refusing to append stale evidence. Full evidence remains in the artifact.'
+              exit 0
+            }
           }
+          # Another platform may have appended only diagnostics while we ran.
+          # Follow that tip without replacing any application or workflow file.
+          git checkout -B "$env:GITHUB_REF_NAME" FETCH_HEAD
+          if ($LASTEXITCODE -ne 0) { throw "Cannot append evidence safely" }
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- $out
