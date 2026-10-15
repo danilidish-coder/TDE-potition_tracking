@@ -32,6 +32,8 @@ jobs:
         run: python tests/windows_handoff_replay_order_regression.py
       - name: Stage 4 offline restart durability and original event IDs
         run: python tests/offline_durability_stage4_regression.py
+      - name: Stage 5 common helpers extraction contract
+        run: python tests/common_module_regression.py
       - name: Ensure release baseline remains v1.2.5
         shell: pwsh
         run: |
@@ -54,3 +56,4 @@ jobs:
       - run: python tests/windows_handoff_module_regression.py
       - run: python tests/windows_handoff_replay_order_regression.py
       - run: python tests/offline_durability_stage4_regression.py
+      - run: python tests/common_module_regression.py
