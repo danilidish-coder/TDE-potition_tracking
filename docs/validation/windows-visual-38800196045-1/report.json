@@ -1,0 +1,3230 @@
+{
+  "startup_runs": [
+    {
+      "frames": 28,
+      "baseline_luma": 201.357,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.357,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.039942,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.097967,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.140121,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.184612,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.235191,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.260425,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.307536,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.357677,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.390178,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.433037,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.481486,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.530253,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.561825,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.591837,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.652611,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.683995,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.733191,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.780466,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.827257,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.88008,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.905441,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.936875,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.983851,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.027864,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.075624,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.120899,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.16754,
+          "distance": 0.0
+        }
+      ],
+      "run": 1
+    },
+    {
+      "frames": 30,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.039913,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.074667,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.109131,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.15641,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.192291,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.217776,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.247562,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.294655,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.325445,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.372642,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.412275,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.438097,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.485956,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.53759,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.579888,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.609457,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.654805,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.704793,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.747539,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.778693,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.825793,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.87246,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.90399,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.935441,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.981474,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.032993,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.08101,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.124702,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.1763,
+          "distance": 0.0
+        }
+      ],
+      "run": 2
+    },
+    {
+      "frames": 33,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.040194,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.087862,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.134325,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.185046,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.231526,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.275055,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.307513,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.354519,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.409486,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.434783,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.464594,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.50504,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.534807,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.568953,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.608484,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.640618,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.677131,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.704571,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.73672,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.77065,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.804248,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.830682,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.864564,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.893859,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.93047,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.974298,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.018241,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.048655,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.082354,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.108317,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.147777,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.17453,
+          "distance": 0.0
+        }
+      ],
+      "run": 3
+    },
+    {
+      "frames": 29,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.041464,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.071711,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.099185,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.141108,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.191499,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.238617,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.281593,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.334511,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.379284,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.423118,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.472843,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.504647,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.55164,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.599024,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.644447,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.688686,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.720069,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.753634,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.798936,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.844991,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.895033,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.9396,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.970025,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.001169,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.048259,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.095095,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.14313,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.188924,
+          "distance": 0.0
+        }
+      ],
+      "run": 4
+    },
+    {
+      "frames": 29,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.034113,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.081161,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.129483,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.164305,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.192329,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.238302,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.28918,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.333693,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.367739,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.4149,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.466252,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.497339,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.536216,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.575947,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.613498,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.662418,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.711524,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.744499,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.786229,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.817315,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.868681,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.911023,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.941635,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.998526,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.055058,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.097894,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.129797,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.160644,
+          "distance": 0.0
+        }
+      ],
+      "run": 5
+    },
+    {
+      "frames": 30,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.026846,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.06246,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.09226,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.138742,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.186132,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.217055,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.263516,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.295608,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.342216,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.389006,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.421272,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.470476,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.513221,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.545533,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.581693,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.627563,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.671434,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.717094,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.74823,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.795013,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.842073,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.877292,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.908585,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.93713,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.968627,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.018812,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.065177,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.108644,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.160695,
+          "distance": 0.0
+        }
+      ],
+      "run": 6
+    },
+    {
+      "frames": 31,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.026518,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.08155,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.118209,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.150183,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.175694,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.207985,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.253016,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.298049,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.347285,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.394076,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.441321,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.472249,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.516611,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.563053,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.597409,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.629618,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.656943,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.707147,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.75245,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.800395,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.84393,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.894163,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.921871,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.956395,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.003618,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.051034,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.084007,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.110055,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.141636,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.172628,
+          "distance": 0.0
+        }
+      ],
+      "run": 7
+    },
+    {
+      "frames": 29,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.04168,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.096351,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.125185,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.167601,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.214101,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.251348,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.292345,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.343386,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.386204,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.422285,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.448671,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.496017,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.532888,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.558453,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.594702,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.640173,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.684534,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.731498,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.777999,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.811827,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.855699,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.90614,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.949968,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.999083,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.042861,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.090745,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.125676,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.17705,
+          "distance": 0.0
+        }
+      ],
+      "run": 8
+    },
+    {
+      "frames": 29,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 1e-06,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.03367,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.070516,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.117147,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.155181,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.187048,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.212368,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.240886,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.287858,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.338761,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.38245,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.43145,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.475098,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.523163,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.579402,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.615781,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.662709,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.710053,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.756624,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.80427,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.851899,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.898304,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.94481,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.977248,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.011763,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.042761,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.084894,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.141319,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.181049,
+          "distance": 0.0
+        }
+      ],
+      "run": 9
+    },
+    {
+      "frames": 29,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.025285,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.061151,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.113744,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.155552,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.199273,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.245015,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.296574,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.343614,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.38586,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.43269,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.467474,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.495576,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.546848,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.591753,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.624842,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.668445,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.714384,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.746374,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.778999,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.825858,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.87158,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.924602,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.967423,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.012712,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.043915,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.090491,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.136892,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.184064,
+          "distance": 0.0
+        }
+      ],
+      "run": 10
+    },
+    {
+      "frames": 30,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.040729,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.073493,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.108623,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.153164,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.187347,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.238629,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.276298,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.319231,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.35962,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.406366,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.450929,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.503792,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.541878,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.5739,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.621707,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.655721,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.701124,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.744741,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.792715,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.823569,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.855393,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.88622,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.93366,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.972783,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.014397,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.057995,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.098959,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.135699,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.166941,
+          "distance": 0.0
+        }
+      ],
+      "run": 11
+    },
+    {
+      "frames": 28,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.033309,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.086407,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.129845,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.160952,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.208567,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.255036,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.31125,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.368395,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.415572,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.461733,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.513189,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.538639,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.5688,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.61475,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.665925,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.694064,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.743419,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.771731,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.818159,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.866426,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.912672,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.958457,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.011384,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.055055,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.103819,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.145632,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.197804,
+          "distance": 0.0
+        }
+      ],
+      "run": 12
+    },
+    {
+      "frames": 28,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.029375,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.074627,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.124389,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.178573,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.233152,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.266451,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.310163,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.341113,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.39097,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.419411,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.449308,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.496709,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.527554,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.576905,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.622247,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.669052,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.71539,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.767737,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.808955,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.864979,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.902638,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.950167,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.997701,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.04443,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.07961,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.123112,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.169187,
+          "distance": 0.0
+        }
+      ],
+      "run": 13
+    },
+    {
+      "frames": 30,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.038027,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.076067,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.11229,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.157241,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.194543,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.254317,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.279577,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.313519,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.344071,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.392134,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.427142,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.466305,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.519858,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.563458,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.609504,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.640336,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.670204,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.701171,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.748499,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.779238,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.826608,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.874694,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.907672,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.951874,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.999095,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.045694,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.09133,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.140311,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.170046,
+          "distance": 0.0
+        }
+      ],
+      "run": 14
+    },
+    {
+      "frames": 29,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.02633,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.07944,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.125655,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.155434,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.189016,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.232934,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.26422,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.29893,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.342265,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.392484,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.436512,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.490273,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.529082,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.576608,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.624604,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.671885,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.718439,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.749845,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.796725,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.82805,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.860283,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.895496,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.933383,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.985705,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.029931,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.076642,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.123718,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.178224,
+          "distance": 0.0
+        }
+      ],
+      "run": 15
+    },
+    {
+      "frames": 31,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.035607,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.069875,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.107024,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.149027,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.19924,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.241223,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.283436,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.319267,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.351353,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.405363,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.461833,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.49119,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.529906,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.569689,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.602829,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.632641,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.680356,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.71174,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.743233,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.774528,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.81991,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.867715,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.91858,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.959988,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.993936,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.037979,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.070622,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.101586,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.149261,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.194661,
+          "distance": 0.0
+        }
+      ],
+      "run": 16
+    },
+    {
+      "frames": 29,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.03175,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.070093,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.09724,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.148739,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.191534,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.242047,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.284702,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.335706,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.383023,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.431607,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.479767,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.533179,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.574043,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.611588,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.643571,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.690702,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.722895,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.768777,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.816278,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.846822,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.893405,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.925072,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.973786,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.004171,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.039118,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.080801,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.111548,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.161091,
+          "distance": 0.0
+        }
+      ],
+      "run": 17
+    },
+    {
+      "frames": 29,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.034255,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.086698,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.116217,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.166739,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.198699,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.225584,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.272414,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.319575,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.371527,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.414541,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.446917,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.481001,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.525081,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.576302,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.618965,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.66654,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.713886,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.75812,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.804311,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.851024,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.898334,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.930849,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.961029,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.991925,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.043486,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.085896,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.115806,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.16599,
+          "distance": 0.0
+        }
+      ],
+      "run": 18
+    },
+    {
+      "frames": 29,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.034163,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.084745,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.119848,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.168008,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.209753,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.241992,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.289881,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.342972,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.387014,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.433208,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.461546,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.507529,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.553994,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.609071,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.668633,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.701717,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.742717,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.773708,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.819428,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.851428,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.883172,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.929299,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.976795,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.023548,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.053921,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.089151,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.116259,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.165755,
+          "distance": 0.0
+        }
+      ],
+      "run": 19
+    },
+    {
+      "frames": 32,
+      "baseline_luma": 201.522,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 201.522,
+      "max_black_ratio": 0.01111,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.034939,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.083859,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.117496,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.149576,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.176901,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.229376,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.272803,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.307751,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.348589,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.398,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.426781,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.475356,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.506757,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.537519,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.589631,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.614913,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.647356,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.693813,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.724261,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.770996,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.818117,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.849341,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.896236,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.928429,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.958967,
+          "distance": 0.0
+        },
+        {
+          "t_s": 0.990564,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.037992,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.083831,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.115431,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.154059,
+          "distance": 0.0
+        },
+        {
+          "t_s": 1.192932,
+          "distance": 0.0
+        }
+      ],
+      "run": 20
+    }
+  ],
+  "theme_toggles": [
+    {
+      "frames": 23,
+      "baseline_luma": 48.726,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 48.726,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 1,
+      "pre_mean_luma": 201.522,
+      "post_mean_luma": 48.726,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 48.726,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 6,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 2,
+      "pre_mean_luma": 48.726,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 20,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 3,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 9,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 4,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 5,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 9,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 6,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 21,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 7,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 8,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 8,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 9,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 21,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 7,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 10,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 11,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 7,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 12,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 13,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 21,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 8,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 14,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 15,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 7,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 16,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 21,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 17,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 8,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 18,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 21,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 19,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 8,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 20,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 20,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 21,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 23,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 8,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 22,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 23,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 28,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 8,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 24,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 29,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 25,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 28,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 10,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 26,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 28,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 27,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 23,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.61595,
+      "suspect_frames": 10,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 28,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    },
+    {
+      "frames": 21,
+      "baseline_luma": 49.091,
+      "baseline_black_ratio": 0.02212,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 29,
+      "pre_mean_luma": 200.57,
+      "post_mean_luma": 49.091,
+      "theme_changed": true
+    },
+    {
+      "frames": 21,
+      "baseline_luma": 200.57,
+      "baseline_black_ratio": 0.01111,
+      "min_luma": 49.091,
+      "max_black_ratio": 0.02212,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 7,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 30,
+      "pre_mean_luma": 49.091,
+      "post_mean_luma": 200.57,
+      "theme_changed": true
+    }
+  ],
+  "capture_supported": true,
+  "startup_flicker_runs_legacy": 0,
+  "startup_endpoint_flicker_runs": 0,
+  "theme_flicker_toggles_legacy": 20,
+  "theme_endpoint_flicker_toggles": 0,
+  "theme_clicks_confirmed": 30
+}
