@@ -96,6 +96,34 @@ class OfflineDurabilityStage4(unittest.TestCase):
                              ["accepted", "rejected"])
             self.assertEqual(len(journal._rows(("PENDING",))), 1)
 
+    def test_restart_after_server_commit_before_local_ack_replays_same_id(self):
+        """A lost acknowledgement must not create a second central START."""
+        with tempfile.TemporaryDirectory() as folder:
+            journal = OfflineJournal(folder)
+            op = journal.enqueue("START", Person(), "ΓΚΙΣΕ 8", "ΕΞΟΔΟΣ")
+            class AckLostStore:
+                def __init__(self):
+                    self.events = {}
+                    self.calls = 0
+                def start(self, person, position, direction, **kwargs):
+                    self.calls += 1
+                    ident = kwargs["event_id"]
+                    self.events.setdefault(ident, kwargs["when"])
+                    if self.calls == 1:
+                        raise OSError("connection lost after central commit")
+                    return {"event_id": ident, "position": position,
+                            "direction": direction, "agms": person.agms}
+                def end(self, person, **kwargs):
+                    raise AssertionError("Unexpected END")
+            store = AckLostStore()
+            self.assertEqual(journal.sync(store, Person)["pending"], 1)
+            self.assertEqual(len(store.events), 1)
+            restarted = OfflineJournal(folder)
+            self.assertEqual(restarted.sync(store, Person)["pending"], 0)
+            self.assertEqual(len(store.events), 1)
+            self.assertEqual(list(store.events), [op["operation_id"]])
+            self.assertEqual(store.calls, 2)
+
     def test_legacy_conflict_is_not_silently_deleted_on_restart(self):
         with tempfile.TemporaryDirectory() as folder:
             j = OfflineJournal(folder)
