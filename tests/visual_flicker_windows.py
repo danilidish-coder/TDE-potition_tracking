@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import ctypes
+from ctypes import wintypes
 import json
 import subprocess
 import time
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 from PIL import ImageGrab, ImageStat
+from support.windows_visual_processes import descendant_pids, process_snapshot, stop_process_tree
 
 user32 = ctypes.windll.user32
 SW_RESTORE = 9
@@ -27,6 +29,18 @@ class POINT(ctypes.Structure):
     _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
 
 
+# HWND is pointer-sized: default ctypes integer arguments can truncate it.
+user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+user32.IsWindowVisible.argtypes = [wintypes.HWND]
+user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(RECT)]
+user32.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(POINT)]
+user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+
+
 @dataclass
 class Sample:
     t: float
@@ -35,11 +49,16 @@ class Sample:
     diff: float
 
 
-def find_position_window() -> Optional[int]:
+def find_position_window(pid: int) -> Optional[int]:
     found = []
+    owners = descendant_pids(pid, process_snapshot())
 
-    @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
     def cb(hwnd, _):
+        owner = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+        if owner.value not in owners:
+            return True
         if not user32.IsWindowVisible(hwnd):
             return True
         length = user32.GetWindowTextLengthW(hwnd)
@@ -238,7 +257,7 @@ def click_theme(hwnd: int):
 def wait_for_window(pid: int, timeout=20.0):
     end = time.time()+timeout
     while time.time() < end:
-        hwnd = find_position_window()
+        hwnd = find_position_window(pid)
         if hwnd:
             return hwnd
         time.sleep(0.01)
@@ -261,20 +280,20 @@ def main():
         p = subprocess.Popen([exe], cwd=str(Path(exe).parent))
         try:
             hwnd = wait_for_window(p.pid)
+            before_bbox = client_bbox(hwnd)
             samples, raw = capture_sequence(hwnd, 1.2)
             summary = summarize(samples)
             summary.update(startup_endpoint_check(raw, out, f"startup_{run:02d}"))
             summary["run"] = run
+            owner = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+            summary.update(root_pid=p.pid, window_pid=owner.value,
+                           bbox_before=before_bbox, bbox_after=client_bbox(hwnd))
             report["startup_runs"].append(summary)
             write_csv(samples, out / f"startup_{run:02d}.csv")
             save_worst(raw, samples, out, f"startup_{run:02d}")
         finally:
-            if p.poll() is None:
-                p.terminate()
-                try:
-                    p.wait(3)
-                except subprocess.TimeoutExpired:
-                    p.kill()
+            stop_process_tree(p)
         time.sleep(0.6)
 
     p = subprocess.Popen([exe], cwd=str(Path(exe).parent))
@@ -302,12 +321,7 @@ def main():
             save_worst(raw, combined, out, f"theme_{toggle:02d}")
             time.sleep(0.25)
     finally:
-        if p.poll() is None:
-            p.terminate()
-            try:
-                p.wait(3)
-            except subprocess.TimeoutExpired:
-                p.kill()
+        stop_process_tree(p)
 
     report["startup_flicker_runs_legacy"] = sum(1 for x in report["startup_runs"] if x.get("flicker_detected"))
     report["startup_endpoint_flicker_runs"] = sum(1 for x in report["startup_runs"] if x.get("endpoint_flicker_detected"))

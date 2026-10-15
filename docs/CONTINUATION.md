@@ -132,3 +132,50 @@ uncertain share preserves the event and rethrows the original failure. Retry
 uses the original operation ID; before-commit no-phantom behavior is preserved.
 Run full local/Windows/Linux gates before marking it complete or extracting the
 next module. This does not claim SMB server power-loss durability in the field.
+
+## Current checkpoint: fresh-process visual validation
+
+START correction commit `c81b91aa3fc7153ce5a2e1dd9893af05f5ef50a8` passed
+32 portable scripts on Linux run `38801316804` and Windows run `38801316650`,
+plus module gate. The full Windows run nevertheless FAILED: 9/20 startup
+endpoint anomalies, 0/30 theme anomalies, 30/30 confirmed toggles. Do not call
+this a full PASS. Last full successful workflow source remains `9dbbb21`.
+
+Evidence was recovered directly over Git, inspected at
+`docs/validation/windows-visual-38801316650-1/contact_01.png` and `contact_04.png`.
+The first captured startup frame is the runner desktop/console, followed by the
+application; other suspect startup pairs show a layout/position change. The
+test's `wait_for_window(pid)` ignored its PID and `find_position_window()` selected
+any matching title. Terminating only the PyInstaller bootloader could leave its
+application child alive. A successful previous startup count therefore does not
+prove all 20 windows belonged to fresh launches. This limitation was identified
+during the broader audit and must be repaired before trusting that criterion.
+
+The current test-only correction filters HWND ownership to the launched process
+tree (including the onefile child), uses pointer-sized Windows API arguments,
+terminates the whole owned process tree, and records root/window PIDs and before/
+after client geometry. No capture frame, interval, endpoint threshold or failure
+condition was removed. `tests/visual_process_regression.py` includes portable tree
+logic and actual Windows Toolhelp/taskkill contracts (two native cases explicitly
+skip on Linux). The next action is full CI, then inspect exact images/geometry if
+startup failures remain. Windows job bounded at 25 minutes to avoid unbounded
+resource usage. The existing rendering correction still has zero theme endpoint
+anomalies over the two measured 30-toggle runs; that is evidence for those runs,
+not a general guarantee.
+
+## Additional confirmed offline recovery defect to fix next
+
+`OfflineJournal.sync` marks an operation APPLIED in one SQLite transaction, then
+calls `remember` in another. Reproduced with a synthetic START: make `remember`
+raise after the central call and APPLIED write, then reopen the journal. Central
+active exists, `pending_count()==0`, but `local_active(agms) is None`. The END
+variant can retain stale local active state. Fix the status/observed write in one
+transaction, and prevent an already-APPLIED stale concurrent replay from
+overwriting newer observed state. Add interruption and concurrency regressions.
+Do this as its own verified correctness change before the personnel extraction.
+
+Personnel import compatibility tests have been exercised against the old code
+in `/tmp/tde_personnel_contract.py` (4 PASS): Greek headers, leading-zero IDs,
+duplicate merging, known-ID/headerless roster, immutable records and invalid
+files. Move/adapt them into tests when extracting that independent module. Do
+not treat the module as implemented; it is still inside the main source.
