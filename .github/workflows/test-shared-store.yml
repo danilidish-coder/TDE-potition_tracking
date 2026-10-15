@@ -18,6 +18,8 @@ permissions:
 
 jobs:
   linux-backend:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -37,3 +39,33 @@ jobs:
         run: python -m py_compile src/position_tracking.py
       - name: Full portable regressions including real offscreen Qt
         run: python tools/run_regressions.py --out artifact/regressions
+      - name: Retain exact Linux failure diagnostics on development branch
+        if: ${{ always() && github.ref == 'refs/heads/feature/v125-modularization-20261013' }}
+        run: |
+          set -euo pipefail
+          out="docs/validation/linux-${{ github.run_id }}-${{ github.run_attempt }}"
+          if [ ! -f artifact/regressions/results.json ]; then
+            echo "No regression results were produced; inspect setup step."
+            exit 0
+          fi
+          mkdir -p "$out"
+          cp artifact/regressions/results.json "$out/results.json"
+          python - "$out" <<'PYDIAGNOSTICS'
+          import json, pathlib, shutil, sys
+          source = pathlib.Path('artifact/regressions')
+          for result in json.loads((source / 'results.json').read_text()):
+              if result['exit_code']:
+                  name = pathlib.Path(result['test']).stem + '.log'
+                  shutil.copy2(source / name, pathlib.Path(sys.argv[1]) / name)
+          PYDIAGNOSTICS
+          git fetch origin "$GITHUB_REF_NAME"
+          if [ "$(git rev-parse FETCH_HEAD)" != "$GITHUB_SHA" ]; then
+            echo "Branch advanced; refusing to overwrite newer work."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- "$out"
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Record Linux regression outcomes for $GITHUB_SHA [skip ci]"
+          git push origin HEAD:refs/heads/feature/v125-modularization-20261013
