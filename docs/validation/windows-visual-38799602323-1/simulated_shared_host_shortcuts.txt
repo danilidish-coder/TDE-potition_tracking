@@ -1,0 +1,24 @@
+Traceback (most recent call last):
+  File "D:\a\TDE-potition_tracking\TDE-potition_tracking\tests\simulated_shared_host_shortcuts.py", line 99, in <module>
+    answers = [f.result() for f in futures]
+               ^^^^^^^^^^
+  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\concurrent\futures\thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\a\TDE-potition_tracking\TDE-potition_tracking\tests\simulated_shared_host_shortcuts.py", line 41, in run_station
+    raise AssertionError(f"Station {computer} {username} {action} crashed: {p.returncode}\n{p.stdout}\n{p.stderr}")
+AssertionError: Station BOOTH-15 WINUSER14 start crashed: 1
+
+Traceback (most recent call last):
+  File "D:\a\TDE-potition_tracking\TDE-potition_tracking\tests\simulated_shared_host_shortcuts.py", line 77, in <module>
+    print(json.dumps(result, ensure_ascii=False))
+  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u0397' in position 46: character maps to <undefined>
+
