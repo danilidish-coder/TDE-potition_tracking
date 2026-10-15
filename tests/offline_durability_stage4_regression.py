@@ -124,6 +124,46 @@ class OfflineDurabilityStage4(unittest.TestCase):
             self.assertEqual(list(store.events), [op["operation_id"]])
             self.assertEqual(store.calls, 2)
 
+    def test_restart_after_end_commit_before_local_ack_keeps_single_end(self):
+        """A lost END acknowledgement must replay the same central END ID."""
+        with tempfile.TemporaryDirectory() as folder:
+            journal = OfflineJournal(folder)
+            person = Person()
+
+            class AckLostOnEndStore:
+                def __init__(self):
+                    self.events = {}
+                    self.end_calls = 0
+
+                def start(self, person, position, direction, **kwargs):
+                    ident = kwargs["event_id"]
+                    self.events.setdefault(ident, "START")
+                    return {"event_id": ident, "position": position,
+                            "direction": direction, "agms": person.agms}
+
+                def end(self, person, **kwargs):
+                    self.end_calls += 1
+                    ident = kwargs["event_id"]
+                    self.events.setdefault(ident, "END")
+                    if self.end_calls == 1:
+                        raise OSError("connection lost after central END commit")
+                    return {"event_id": ident}
+
+            store = AckLostOnEndStore()
+            start = journal.enqueue("START", person, "ΓΚΙΣΕ 9", "ΕΞΟΔΟΣ")
+            self.assertEqual(journal.sync(store, Person)["pending"], 0)
+            end = journal.enqueue("END", person)
+            self.assertEqual(journal.sync(store, Person)["pending"], 1)
+            expected = {start["operation_id"]: "START",
+                        end["operation_id"]: "END"}
+            self.assertEqual(store.events, expected)
+
+            restarted = OfflineJournal(folder)
+            self.assertEqual(restarted.sync(store, Person)["pending"], 0)
+            self.assertEqual(store.events, expected)
+            self.assertEqual(store.end_calls, 2)
+            self.assertIsNone(restarted.local_active(person.agms))
+
     def test_legacy_conflict_is_not_silently_deleted_on_restart(self):
         with tempfile.TemporaryDirectory() as folder:
             j = OfflineJournal(folder)
