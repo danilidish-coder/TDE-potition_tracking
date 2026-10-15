@@ -1,6 +1,9 @@
 name: Position Tracking Backend and Shared Directory Stress
 
 on:
+  push:
+    branches: [feature/v125-modularization-20261013]
+    paths: ["src/**", "tests/**", "tools/run_regressions.py", ".github/workflows/test-shared-store.yml"]
   pull_request:
     branches:
       - main
@@ -32,19 +35,5 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: Compile Python source
         run: python -m py_compile src/position_tracking.py
-      - name: Existing regressions
-        run: |
-          python tests/network_resilience_regression.py
-          python tests/shift_smb_lock_concurrency.py
-          python tests/client_lifecycle_regression.py
-          python tests/windows_user_handoff_regression.py
-          python tests/shift_end_actions_regression.py
-      - name: Multi-station shortcut and host power-off simulation
-        run: python tests/simulated_shared_host_shortcuts.py
-      - name: Offline queue recovery and restart stress
-        run: |
-          python tests/offline_recovery_integration.py
-          python tests/offline_user_logoff_machine_queue.py
-          python tests/offline_15_clients_restart_stress.py
-          python tests/offline_single_machine_claim_stress.py
-          python tests/start_time_correction_edge_regression.py
+      - name: Full portable regressions including real offscreen Qt
+        run: python tools/run_regressions.py --out artifact/regressions

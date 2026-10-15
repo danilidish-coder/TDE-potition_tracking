@@ -2553,6 +2553,7 @@ def build_shift_html(store: SharedEventStore, day: date, cutoff: str) -> str:
 
 
 def run(args=None) -> int:
+    from position_tracking_rendering import coherent_widget_update
     from PySide6.QtCore import Qt, QDate, QDateTime, QTime, QTimer, QRectF, QPointF, QByteArray
     from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen, QIcon, QPixmap, QPalette, QPainterPath
     from PySide6.QtSvg import QSvgRenderer
@@ -3693,9 +3694,7 @@ def run(args=None) -> int:
             dark = _clean(self.config.theme).lower() == "dark"
             t = THEME_DARK if dark else THEME_LIGHT
 
-            self.setUpdatesEnabled(False)
-            self.root.setUpdatesEnabled(False)
-            try:
+            with coherent_widget_update(self):
                 palette = self.palette()
                 palette.setColor(QPalette.Window, QColor(t["window"]))
                 self.setPalette(palette)
@@ -3712,10 +3711,6 @@ def run(args=None) -> int:
                     self.greece_map.set_dark(dark)
                 self._agms_changed()
                 self._officer_changed()
-            finally:
-                self.root.setUpdatesEnabled(True)
-                self.setUpdatesEnabled(True)
-                self.update()
 
         def _find_personnel_file(self) -> Path | None:
             candidates = []
