@@ -87,7 +87,11 @@ jobs:
           $p = Start-Process -FilePath $exe -PassThru
           Start-Sleep -Seconds 10
           if ($p.HasExited) { throw "Application exited unexpectedly during smoke test" }
-          Stop-Process -Id $p.Id -Force
+          # The onefile bootloader owns a child EXE. Leave no smoke-test
+          # window behind to contaminate the subsequent fresh-start captures.
+          taskkill /PID $p.Id /T /F
+          if ($LASTEXITCODE -ne 0) { throw "Smoke process tree cleanup failed" }
+          if (-not $p.WaitForExit(10000)) { throw "Smoke process did not terminate" }
           Write-Host "Smoke test PASS"
           Write-Host "EXE SHA256: $((Get-FileHash $exe -Algorithm SHA256).Hash)"
 
