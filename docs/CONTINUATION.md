@@ -54,6 +54,33 @@ candidate. If Windows fails, diagnose and fix this step before further extractio
 
 ## Remaining work after the gate
 
+### Confirmed independent persistence defect (synthetic reproduction)
+
+In `SharedEventStore.start`, inject `_atomic_json` so it performs the active-file
+replace successfully, then raises `ConnectionError` to represent a lost server
+acknowledgement. The exception handler unconditionally deletes the START event
+file. The active marker is still present. Retrying with the original operation
+ID returns that active marker without restoring the deleted START history.
+Reproduced locally using temporary directories, `PersonnelRecord('999001',...)`,
+position 1 / ΕΙΣΟΔΟΣ and fixed event ID `audit-lost-active-ack`; `iter_all_events()`
+is empty both before and after retry while the active marker exists. This is not
+covered by the existing stage-4 tests, which lose acknowledgement after the whole
+store call rather than during active-marker commit. Add a dedicated fault test
+and repair the ambiguous-commit path as the next independent correctness change
+after the rendering gate. Preserve existing before-write failure semantics and
+avoid phantom history, deleted durable records or duplicate ownership.
+
+### CI diagnosis in progress
+
+Candidate application commit `099e61d`; local 30/30 scripts PASS, including four
+real Qt rendering contracts. Windows run `38798943639` and module gate
+`38798943771` were started. Module gate passed. Full Linux run `38798943593`
+failed the portable suite, exact script not available from public annotation.
+Diagnostic-only workflow commit `e4a30b5` reruns Linux and saves results plus failed
+logs under `docs/validation/linux-<run>-<attempt>` using an append-only evidence
+commit on this branch. Fetch/fast-forward it, diagnose that exact failure before
+proceeding. Its failure must not be treated as a full Linux PASS.
+
 Read `ARCHITECTURE_AUDIT.md` for responsibility/dependency/coverage inventory.
 Extract one coherent unit per change; preserve legacy entry-point exports and
 data/path semantics. Suggested sequence: personnel/value models and OOXML import;

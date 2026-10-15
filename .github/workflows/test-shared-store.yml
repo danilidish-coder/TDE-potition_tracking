@@ -56,7 +56,7 @@ jobs:
           for result in json.loads((source / 'results.json').read_text()):
               if result['exit_code']:
                   name = pathlib.Path(result['test']).stem + '.log'
-                  shutil.copy2(source / name, pathlib.Path(sys.argv[1]) / name)
+                  shutil.copy2(source / name, pathlib.Path(sys.argv[1]) / (pathlib.Path(name).stem + '.txt'))
           PYDIAGNOSTICS
           git fetch origin "$GITHUB_REF_NAME"
           if [ "$(git rev-parse FETCH_HEAD)" != "$GITHUB_SHA" ]; then

@@ -106,12 +106,12 @@ jobs:
           retention-days: 1
 
       - name: Retain diagnostic summary on the isolated development branch
-        if: ${{ always() && github.ref == 'refs/heads/feature/v125-modularization-20261013' && steps.visual.outcome != 'skipped' }}
+        if: ${{ always() && github.ref == 'refs/heads/feature/v125-modularization-20261013' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $out = "docs/validation/windows-visual-${{ github.run_id }}-${{ github.run_attempt }}"
-          python tools/export_visual_evidence.py --source visual_flicker --out $out --commit "$env:GITHUB_SHA" --run "${{ github.run_id }}"
+          python tools/export_visual_evidence.py --source visual_flicker --regressions artifact/regressions --out $out --commit "$env:GITHUB_SHA" --run "${{ github.run_id }}"
           if ($LASTEXITCODE -ne 0) { throw "Visual evidence export failed" }
           git fetch origin "$env:GITHUB_REF_NAME"
           if ($LASTEXITCODE -ne 0) { throw "Evidence branch fetch failed" }

@@ -13,8 +13,16 @@ def main():
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--commit", required=True)
     parser.add_argument("--run", required=True)
+    parser.add_argument("--regressions", type=Path)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
+    if args.regressions and (args.regressions / "results.json").is_file():
+        results = json.loads((args.regressions / "results.json").read_text(encoding="utf-8"))
+        shutil.copy2(args.regressions / "results.json", args.out / "regressions.json")
+        for result in results:
+            if result["exit_code"]:
+                stem = Path(result["test"]).stem
+                shutil.copy2(args.regressions / (stem + ".log"), args.out / (stem + ".txt"))
     report = args.source / "report.json"
     if report.is_file():
         shutil.copy2(report, args.out / "report.json")
