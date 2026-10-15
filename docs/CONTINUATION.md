@@ -192,3 +192,15 @@ need their own next full Windows/Linux results; do not treat a prior 34-script
 run as validation of the new 35-script personnel revision. First pending: push
 these local commits, inspect reports and code provenance, then update this
 checkpoint with the exact successful source/run IDs or the remaining failure.
+
+## Independent theme module candidate
+
+`position_tracking_theme.py` now contains the unchanged palette/style definitions;
+`run` imports them explicitly. Three new contracts verify no-Qt standalone import,
+existing normalization/default behavior, and real rendered Qt background pixels.
+AST comparison confirms exact palette/style definitions including literal CSS values.
+The existing whole-application theme contract remains enabled. Local portable suite
+now has 36 scripts. This unpublished unit must follow the pending 35-script source
+`22bc3bd` diagnostics and receive its own full CI. No other UI controller was moved.
+After those gates, next unit is settings/runtime filesystem policy; the rest of the
+monolith and field acceptance remain explicitly unfinished.

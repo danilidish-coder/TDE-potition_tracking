@@ -14,7 +14,7 @@ This is a development audit, not a production acceptance certificate.
 | Active positions, START/END | SharedEventStore | booth + officer locks, receipt replay; lifecycle and correction tests |
 | Shifts and history | SharedEventStore | SQLite snapshots/session index; shift/archive/history regressions |
 | Reports and printing | top-level report functions | docx, openpyxl, Qt PDF; PDF/archive regressions |
-| Qt controllers, views, styles | run(): nested MainWindow and widgets | async state/position/network executors; GUI behavior coverage incomplete |
+| Qt controllers and views | run(): nested MainWindow and widgets | async state/position/network executors; GUI behavior coverage incomplete |
 | Durable offline journal | position_tracking_offline | SQLite operations; 15-client restart, contention, durability and replay tests |
 | Windows account handoff | position_tracking_handoff | store/journal interfaces; protected original event IDs and replay-order tests |
 | Machine queue policy | position_tracking_machine_queue | shared PUBLIC path, legacy queue guard; ACL/two-account simulations |
@@ -121,3 +121,13 @@ standalone loading, Greek headers, leading-zero IDs, duplicate merging, headerle
 known-ID roster, immutable records, invalid input and input-file preservation. The
 three class bodies were compared by AST with the pre-extraction source and are unchanged.
 The symbol inventory above is the original audit baseline, not a current line count.
+
+## Theme boundary extracted
+
+`position_tracking_theme.py` owns palette dictionaries and pure stylesheet generation.
+It imports only common normalization, with no Qt or entry-point import. Palette and
+stylesheet ASTs (including CSS string values) match the previous definitions exactly.
+Three contracts test independent import, normalization/fallback and actual Qt root
+background pixels through light/dark/light; existing application tests exercise 60
+whole-window changes. `position_tracking_rendering.py` separately owns coherent paint
+transactions, so style data does not depend on presentation or application services.
