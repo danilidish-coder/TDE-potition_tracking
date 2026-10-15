@@ -10,6 +10,16 @@ import sys
 import time
 
 
+def regression_environment():
+    environment = dict(os.environ)
+    environment.setdefault("QT_QPA_PLATFORM", "offscreen")
+    # A captured Windows pipe defaults to cp1252, unlike the interactive CI
+    # console. Greek JSON from nested station processes must round-trip intact.
+    environment["PYTHONUTF8"] = "1"
+    environment["PYTHONIOENCODING"] = "utf-8"
+    return environment
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, required=True)
@@ -17,8 +27,7 @@ def main():
     root = Path(__file__).resolve().parents[1]
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
-    environment = dict(os.environ)
-    environment.setdefault("QT_QPA_PLATFORM", "offscreen")
+    environment = regression_environment()
     results = []
     for test in sorted((root / "tests").glob("*.py")):
         if test.name == "visual_flicker_windows.py":
@@ -27,7 +36,7 @@ def main():
         started = time.monotonic()
         try:
             result = subprocess.run([sys.executable, str(test)], cwd=root, env=environment,
-                                    capture_output=True, text=True, timeout=240)
+                                    capture_output=True, text=True, encoding="utf-8", timeout=240)
             code, output = result.returncode, result.stdout + result.stderr
         except subprocess.TimeoutExpired as exc:
             code, output = 124, str(exc)

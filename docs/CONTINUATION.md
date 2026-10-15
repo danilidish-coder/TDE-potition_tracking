@@ -81,6 +81,21 @@ logs under `docs/validation/linux-<run>-<attempt>` using an append-only evidence
 commit on this branch. Fetch/fast-forward it, diagnose that exact failure before
 proceeding. Its failure must not be treated as a full Linux PASS.
 
+Subsequent diagnostics were recovered over Git (no user file transfer required):
+
+- `docs/validation/linux-38799602304-1`: three Qt tests could not import
+  `libEGL.so.1`. The Linux CI now installs `libegl1` and `libopengl0` before tests.
+- `docs/validation/windows-visual-38799602323-1`: 29/30 portable scripts passed;
+  `simulated_shared_host_shortcuts.py` failed because a nested station's Greek
+  JSON error could not encode to cp1252 in the new captured-pipe runner. The
+  runner now sets PYTHONUTF8/PYTHONIOENCODING and decodes UTF-8 explicitly, with
+  `runner_encoding_regression.py` verifying nested Greek JSON round-trip.
+- Neither failure reached the actual Windows visual step. The rendering
+  correction is still pending physical Windows visual validation.
+- Both platform evidence writers now append at the current branch tip only if
+  tested source/configuration is identical; docs-only diagnostic commits from
+  another platform are retained. Failed logs use `.txt` because `.log` is ignored.
+
 Read `ARCHITECTURE_AUDIT.md` for responsibility/dependency/coverage inventory.
 Extract one coherent unit per change; preserve legacy entry-point exports and
 data/path semantics. Suggested sequence: personnel/value models and OOXML import;
