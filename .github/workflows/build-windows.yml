@@ -140,17 +140,18 @@ jobs:
         id: visual
         shell: powershell
         run: |
+          python "tests\visual_startup_evidence_regression.py"
+          if ($LASTEXITCODE -ne 0) { throw "Startup screenshot evidence regression failed" }
           python "tests\visual_flicker_windows.py" --exe "dist\TDE_Katagrafi_Theseon.exe" --out "visual_flicker"
 
       - name: Upload visual flicker evidence
-        if: ${{ false }} # Disabled: artifact quota / incomplete offline acceptance. Retain step for later gated release.
-        continue-on-error: true
+        if: ${{ always() && steps.visual.outcome != 'skipped' }}
         uses: actions/upload-artifact@v4
         with:
-          name: POSITION_TRACKING_VISUAL_FLICKER
+          name: POSITION_TRACKING_VISUAL_FLICKER-${{ github.run_id }}-${{ github.run_attempt }}
           path: visual_flicker/**
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 1
 
       - name: Archive Windows EXE
         if: github.ref == 'refs/heads/main'

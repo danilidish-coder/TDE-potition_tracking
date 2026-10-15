@@ -151,14 +151,29 @@ def startup_endpoint_check(raw, out_dir: Path, prefix: str, threshold: float = 0
     if not raw:
         return {"endpoint_anomaly_frames": 0, "max_endpoint_distance": 0.0}
     final_ref = raw[-1][1]
+    raw[0][1].save(out_dir / f"{prefix}_first.png")
+    final_ref.save(out_dir / f"{prefix}_reference.png")
     scored = [(t, normalized_image_distance(img, final_ref), img) for t, img in raw]
     anomalies = [x for x in scored if x[1] > threshold]
+    # Keep the entire suspect startup, including normal frames between anomalies.
+    # This distinguishes a monotonic first paint from a transient third state;
+    # it does not exclude early frames or change the acceptance threshold.
+    if anomalies:
+        sequence_dir = out_dir / f"{prefix}_sequence"
+        sequence_dir.mkdir(parents=True, exist_ok=True)
+        for index, (t, dist, img) in enumerate(scored):
+            img.save(sequence_dir / f"{index:04d}_{t:.3f}s_d{dist:.3f}.png")
     for rank, (t, dist, img) in enumerate(sorted(scored, key=lambda x: x[1], reverse=True)[:5], 1):
         img.save(out_dir / f"{prefix}_endpoint_{rank:02d}_{t:.3f}s_d{dist:.3f}.png")
     return {
         "endpoint_anomaly_frames": len(anomalies),
         "max_endpoint_distance": round(max(x[1] for x in scored), 5),
         "endpoint_flicker_detected": bool(anomalies),
+        "endpoint_threshold": threshold,
+        "endpoint_distances": [
+            {"t_s": round(t, 6), "distance": round(dist, 6)}
+            for t, dist, _ in scored
+        ],
     }
 
 
