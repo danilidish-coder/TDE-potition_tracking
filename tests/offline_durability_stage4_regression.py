@@ -1,5 +1,6 @@
 """Stage 4: durable offline-journal invariants, isolated from production data."""
 import sys
+import threading
 import tempfile
 import unittest
 from pathlib import Path
@@ -66,6 +67,34 @@ class OfflineDurabilityStage4(unittest.TestCase):
                              [created for _, created, _ in recorded])
             self.assertEqual(restarted.sync(store, Person)["applied"], [])
             self.assertEqual(len(store.events), 2)
+
+    def test_simultaneous_offline_claims_same_booth_allow_only_one(self):
+        with tempfile.TemporaryDirectory() as folder:
+            journal = OfflineJournal(folder)
+            barrier = threading.Barrier(2)
+            results = []
+            lock = threading.Lock()
+
+            def claim(person):
+                barrier.wait()
+                try:
+                    outcome = ("accepted", journal.enqueue(
+                        "START", person, "ΓΚΙΣΕ 7", "ΕΞΟΔΟΣ")["operation_id"])
+                except ValueError as exc:
+                    outcome = ("rejected", str(exc))
+                with lock:
+                    results.append(outcome)
+
+            workers = [threading.Thread(target=claim, args=(Person(str(900 + i)),))
+                       for i in range(2)]
+            for worker in workers:
+                worker.start()
+            for worker in workers:
+                worker.join(timeout=8)
+                self.assertFalse(worker.is_alive(), "Offline claim deadlocked")
+            self.assertEqual(sorted(item[0] for item in results),
+                             ["accepted", "rejected"])
+            self.assertEqual(len(journal._rows(("PENDING",))), 1)
 
     def test_legacy_conflict_is_not_silently_deleted_on_restart(self):
         with tempfile.TemporaryDirectory() as folder:
