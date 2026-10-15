@@ -145,3 +145,20 @@ START/END identity/history checks remain field acceptance. Simulations do not
 certify those. Update this checkpoint with exact SHAs/runs and the first pending
 action after each stage. Do not claim full completion while these required
 implementation/gate tasks remain.
+
+## Independent personnel module candidate
+
+The personnel/value/OOXML boundary is now implemented locally in
+`src/position_tracking_personnel.py` with unchanged class bodies and legacy exports.
+`tests/personnel_module_regression.py` has six passing contracts, including independent
+import without the entry point or Qt. Full local suite after extraction: 35 scripts
+PASS. No source/data format behavior was changed. This candidate needs its own Windows
+build/portable/visual run before being considered fully verified.
+
+The earlier physical-capture/atomic-cache revision `29b0a1f` has passed Linux (34 scripts)
+and its module gate; Windows run 238 is still pending at this checkpoint. Preserve its
+exact diagnostics, then rebase only this unpublished personnel commit over any docs-only
+CI additions and push it for its own required checks. Do not describe pending Windows
+checks as passed or the whole modularization as complete. Next independent unit after
+these gates: pure theme palette/stylesheet data, then settings/runtime paths and the
+remaining services/controllers listed in ARCHITECTURE_AUDIT.md.

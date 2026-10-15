@@ -9,7 +9,7 @@ This is a development audit, not a production acceptance certificate.
 | Area | Current owner | Dependencies / checks |
 |---|---|---|
 | Settings, runtime files, migrations | position_tracking.py: AppConfig and path helpers | machine_queue; settings integration coverage needed |
-| Personnel and roster Excel import | PersonnelRecord, PersonnelRepository, ShiftRosterRepository | stdlib OOXML; officer simulation; malformed/compatibility contract needed |
+| Personnel and roster Excel import | position_tracking_personnel.py | stdlib OOXML; six compatibility/standalone import contracts; legacy facade exports |
 | Shared storage and concurrency | SharedEventStore | JSON receipts, SQLite, OS file locks; shared lock and network stress |
 | Active positions, START/END | SharedEventStore | booth + officer locks, receipt replay; lifecycle and correction tests |
 | Shifts and history | SharedEventStore | SQLite snapshots/session index; shift/archive/history regressions |
@@ -110,3 +110,14 @@ All tests use synthetic data and temporary directories. Local contention is not 
 
 - `_windows_session_is_active` (37 lines)
 
+
+## Personnel boundary extracted
+
+`position_tracking_personnel.py` owns immutable personnel value records and read-only
+OOXML personnel/roster import. Its only project dependency is the common text helpers;
+it imports neither Qt, the central store nor the application entry point. Existing
+entry-point class names reexport the same objects. Six contracts cover those identities,
+standalone loading, Greek headers, leading-zero IDs, duplicate merging, headerless
+known-ID roster, immutable records, invalid input and input-file preservation. The
+three class bodies were compared by AST with the pre-extraction source and are unchanged.
+The symbol inventory above is the original audit baseline, not a current line count.
