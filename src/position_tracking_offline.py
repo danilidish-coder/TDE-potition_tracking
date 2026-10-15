@@ -209,13 +209,29 @@ class OfflineJournal:
                 if "άλλαξε" in str(exc) or "changed" in str(exc).lower():
                     self._mark(op["id"], "CONFLICT", str(exc))
                 break
-            self._mark(op["id"], "APPLIED", "")
-            applied.append(op["id"])
-            if op["kind"] == "START":
-                self.remember(op["agms"], event)
-            else:
-                self.remember(op["agms"], None)
+            if self._record_applied(op, event):
+                applied.append(op["id"])
         return {"applied": applied, "pending": self.pending_count(), "conflicts": self.conflicts()}
+
+    def _record_applied(self, op, event):
+        """Commit replay status and its observed state together, once.
+
+        A crash/cache write failure must leave the operation retryable. Another
+        process may already have replayed this ID and a later END; never let a
+        delayed response resurrect its old START in the shared machine cache.
+        """
+        with self._db() as db:
+            changed = db.execute(
+                "UPDATE operations SET status='APPLIED',error='',recorded_at=? "
+                "WHERE id=? AND status='PENDING'",
+                (datetime.now().isoformat(timespec="seconds"), op["id"]),
+            ).rowcount
+            if changed != 1:
+                return False
+            active = event if op["kind"] == "START" else None
+            db.execute("INSERT OR REPLACE INTO observed VALUES(?,?,?)",
+                       (op["agms"], json.dumps(active, ensure_ascii=False), datetime.now().isoformat()))
+        return True
 
     def resolve_conflict(self, op_id: str, officer_agms: str, reason: str):
         """Reject an unconfirmed offline claim with a durable officer audit.

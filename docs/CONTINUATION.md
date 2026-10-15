@@ -179,3 +179,25 @@ in `/tmp/tde_personnel_contract.py` (4 PASS): Greek headers, leading-zero IDs,
 duplicate merging, known-ID/headerless roster, immutable records and invalid
 files. Move/adapt them into tests when extracting that independent module. Do
 not treat the module as implemented; it is still inside the main source.
+
+### Independent offline transaction candidate (not yet Windows-certified)
+
+Implemented `_record_applied` in `position_tracking_offline.py`: conditional
+PENDING→APPLIED and the `observed` update now share one SQLite transaction.
+An already completed operation cannot overwrite a newer cached state when an
+old worker finally returns. `offline_applied_cache_regression.py` verifies START
+and END cache-write failures with a real SQLite abort trigger, reopen/retry with
+the same IDs, and deterministic concurrent replay where a late START response
+arrives after another process has already applied END. All three tests fail on
+the pre-fix offline module and pass on the candidate. Full local suite: 34 scripts
+PASS, including two Windows-native cases explicitly skipped on Linux.
+
+This is independent recovery work while fresh-window visual validation of
+`fcc315e` runs in Windows. Do not claim the transaction candidate Windows-tested
+until its own full CI completes. Preserve the native-test results first: fetch
+the diagnostic-only remote commit; rebase this unpublished local correctness
+commit on top if necessary (only docs are expected remotely), then push this
+branch and require its full portable/Windows checks. If startup anomalies remain,
+inspect bbox/PID metadata and images rather than changing thresholds. Continue
+fixing the true source of movement/paint or capture misidentification; then resume
+the personnel/domain extraction. No production release is authorized.
