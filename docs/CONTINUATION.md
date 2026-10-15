@@ -162,3 +162,33 @@ CI additions and push it for its own required checks. Do not describe pending Wi
 checks as passed or the whole modularization as complete. Next independent unit after
 these gates: pure theme palette/stylesheet data, then settings/runtime paths and the
 remaining services/controllers listed in ARCHITECTURE_AUDIT.md.
+
+## Latest measured result and exact desktop classification candidate
+
+Windows `38805076037` on `29b0a1f` passed all 34 portable scripts, including atomic
+cache recovery and native DPI/tree contracts. The full run FAILED only startup
+analysis: 15 startup anomalies, zero theme anomalies, 30 confirmed clicks. Actual
+geometry is now fully visible `[380,160,1540,880]` at 96 DPI on a 1920x1080 desktop.
+Most anomalies are a single first screenshot of the Windows desktop/runner console
+(distance ~0.529958), followed by complete stable UI by ~45–55ms. Images were
+inspected at docs/validation/windows-visual-38805076037-1/contact_02.png. This is
+not evidence of a mixed application-theme frame; earlier clipped capture geometry
+obscured which pixels were actually being observed.
+
+The current test refinement captures the actual desktop BEFORE each EXE launch.
+Only byte-identical desktop frames before any application pixels are classified
+as launch latency. All frames/images/raw distances remain retained and reported,
+with desktop-loading vs application-frame counts and a separate application
+maximum distance. Every application frame still uses the original .08 threshold.
+Black/partial/mixed UI and return to desktop AFTER app pixels remain failures.
+A desktop-only or zero-frame capture is a hard failure. Seven synthetic image/
+retention/error contracts verify these distinctions, without sleeps, threshold
+relaxation or discarding evidence. Actual Windows verification of exact desktop
+matches is still pending; if background changes prevent an exact match, the test
+must continue to fail and retain evidence rather than broaden that match rule.
+
+Personnel extraction and this test-only refinement are separate commits. Both
+need their own next full Windows/Linux results; do not treat a prior 34-script
+run as validation of the new 35-script personnel revision. First pending: push
+these local commits, inspect reports and code provenance, then update this
+checkpoint with the exact successful source/run IDs or the remaining failure.

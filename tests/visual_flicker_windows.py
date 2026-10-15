@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from PIL import ImageGrab, ImageStat
+from PIL import ImageGrab, ImageStat, ImageChops
 from support.windows_visual_processes import (
     descendant_pids, process_snapshot, stop_process_tree,
     use_physical_pixel_coordinates, theme_button_point,
@@ -178,18 +178,37 @@ def normalized_image_distance(img_a, img_b) -> float:
     return total / (len(pa)*3*255.0)
 
 
-def startup_endpoint_check(raw, out_dir: Path, prefix: str, threshold: float = 0.08):
+def startup_endpoint_check(raw, out_dir: Path, prefix: str, threshold: float = 0.08, desktop_reference=None):
     if not raw:
-        return {"endpoint_anomaly_frames": 0, "max_endpoint_distance": 0.0}
+        raise RuntimeError("No startup frames captured.")
     final_ref = raw[-1][1]
     raw[0][1].save(out_dir / f"{prefix}_first.png")
     final_ref.save(out_dir / f"{prefix}_reference.png")
+    if desktop_reference is not None:
+        desktop_reference.save(out_dir / f"{prefix}_desktop_reference.png")
     scored = [(t, normalized_image_distance(img, final_ref), img) for t, img in raw]
-    anomalies = [x for x in scored if x[1] > threshold]
+    loading_indexes = []
+    application_seen = desktop_reference is None
+    for index, (_, _, img) in enumerate(scored):
+        unchanged_desktop = (
+            desktop_reference is not None and img.size == desktop_reference.size
+            and ImageChops.difference(img.convert("RGB"), desktop_reference.convert("RGB")).getbbox() is None
+        )
+        if not application_seen and unchanged_desktop:
+            loading_indexes.append(index)
+        else:
+            application_seen = True
+    if not application_seen:
+        raise RuntimeError("No application pixels captured: only the unchanged pre-launch desktop was observed.")
+    loading = set(loading_indexes)
+    # Every frame remains in the report/evidence. Only byte-identical desktop
+    # BEFORE the first application pixels is classified as launch latency.
+    # Partial/black UI and desktop reappearing after UI remain strict failures.
+    anomalies = [x for index, x in enumerate(scored) if index not in loading and x[1] > threshold]
     # Keep the entire suspect startup, including normal frames between anomalies.
     # This distinguishes a monotonic first paint from a transient third state;
     # it does not exclude early frames or change the acceptance threshold.
-    if anomalies:
+    if anomalies or loading_indexes:
         sequence_dir = out_dir / f"{prefix}_sequence"
         sequence_dir.mkdir(parents=True, exist_ok=True)
         for index, (t, dist, img) in enumerate(scored):
@@ -199,11 +218,14 @@ def startup_endpoint_check(raw, out_dir: Path, prefix: str, threshold: float = 0
     return {
         "endpoint_anomaly_frames": len(anomalies),
         "max_endpoint_distance": round(max(x[1] for x in scored), 5),
+        "max_application_endpoint_distance": round(max(x[1] for index, x in enumerate(scored) if index not in loading), 5),
         "endpoint_flicker_detected": bool(anomalies),
         "endpoint_threshold": threshold,
+        "desktop_loading_frames": len(loading_indexes),
+        "application_frames": len(scored) - len(loading_indexes),
         "endpoint_distances": [
-            {"t_s": round(t, 6), "distance": round(dist, 6)}
-            for t, dist, _ in scored
+            {"t_s": round(t, 6), "distance": round(dist, 6), "unchanged_prelaunch_desktop": index in loading}
+            for index, (t, dist, _) in enumerate(scored)
         ],
     }
 
@@ -275,13 +297,18 @@ def wait_for_window(pid: int, timeout=20.0):
 
 def _run_visual_tests(exe, out, report):
     for run in range(1, 21):
+        desktop = ImageGrab.grab(all_screens=True)
+        desktop_origin = (user32.GetSystemMetrics(76), user32.GetSystemMetrics(77))
         p = subprocess.Popen([exe], cwd=str(Path(exe).parent))
         try:
             hwnd = wait_for_window(p.pid)
             before_bbox = client_bbox(hwnd)
+            left, top, right, bottom = before_bbox
+            desktop_reference = desktop.crop((left - desktop_origin[0], top - desktop_origin[1],
+                                               right - desktop_origin[0], bottom - desktop_origin[1]))
             samples, raw = capture_sequence(hwnd, 1.2)
             summary = summarize(samples)
-            summary.update(startup_endpoint_check(raw, out, f"startup_{run:02d}"))
+            summary.update(startup_endpoint_check(raw, out, f"startup_{run:02d}", desktop_reference=desktop_reference))
             summary["run"] = run
             owner = wintypes.DWORD()
             user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
@@ -324,6 +351,7 @@ def _run_visual_tests(exe, out, report):
 
     report["startup_flicker_runs_legacy"] = sum(1 for x in report["startup_runs"] if x.get("flicker_detected"))
     report["startup_endpoint_flicker_runs"] = sum(1 for x in report["startup_runs"] if x.get("endpoint_flicker_detected"))
+    report["startup_desktop_loading_runs"] = sum(1 for x in report["startup_runs"] if x.get("desktop_loading_frames"))
     report["theme_flicker_toggles_legacy"] = sum(1 for x in report["theme_toggles"] if x.get("flicker_detected"))
     report["theme_endpoint_flicker_toggles"] = sum(1 for x in report["theme_toggles"] if x.get("endpoint_flicker_detected"))
     report["theme_clicks_confirmed"] = sum(1 for x in report["theme_toggles"] if x.get("theme_changed"))
