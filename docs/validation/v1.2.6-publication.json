@@ -1,0 +1,19 @@
+{
+  "source_commit": "eed6edab485c8ae5800c5b62f4c2cdfc29ee32e6",
+  "version": "v1.2.6",
+  "exe_sha256": "7671ef27814cb35f3c7f26d625b65e5d7fb95e60fcd8c15ac06ff14fc51a1a88",
+  "release": "https://github.com/danilidish-coder/TDE-potition_tracking/releases/tag/v1.2.6",
+  "download": "https://github.com/danilidish-coder/TDE-potition_tracking/releases/download/v1.2.6/TDE_Katagrafi_Theseon.exe",
+  "windows_run": "38925657174",
+  "independent_gates": {
+    "modularization-stage-gate.yml": 38925657163,
+    "test-shared-store.yml": 38925657143
+  },
+  "downloaded_exe_hash_verified": true,
+  "old_releases_unchanged": true,
+  "old_tags_unchanged": true,
+  "protected_refs": {
+    "heads/main": "3c7a785a4008caa7b4fc1c7fd8d240cb8653ff99",
+    "tags/v1.2.5": "33ea13ca2133ddbfb93b1d051d4b25dc35bd954f"
+  }
+}

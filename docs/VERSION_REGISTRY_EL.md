@@ -1,3 +1,18 @@
+## Published v1.2.6 Pre-release — 2026-10-16
+
+Source: `eed6edab485c8ae5800c5b62f4c2cdfc29ee32e6` (version-only successor of certified `410bf72`).
+EXE SHA-256: `7671ef27814cb35f3c7f26d625b65e5d7fb95e60fcd8c15ac06ff14fc51a1a88`
+Release: https://github.com/danilidish-coder/TDE-potition_tracking/releases/tag/v1.2.6
+Direct EXE: https://github.com/danilidish-coder/TDE-potition_tracking/releases/download/v1.2.6/TDE_Katagrafi_Theseon.exe
+Windows run: 38925657174; independent exact-source gates: {"modularization-stage-gate.yml": 38925657163, "test-shared-store.yml": 38925657143}.
+All final gates PASS, including the exact published/downloaded EXE hash.
+Application, VERSION.txt, PE resource and manifest: v1.2.6.
+Old releases/assets/tags and main/v1.2.5 compared before/after: unchanged.
+Proof: `docs/validation/v1.2.6-publication.json`.
+This is test-only; production replacement remains unapproved.
+Next: user-controlled field acceptance (multi-PC SMB/ACL/power loss,
+Windows sessions/reboot, extended GUI/DPI/printing). No new development authorized.
+
 ## v1.2.6 publication in progress — 2026-10-16
 
 Version-only successor of certified 410bf72fe197e6e7d9a4a1a299a135a716c71bf3.
