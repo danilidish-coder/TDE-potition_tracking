@@ -173,3 +173,6 @@ Store I/O/locks/SQLite primitives: seven AST-identical methods extracted into
 
 Communication store boundary: 12 AST-identical heartbeat/message/ack/command
 methods; 39 scripts PASS (/tmp/tde-communication-20261016), compileall/diff PASS.
+
+Personnel history/session index: nine AST-identical reconciliation/search methods,
+39 scripts PASS (/tmp/tde-session-index-20261016), compileall/diff PASS.
