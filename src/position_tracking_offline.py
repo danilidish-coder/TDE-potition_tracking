@@ -121,6 +121,27 @@ class OfflineJournal:
         with self._db() as db:
             return self._local_active_db(db, agms)
 
+    def proves_no_position_obligations(self) -> bool:
+        """Conservative local proof, never inferred from missing roster/network.
+
+        A single consistent snapshot must have no unresolved operation, no known
+        active/invalid observation and no START lacking an applied matching END.
+        This says nothing about unrelated positions on other computers.
+        """
+        with self._db() as db:
+            db.execute("BEGIN")
+            rows = db.execute("SELECT id,kind,agms,start_id,status FROM operations").fetchall()
+            observed = db.execute("SELECT record FROM observed").fetchall()
+        if any(json.loads(row[0]) is not None for row in observed):
+            return False
+        if any(not ident or not agms or kind not in ("START", "END") or
+               status not in ("APPLIED", "REJECTED") for ident, kind, agms, start_id, status in rows):
+            return False
+        ended = {(agms, start_id) for ident, kind, agms, start_id, status in rows
+                 if kind == "END" and status == "APPLIED" and start_id}
+        return all((kind == "START" and (agms, ident) in ended) or
+                   (kind == "END" and bool(start_id)) for ident, kind, agms, start_id, status in rows)
+
     def auto_close_previous_windows_users(self, computer: str, windows_user: str):
         """On next Windows user launch, durably queue END for previous users.
 

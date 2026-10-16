@@ -1,3 +1,34 @@
+# Resumed: reported idle/offline exit — 2026-10-16
+
+Starting checkpoint 278307b6ff46223db0685bcc867f9229b7e1554b; remote matched.
+Home report reproduced in a real launch/QApplication loop/child process, without
+central folder, roster or START/END. Original failure preserved in
+validation/idle-exit-20261016/before.txt.
+
+Fix: distinguish application closure from confirmed service END. Local idle exit
+is permitted only for an explicitly tracked never-used window, with no initial
+handoff error, settled relevant futures and a consistent local-journal proof:
+no unresolved/unknown operations, no active/invalid observations, every START
+matched by an applied END. Corrupt/unknown state fails closed. No schema or
+ID/timestamp changes, no END/ACK/share access in local-idle branch. Remote CLOSE
+still requires central confirmation/ACK; attempted START/END never uses shortcut.
+
+10 targeted real-process Qt cases PASS, including no-central process termination,
+confirmed closed history, pending/conflict, applied-unclosed START with empty
+cache, observed active/corrupt state, in-flight work, attempted action and remote
+command protection. Entire portable suite **49 scripts PASS**. Source compilation
+and diff check follow before commit. Current native EXE acceptance is pending;
+1554ded remains previous accepted binary and contains the reported idle-exit bug.
+
+Next: targeted remaining GUI/SMB risk: live-map service mutations currently read
+and write shared state on Qt and END does not guard the exact selected START.
+Reproduce before changing, then minimal correction and focused/full local checks;
+one final combined Windows/Linux/gate cycle only after the candidate is ready.
+No repeats of completed modularization or earlier long soak. Remaining real field
+acceptance in FIELD_ACCEPTANCE_EL.md and RELIABILITY_REPORT_EL.md.
+
+Earlier checkpoint below is historical and superseded by this header.
+
 # Exact reliability checkpoint — 2026-10-16
 
 Task explicitly resumed from 801f91db09b17e5cdf77a952f8c21326ce5513a7.

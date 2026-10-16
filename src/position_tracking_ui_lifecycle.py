@@ -58,11 +58,13 @@ class WindowLifecycleMixin:
         answer = QMessageBox.question(
             self,
             "Έξοδος από το πρόγραμμα",
-            "Να κλείσει πραγματικά η εφαρμογή?\\n\\n"
-            "Οι ενεργές θέσεις που ανοίχθηκαν από αυτό το παράθυρο "
-            "θα λάβουν ΛΗΞΗ πριν κλείσει το πρόγραμμα.\\n"
-            "Αν δεν είναι διαθέσιμος ο κεντρικός φάκελος, η έξοδος "
-            "δεν θα ολοκληρωθεί με ψευδή επιβεβαίωση.",
+            "Να κλείσει η εφαρμογή;\n\n"
+            "Απλό κλείσιμο χωρίς ΛΗΞΗ επιτρέπεται μόνο όταν αποδεικνύεται "
+            "ότι αυτό το παράθυρο δεν άνοιξε θέση και δεν υπάρχουν ενεργές "
+            "ή εκκρεμείς τοπικές καταγραφές.\n\n"
+            "Διαφορετικά, οι θέσεις αυτού του παραθύρου απαιτούν "
+            "επιβεβαιωμένη ΛΗΞΗ πριν από την έξοδο. "
+            "Το κλείσιμο εφαρμογής δεν αποτελεί αποδέσμευση άλλων θέσεων.",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -76,7 +78,7 @@ class WindowLifecycleMixin:
         self._exit_in_progress = True
         self.start_btn.setEnabled(False)
         self.end_btn.setEnabled(False)
-        self.info.setText("ΕΚΚΡΕΜΕΙ ΕΠΙΒΕΒΑΙΩΜΕΝΗ ΛΗΞΗ — η εφαρμογή παραμένει ανοικτή.")
+        self.info.setText("ΕΛΕΓΧΟΣ ΑΣΦΑΛΟΥΣ ΕΞΟΔΟΥ — η εφαρμογή παραμένει ανοικτή.")
         offline_future = self._offline_future
         local_future = self._position_operation_future
         store = self.store
@@ -88,6 +90,19 @@ class WindowLifecycleMixin:
             # a separate worker; wait without blocking Qt or overtaking its END.
             if local_future is not None:
                 local_future.result(timeout=0)
+            background_settled = all(
+                future is None or future.done() for future in (
+                    offline_future, getattr(self, "_communication_future", None),
+                    getattr(self, "_shift_future", None), getattr(self, "_shift_closure_future", None),
+                    getattr(self, "_agms_future", None), getattr(self, "_shift_status_future", None),
+                )
+            )
+            if (not command_id and not getattr(self, "_position_activity_attempted", True)
+                    and not getattr(self, "_handoff_initial_error", "") and background_settled
+                    and self.offline.proves_no_position_obligations()):
+                # This instance never issued START/END. This is application
+                # closure only: do not emit END, ACK, or touch an absent share.
+                return "local_idle"
             if offline_future is not None:
                 connected, _ = offline_future.result(timeout=31)
             if self.offline.pending_count():
@@ -99,6 +114,7 @@ class WindowLifecycleMixin:
                 connected.remove_client_heartbeat(self.client_id)
             except Exception:
                 pass  # heartbeat expiry does not change confirmed END receipts
+            return "centrally_confirmed"
 
         future = self._position_pool.submit(work)
         self._exit_future = future
@@ -111,15 +127,15 @@ class WindowLifecycleMixin:
                 QTimer.singleShot(100, poll)
                 return
             try:
-                future.result()
+                self._exit_mode = future.result()
             except Exception as exc:
                 self._exit_in_progress = False
                 self.info.setText("Η ΛΗΞΗ ΔΕΝ ΕΠΙΒΕΒΑΙΩΘΗΚΕ — η εφαρμογή παραμένει ανοικτή.")
                 self._agms_changed()
                 QMessageBox.critical(
-                    self, "Η λήξη δεν καταχωρίστηκε",
-                    f"Δεν επιβεβαιώθηκε η αποδέσμευση της θέσης.\n{exc}\n"
-                    "Ελέγξτε τον κεντρικό υπολογιστή ή ενημερώστε τον ΑΞΥΠ.",
+                    self, "Η έξοδος δεν ολοκληρώθηκε",
+                    f"Δεν αποδείχθηκε ασφαλές κλείσιμο ή επιβεβαιωμένη ΛΗΞΗ.\n{exc}\n"
+                    "Οι καταγραφές διατηρούνται. Ελέγξτε τον κεντρικό υπολογιστή ή ενημερώστε τον ΑΞΥΠ.",
                 )
                 return
             self._force_exit = True

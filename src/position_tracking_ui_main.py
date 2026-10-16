@@ -43,6 +43,7 @@ class MainWindow(AdministrationMixin, PersonnelHistoryMixin, ReportDialogsMixin,
         self._network_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix='TDE-network')
         self._position_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix='TDE-position')
         self._state_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix='TDE-state')
+        self._position_activity_attempted = False
         self._position_operation_future = None
         self._last_bootstrap_check = 0.0
         self._offline_future = None

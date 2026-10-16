@@ -135,6 +135,9 @@ class PositionActionsMixin:
             result["pending_sync"] = True
             result["conflict"] = bool(self.offline.conflicts())
             return result
+        # Even a failed/ambiguous enqueue prevents the never-used-session exit
+        # shortcut. Confirmation of a real position must retain its strict path.
+        self._position_activity_attempted = True
         future = self._position_pool.submit(work)
         self._position_operation_future = future
         def poll():
