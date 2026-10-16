@@ -1,3 +1,14 @@
+## Reliability checkpoint: stale shared observation
+
+Reproduced a delayed GUI remote read resurrecting a START in the shared machine
+cache after a second journal instance had replayed its END. Fixed with an atomic
+local observation revision comparison: no local DB lock spans network I/O and a
+changed observed row/latest operation rejects the stale response. GUI then uses
+the current durable state. Legacy remember callers remain compatible; no schema
+or event changes. Both delayed START and delayed empty-read cases PASS, full
+portable suite **46 scripts PASS**. Original failure and final outcomes preserved
+in `validation/reliability-20261016/`. Next: asynchronous confirmed exit.
+
 ## Reliability checkpoint: selection backpressure
 
 Reproduced on source 762c3a36: 200 rapid selection changes while a remote read

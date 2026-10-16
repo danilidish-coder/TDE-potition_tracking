@@ -60,10 +60,28 @@ class OfflineJournal:
                 "client_id": client_id, "computer": socket.gethostname(),
                 "windows_user": os.environ.get("USERNAME") or os.environ.get("USER") or ""}
 
-    def remember(self, agms: str, active: dict | None):
+    @staticmethod
+    def _observation_revision_db(db, agms):
+        observed = db.execute("SELECT record,checked_at FROM observed WHERE agms=?", (agms,)).fetchone()
+        operation = db.execute(
+            "SELECT id,status FROM operations WHERE agms=? ORDER BY rowid DESC LIMIT 1", (agms,)
+        ).fetchone()
+        return observed, operation
+
+    def observation_revision(self, agms: str):
+        # Capture a consistent local snapshot; no connection/lock spans SMB I/O.
         with self._db() as db:
+            db.execute("BEGIN")
+            return self._observation_revision_db(db, agms)
+
+    def remember(self, agms: str, active: dict | None, *, expected_revision=None):
+        with self._db() as db:
+            db.execute("BEGIN IMMEDIATE")
+            if expected_revision is not None and self._observation_revision_db(db, agms) != expected_revision:
+                return False
             db.execute("INSERT OR REPLACE INTO observed VALUES(?,?,?)",
                        (agms, json.dumps(active, ensure_ascii=False), datetime.now().isoformat()))
+        return True
 
     @staticmethod
     def _rows_db(db, statuses=("PENDING", "CONFLICT")):

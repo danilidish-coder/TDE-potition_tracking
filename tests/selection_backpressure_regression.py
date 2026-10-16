@@ -58,4 +58,46 @@ class SelectionBackpressure(unittest.TestCase):
                 w._state_pool.shutdown(wait=True, cancel_futures=True)
                 w.close(); app.processEvents()
 
+class DelayedSelectionObservation(unittest.TestCase):
+    def test_remote_read_cannot_resurrect_start_after_another_process_replayed_end(self):
+        from position_tracking_store import SharedEventStore
+        app = QApplication.instance() or QApplication([])
+        captured, release = threading.Event(), threading.Event()
+        class Window(PersonnelSelectionMixin, QWidget): pass
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            journal = OfflineJournal(root / 'queue'); store = SharedEventStore(root / 'central')
+            person = PersonnelRecord('1', 'TEST', 'SYNTHETIC', 'ONLY')
+            journal.enqueue('START', person, '14', 'ΕΞΟΔΟΣ')
+            journal.sync(store, PersonnelRecord)
+            class SlowStore:
+                def get_active(self, agms):
+                    record = store.get_active(agms); captured.set()
+                    if not release.wait(8): raise RuntimeError('fixture deadline')
+                    return record
+            w = Window(); w._state_pool = ThreadPoolExecutor(max_workers=2)
+            w.store = SlowStore(); w.offline = journal; w._position_operation_future = None
+            w.agms_input = QLineEdit(w); w.person_name = QLabel(w); w.active_status = QLabel(w)
+            w.start_btn = QPushButton(w); w.end_btn = QPushButton(w); w._people_by_agms = {'1': person}
+            try:
+                w.agms_input.setText('1'); w._agms_changed()
+                deadline = time.monotonic() + 2
+                while not captured.is_set() and time.monotonic() < deadline: QTest.qWait(10)
+                self.assertTrue(captured.is_set())
+                other = OfflineJournal(root / 'queue')
+                end = other.enqueue('END', person)
+                self.assertEqual(other.sync(store, PersonnelRecord)['applied'], [end['operation_id']])
+                self.assertIsNone(other.local_active('1'))
+                release.set()
+                deadline = time.monotonic() + 3
+                while time.monotonic() < deadline and not w._agms_future.done(): QTest.qWait(10)
+                self.assertTrue(w._agms_future.done()); QTest.qWait(250)
+                self.assertIsNone(journal.local_active('1'), 'Delayed SMB read resurrected an already ended START')
+                self.assertFalse(w.end_btn.isEnabled(), 'GUI must use current local observation after rejecting stale read')
+                self.assertTrue(w.start_btn.isEnabled())
+                self.assertEqual(len(store.iter_all_events()), 2)
+            finally:
+                release.set(); w._agms_query_serial += 1
+                w._state_pool.shutdown(wait=True, cancel_futures=True); w.close(); app.processEvents()
+
 if __name__ == '__main__': unittest.main()

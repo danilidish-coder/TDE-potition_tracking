@@ -93,6 +93,17 @@ class AppliedCacheContract(unittest.TestCase):
         self.assertIsNone(self.journal.local_active(self.person.agms))
         self.assertEqual(len(self.store.iter_all_events()), 2)
 
+    def test_delayed_empty_read_cannot_erase_a_new_applied_start(self):
+        revision = self.journal.observation_revision(self.person.agms)
+        other = OfflineJournal(self.root / 'local')
+        operation = other.enqueue('START', self.person, '14', 'ΕΞΟΔΟΣ')
+        other.sync(self.store, PersonnelRecord)
+        self.assertFalse(self.journal.remember(self.person.agms, None, expected_revision=revision))
+        self.assertEqual(self.journal.local_active(self.person.agms)['event_id'], operation['operation_id'])
+        current = self.journal.observation_revision(self.person.agms)
+        self.assertTrue(self.journal.remember(self.person.agms, self.store.get_active(self.person.agms), expected_revision=current))
+        self.assertEqual(len(self.store.iter_all_events()), 1)
+
 
 if __name__ == '__main__':
     unittest.main()

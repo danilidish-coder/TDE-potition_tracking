@@ -52,8 +52,12 @@ class PersonnelSelectionMixin:
             return
         self.active_status.setText("ΕΛΕΓΧΟΣ ΕΝΕΡΓΗΣ ΘΕΣΗΣ — αναμονή κεντρικού.")
         def load_remote():
+            revision = self.offline.observation_revision(person.agms)
             record = self.store.get_active(person.agms)
-            self.offline.remember(person.agms, record)
+            if not self.offline.remember(person.agms, record, expected_revision=revision):
+                # A local operation/replay won while SMB was returning. Its
+                # durable state must win both the cache and the button state.
+                return self.offline.local_active(person.agms)
             return record
         future = None
         query_started = time.monotonic()
