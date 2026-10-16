@@ -176,3 +176,16 @@ methods; 39 scripts PASS (/tmp/tde-communication-20261016), compileall/diff PASS
 
 Personnel history/session index: nine AST-identical reconciliation/search methods,
 39 scripts PASS (/tmp/tde-session-index-20261016), compileall/diff PASS.
+
+Shift schema/snapshot index: five AST-identical methods, 39 scripts PASS
+(/tmp/tde-shift-index-20261016), compileall/diff PASS.
+
+Windows diagnostic run 38861912057 FAILED on exact application src/ tree ec80b132:
+36 portable scripts/build/smoke PASS, 14/20 startup anomalies and 1/30 theme
+anomalies, 30/30 clicks. Linux 38861912055 and module gate 38861912054 PASS.
+Original PNGs now retained in its diagnostics commit 09c8cf0. Pixel analysis of
+startup_03: only 1043/835200 pixels differ from prelaunch desktop, on the bottom/
+left console border (focus change). Startup_09/_10 are solid white real window
+frames, not normal unchanged desktop. Neither has been waived. Next isolate the
+CI background focus fixture, then correct actual first-paint/presentation and
+retain originals for the failing theme toggle too. No threshold change allowed.
