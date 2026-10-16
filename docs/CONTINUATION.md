@@ -154,3 +154,7 @@ Linux 38861912055 and module gate 38861912054 already PASS for 0f6fee5.
 Pure report text/HTML boundary: 38 local scripts PASS, including five new
 formatter contracts; /tmp/tde-report-text-20261016. No store/Qt/document dependency
 at import; entry reexports retain object identity. No Windows PASS claimed yet.
+
+PDF/history summary module: function ASTs exactly unchanged, legacy identities
+retained; 39 scripts PASS (/tmp/tde-pdf-20261016), compileall/diff PASS. Independent
+service import and missing-Qt failure contracts added; Windows still pending.
