@@ -1,143 +1,86 @@
-# Architecture and verification map
+# Current architecture and verification map — 2026-10-16
 
-Branch: `feature/v125-modularization-20261013`. Production main and v1.2.5 are protected.
+Only feature/v125-modularization-20261013. Main and production v1.2.5 protected.
+This is development verification, not field/production acceptance.
 
-This is a development audit, not a production acceptance certificate.
+## Current structure
 
-## Responsibilities and boundaries
+43 source files; entry 88 lines, MainWindow composition 77, largest module 366.
+The full per-file responsibility/line/commit inventory is in
+MODULARIZATION_REPORT_EL.md and validation/structure-20261016/modules.json.
+The original monolith inventory remains in Git history at checkpoint a323d9e.
 
-| Area | Current owner | Dependencies / checks |
-|---|---|---|
-| Settings, runtime files, migrations | position_tracking.py: AppConfig and path helpers | machine_queue; settings integration coverage needed |
-| Personnel and roster Excel import | position_tracking_personnel.py | stdlib OOXML; six compatibility/standalone import contracts; legacy facade exports |
-| Shared storage and concurrency | SharedEventStore | JSON receipts, SQLite, OS file locks; shared lock and network stress |
-| Active positions, START/END | SharedEventStore | booth + officer locks, receipt replay; lifecycle and correction tests |
-| Shifts and history | SharedEventStore | SQLite snapshots/session index; shift/archive/history regressions |
-| Reports and printing | top-level report functions | docx, openpyxl, Qt PDF; PDF/archive regressions |
-| Qt controllers and views | run(): nested MainWindow and widgets | async state/position/network executors; GUI behavior coverage incomplete |
-| Durable offline journal | position_tracking_offline | SQLite operations; 15-client restart, contention, durability and replay tests |
-| Windows account handoff | position_tracking_handoff | store/journal interfaces; protected original event IDs and replay-order tests |
-| Machine queue policy | position_tracking_machine_queue | shared PUBLIC path, legacy queue guard; ACL/two-account simulations |
-| Windows sessions | position_tracking_windows_session | WTS; mocked API states, actual session tests still required |
-| Local EXE bootstrap | position_tracking_bootstrap | frozen Windows, checksum, PowerShell shortcut; actual offline launch still required |
-| Shared normalization | position_tracking_common | stdlib; compatibility contract |
+| Responsibility | Current owners |
+|---|---|
+| Compatibility/launch composition | position_tracking.py, ui_application, ui_main, ui_context |
+| Settings and paths | settings, machine_queue |
+| Immutable personnel and roster import | personnel, common |
+| Active START/END, corrections, idempotent receipts | positions, store_io |
+| Shift membership/lifecycle | shifts |
+| SQLite snapshots and history index | shift_index, session_index |
+| Event projection and clock-window queries | event_queries |
+| Shared clients/messages/commands | communication |
+| Store composition, audit and backup | store |
+| Durable replay and account transitions | offline, handoff, windows_session |
+| Offline local Windows EXE bootstrap | bootstrap |
+| Text/HTML, PDF, Word, Excel reporting | report_text, pdf, documents, statistics |
+| Palette/style data and coherent repaint | theme, rendering |
+| Qt view/assets/map | ui_view, ui_assets, ui_map, artwork |
+| Qt business interaction controllers | ui_configuration, ui_selection, ui_positions, ui_shifts, ui_shift_end |
+| Qt communication/admin/history/report dialogs | ui_communication, ui_messages, ui_admin, ui_history, ui_reports |
+| Safe exit and initial presentation | ui_lifecycle, ui_presentation |
 
-## Dependency direction
+## Dependency and composition rules
 
-UI/controllers → reporting and storage services → personnel/value models and common helpers. Offline/handoff use narrow store interfaces. Entry point reexports legacy names for existing callers/tests. No extracted service should import the entry point. Settings/path providers must preserve application location and runtime override compatibility.
+Entry supplies explicit WindowServices config/path/file-opening callbacks. UI
+capability mixins compose into the small MainWindow; store capability mixins
+compose into SharedEventStore and share its explicit filesystem/SQLite state.
+Services do not import the entry or UI. Reporting uses narrow session-source
+contracts. Optional Qt/docx/openpyxl dependencies load only when needed by exports.
+Legacy entry exports remain compatible. No import cycles or duplicate effective
+business-method implementations. See tests/architecture_regression.py.
 
-## Known defects / investigation
+```mermaid
+flowchart TD
+    Entry["Entry: legacy API + runtime providers"] --> App["Qt application lifetime"]
+    App --> Window["MainWindow composition"]
+    Window --> Views["Views and UI controllers"]
+    Views --> Store["SharedEventStore composition"]
+    Views --> Reports["Report format adapters"]
+    Views --> Offline["Durable outbox and handoff"]
+    Store --> Capabilities["I/O, positions, shifts, indexes, queries, communication"]
+    Reports --> Models["Personnel and common values"]
+    Capabilities --> Models
+    Offline --> Models
+```
 
-- Reported mixed light/dark widgets in theme toggle 24 of run 38794439758. Existing code reenables root and window separately and schedules only update(); repaint is deferred. Candidate correction: one top-level update transaction, polish/layout complete while disabled, synchronous whole-tree repaint without processEvents or masking. Windows visual evidence remains mandatory.
+Whole-module AST audit: all 66 store methods unchanged versus 0f6fee5; all 50
+effective UI methods unchanged after explicit path callback normalization.
+Constructor composition is checked by real UI workflows. SQL/HTML string values
+are compared using complete owning-module ASTs, without text dedentation.
+Evidence: validation/structure-20261016/ast-audit.json.
 
-- Startup endpoint checks have previously failed (6/20 in run 38788459409). Do not excuse early frames or change limits; new full suspect sequences are retained.
+## Resolved evidence and current certification
 
-- Artifact download here is blocked by GitHub API access. Public run status is available, CI captures retained evidence; continue diagnosis using reported observations and repeatable tests.
+Initial capture contained console focus-border changes AND genuine unpainted
+white native surfaces. CI background now owns a responsive message loop; initial
+native presentation waits for actual completed Qt paint before uncloaking once.
+Theme changes still use normal visible coherent repaint. No threshold change,
+frame hiding/exclusion or screenshot overlay. See CONTINUATION.md for exact runs.
 
-- Previous acceptance matrix contains historical NOT IMPLEMENTED statuses; do not treat those as current facts or silently overwrite historical evidence.
+b943a869: full Windows 38865827943 SUCCESS, strict startup 0/20 and theme 0/30,
+30/30 confirmed clicks; Linux/module gate PASS and real EXE artifact uploaded.
+Latest complete structural source d128e6d: 43 local scripts PASS, Linux 38868080997
+and gate 38868081064 PASS. Windows 38868081099 final certification pending,
+including new external frozen-EXE mouse/keyboard data workflow.
 
+## Field acceptance gaps
 
-## Validation gaps and field acceptance
-
-All tests use synthetic data and temporary directories. Local contention is not an SMB power-loss/ACL proof. Windows WTS mocks do not prove lock/disconnect/logoff handling on real sessions. Need real Windows SMB host and 2+ clients, ACL-denied/reconnect, host power off, 10:00 shift boundary, logout/reboot, interrupted replay, preserved START/END IDs/timestamps and archive reconciliation. Long-running GUI responsiveness and interactive EXE workflows remain separate acceptance requirements. No access to operational data is needed or authorized.
-
-
-## Source symbol inventory (audit baseline)
-
-### position_tracking.py
-
-- `_app_dir` (7 lines)
-- `_exe_dir` (2 lines)
-- `_runtime_root` (16 lines)
-- `_open_path` (7 lines)
-- `_fallback_settings_path` (6 lines)
-- `_settings_path` (2 lines)
-- `AppConfig` (53 lines)
-- `PersonnelRecord` (13 lines)
-- `PersonnelRepository` (206 lines)
-- `ShiftRosterRepository` (55 lines)
-- `BusyError` (2 lines)
-- `SharedEventStore` (1544 lines)
-  Methods: `__init__`, `_active_path`, `_lock_path`, `_file_lock`, `officer_lock`, `_atomic_json`, `local_client_id`, `write_client_heartbeat`, `remove_client_heartbeat`, `online_clients`, `send_message`, `acknowledge_message`, `pending_messages`, `message_acknowledgements`, `recent_sent_messages`, `send_close_command`, `pending_commands`, `acknowledge_command`, `_shift_db_write_lock`, `_shift_db_connect`, `_upsert_shift_con`, `_upsert_personnel_session_con`, `_store_personnel_session`, `_has_end_receipt`, `reconcile_pending_sessions`, `_session_row_dict`, `_session_overlaps_clock_window`, `search_personnel_sessions`, `list_personnel_workers`, `list_session_positions`, `_init_shift_db`, `_store_shift_snapshot`, `get_shift`, `_current_report_shift_id`, `_effective_start_timestamp`, `_apply_start_correction`, `correct_active_start`, `get_active`, `_existing_operation_event`, `_write_event`, `start`, `end`, `active_all`, `close_previous_windows_user_positions`, `iter_events`, `iter_all_events`, `completed_sessions_all`, `save_shift`, `_current_shift_path`, `current_shift`, `current_report_shift`, `_person_payload`, `start_officer_shift`, `_sync_active_shift_locked`, `sync_active_shift`, `set_shift_member_state`, `end_officer_shift_member`, `end_officer_shift`, `shift_sessions_v2`, `list_shifts`, `search_finalized_shifts`, `roster_sessions`, `log_admin_action`, `backup_data`, `finalize_shift`, `shift_sessions`
-- `_duration_text` (6 lines)
-- `build_shift_text` (37 lines)
-- `build_roster_shift_text` (39 lines)
-- `create_personnel_statistics_xlsx` (118 lines)
-- `create_shift_docx` (58 lines)
-- `create_shift_pdf` (104 lines)
-- `_format_seconds` (4 lines)
-- `summarize_personnel_history` (25 lines)
-- `create_personnel_history_pdf` (105 lines)
-- `archive_shift_pdf` (3 lines)
-- `shift_report_title` (18 lines)
-- `archive_shift_docx` (7 lines)
-- `build_roster_shift_html` (5 lines)
-- `_escape_html` (2 lines)
-- `build_shift_html` (5 lines)
-- `run` (2689 lines)
-
-### position_tracking_bootstrap.py
-
-- `cache_windows_client` (51 lines)
-
-### position_tracking_common.py
-
-- `_clean` (2 lines)
-- `_norm_search` (4 lines)
-- `_safe_name` (3 lines)
-
-### position_tracking_handoff.py
-
-- `close_previous_windows_user_positions` (70 lines)
-- `HandoffBlocked` (2 lines)
-- `reconcile_handoff_before_replay` (45 lines)
-
-### position_tracking_machine_queue.py
-
-- `_local_root` (8 lines)
-- `_machine_queue_root` (60 lines)
-
-### position_tracking_offline.py
-
-- `OfflineConflict` (2 lines)
-- `OfflineJournal` (219 lines)
-
-### position_tracking_rendering.py
-
-- `coherent_widget_update` (22 lines)
-
-### position_tracking_windows_session.py
-
-- `_windows_session_is_active` (37 lines)
-
-
-## Personnel boundary extracted
-
-`position_tracking_personnel.py` owns immutable personnel value records and read-only
-OOXML personnel/roster import. Its only project dependency is the common text helpers;
-it imports neither Qt, the central store nor the application entry point. Existing
-entry-point class names reexport the same objects. Six contracts cover those identities,
-standalone loading, Greek headers, leading-zero IDs, duplicate merging, headerless
-known-ID roster, immutable records, invalid input and input-file preservation. The
-three class bodies were compared by AST with the pre-extraction source and are unchanged.
-The symbol inventory above is the original audit baseline, not a current line count.
-
-## Theme boundary extracted
-
-`position_tracking_theme.py` owns palette dictionaries and pure stylesheet generation.
-It imports only common normalization, with no Qt or entry-point import. Palette and
-stylesheet ASTs (including CSS string values) match the previous definitions exactly.
-Three contracts test independent import, normalization/fallback and actual Qt root
-background pixels through light/dark/light; existing application tests exercise 60
-whole-window changes. `position_tracking_rendering.py` separately owns coherent paint
-transactions, so style data does not depend on presentation or application services.
-
-## Settings boundary extracted, 2026-10-16
-
-`position_tracking_settings.py` owns config dataclass/persistence, migration and
-runtime path policy. Direct callers can inject paths; entry compatibility wrappers
-preserve overridable `_local_root`/`_app_dir` and return the legacy dataclass type.
-No entry, Qt or store import. Six contracts cover migration without shared-file
-mutation, existing-local precedence, failed replace preserving committed settings,
-corrupt/missing input, frozen EXE paths and isolated imports. No persistence format
-or fallback policy changed.
+All automated datasets are synthetic/temporary. Local contention and fault
+injection do not certify real SMB power loss or NTFS/share ACL. Account identity
+simulation does not certify actual Windows logoff/reboot/session switching.
+Required: real host + 2+ clients, denied/reconnected share, power-off/replay,
+10:00 and 12/24h transitions, long-running responsiveness and blocked-I/O shutdown,
+cached cold launch, small/high-DPI displays and real printing. Preserve original
+START/END IDs, timestamps, history and pending queue throughout those trials.
+No operational data or production deployment is authorized by this work.

@@ -1,0 +1,26 @@
+This plugin does not support propagateSizeHints()
+FThis plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.
+======================================================================
+FAIL: test_actual_application (__main__.RenderingContract.test_actual_application)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/rendering_regression.py", line 131, in test_actual_application
+    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+AssertionError: 1 != 0 : Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/rendering_regression.py", line 137, in <module>
+    application_check()
+  File "/workspace/TDE-potition_tracking/tests/rendering_regression.py", line 73, in application_check
+    raise errors[0]
+  File "/workspace/TDE-potition_tracking/tests/rendering_regression.py", line 56, in exercise
+    assert all(b in observer.painted for b in buttons), "A child missed the synchronous theme paint"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: A child missed the synchronous theme paint
+
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.691s
+
+FAILED (failures=1)

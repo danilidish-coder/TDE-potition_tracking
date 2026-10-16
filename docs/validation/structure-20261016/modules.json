@@ -1,0 +1,217 @@
+[
+  {
+    "module": "position_tracking",
+    "lines": 88,
+    "last_commit": "9ac9eb9d921cb5c0dbf17f015054ff82ce2f4431"
+  },
+  {
+    "module": "position_tracking_artwork",
+    "lines": 4,
+    "last_commit": "bdcf4f37a8ed650a249f9e89115405937789eb40"
+  },
+  {
+    "module": "position_tracking_bootstrap",
+    "lines": 68,
+    "last_commit": "1fecf3a3642b6f67b8c57bac8e8c005ec1749b0e"
+  },
+  {
+    "module": "position_tracking_common",
+    "lines": 25,
+    "last_commit": "b58b5b7a7b040f24c5795f6fc66517acfb47b559"
+  },
+  {
+    "module": "position_tracking_communication",
+    "lines": 187,
+    "last_commit": "2f25fc30c05f2714cf7fc4164a74d0e17ff4d5b8"
+  },
+  {
+    "module": "position_tracking_constants",
+    "lines": 6,
+    "last_commit": "8febfdedd1927c596cea7294192364b6acd32889"
+  },
+  {
+    "module": "position_tracking_documents",
+    "lines": 78,
+    "last_commit": "5c4bb45bc0f34a1c2353f2c852fd25ecfc108202"
+  },
+  {
+    "module": "position_tracking_event_queries",
+    "lines": 252,
+    "last_commit": "f1275aaa38a520e17763aa5b76328c700fe2c306"
+  },
+  {
+    "module": "position_tracking_handoff",
+    "lines": 134,
+    "last_commit": "716e35b300b5edaf515aa052724d80ac2e4a28d9"
+  },
+  {
+    "module": "position_tracking_machine_queue",
+    "lines": 83,
+    "last_commit": "b6015c6640955e5aeab84cc9b605272da3dc071d"
+  },
+  {
+    "module": "position_tracking_offline",
+    "lines": 258,
+    "last_commit": "ccbb27132a510b7105282487ff3e053b769a8f2c"
+  },
+  {
+    "module": "position_tracking_pdf",
+    "lines": 256,
+    "last_commit": "2904fc46d692993c2a43a04d63ce0c12a565a6e7"
+  },
+  {
+    "module": "position_tracking_personnel",
+    "lines": 299,
+    "last_commit": "1e7f2f20e6fa894a8db92b5dc38649397ebfd091"
+  },
+  {
+    "module": "position_tracking_positions",
+    "lines": 305,
+    "last_commit": "a2707c906014050b114503b872b4d005f0db15c2"
+  },
+  {
+    "module": "position_tracking_rendering",
+    "lines": 33,
+    "last_commit": "099e61d6a2d56ce8fc2d2e99eeae84da189afa6d"
+  },
+  {
+    "module": "position_tracking_report_text",
+    "lines": 159,
+    "last_commit": "2aae814d1936decda44275a5e45eb979b37e00ab"
+  },
+  {
+    "module": "position_tracking_session_index",
+    "lines": 250,
+    "last_commit": "5ffa016efba267df9db6cda4b3bb4501b12d8562"
+  },
+  {
+    "module": "position_tracking_settings",
+    "lines": 132,
+    "last_commit": "910b34072257f6833fde0d5023aeea52bbac89e1"
+  },
+  {
+    "module": "position_tracking_shift_index",
+    "lines": 166,
+    "last_commit": "3dd406786c588f9858e0d34277d4a4754964800c"
+  },
+  {
+    "module": "position_tracking_shifts",
+    "lines": 322,
+    "last_commit": "59f19b8f03223b29083c2e429aef34eab2b31c31"
+  },
+  {
+    "module": "position_tracking_statistics",
+    "lines": 127,
+    "last_commit": "b0c53953225c9173aff0a2e5fa9e51af45e3df47"
+  },
+  {
+    "module": "position_tracking_store",
+    "lines": 116,
+    "last_commit": "69e423bfb4ff9e8ac5a4671b1af0ba364b3d65b0"
+  },
+  {
+    "module": "position_tracking_store_io",
+    "lines": 124,
+    "last_commit": "6927c44f92be54fc12c62243ab6240fa9c767a35"
+  },
+  {
+    "module": "position_tracking_theme",
+    "lines": 152,
+    "last_commit": "ec80b132c35c48f25a3b3601ad74a3290f769825"
+  },
+  {
+    "module": "position_tracking_ui_admin",
+    "lines": 172,
+    "last_commit": "b8b9a18e806fb4aaffb5d9ce83a2918c56ab3c6f"
+  },
+  {
+    "module": "position_tracking_ui_application",
+    "lines": 18,
+    "last_commit": "9ac9eb9d921cb5c0dbf17f015054ff82ce2f4431"
+  },
+  {
+    "module": "position_tracking_ui_assets",
+    "lines": 89,
+    "last_commit": "bdcf4f37a8ed650a249f9e89115405937789eb40"
+  },
+  {
+    "module": "position_tracking_ui_communication",
+    "lines": 151,
+    "last_commit": "fa71594d9f895e687c417a2d90633123447e635a"
+  },
+  {
+    "module": "position_tracking_ui_configuration",
+    "lines": 112,
+    "last_commit": "be13404b28603316915a61c7bf2e95d2ae90501f"
+  },
+  {
+    "module": "position_tracking_ui_context",
+    "lines": 13,
+    "last_commit": "be13404b28603316915a61c7bf2e95d2ae90501f"
+  },
+  {
+    "module": "position_tracking_ui_history",
+    "lines": 366,
+    "last_commit": "8febfdedd1927c596cea7294192364b6acd32889"
+  },
+  {
+    "module": "position_tracking_ui_lifecycle",
+    "lines": 77,
+    "last_commit": "16db2858d67a0fa949e160dcb821a327f71d6b99"
+  },
+  {
+    "module": "position_tracking_ui_main",
+    "lines": 77,
+    "last_commit": "9ac9eb9d921cb5c0dbf17f015054ff82ce2f4431"
+  },
+  {
+    "module": "position_tracking_ui_map",
+    "lines": 287,
+    "last_commit": "820b64e5cca925f6f3d0202a984ccff1c9753a3f"
+  },
+  {
+    "module": "position_tracking_ui_messages",
+    "lines": 194,
+    "last_commit": "6827b93f14bf99c3a776f58b2e94367b5baef7eb"
+  },
+  {
+    "module": "position_tracking_ui_positions",
+    "lines": 179,
+    "last_commit": "d0fc5408a2728048a768a2f1c64142a61648f9c8"
+  },
+  {
+    "module": "position_tracking_ui_presentation",
+    "lines": 58,
+    "last_commit": "7444dc905cb181e807bf0368f690eb0d3efdbe8a"
+  },
+  {
+    "module": "position_tracking_ui_reports",
+    "lines": 187,
+    "last_commit": "35deb1a3a2eb1eb72fb82f295934180fb6cba6e4"
+  },
+  {
+    "module": "position_tracking_ui_selection",
+    "lines": 111,
+    "last_commit": "3e5e334df699df7d32bbaab386a852085cdafd78"
+  },
+  {
+    "module": "position_tracking_ui_shift_end",
+    "lines": 284,
+    "last_commit": "fae2c38e405b10ee86fdf389126ba4a2caa775c2"
+  },
+  {
+    "module": "position_tracking_ui_shifts",
+    "lines": 227,
+    "last_commit": "906710271dc83b9c669a10c9da273e252ec7543b"
+  },
+  {
+    "module": "position_tracking_ui_view",
+    "lines": 193,
+    "last_commit": "5b42fb0dd2850bb100afd017d1d7a09cb6ecb77d"
+  },
+  {
+    "module": "position_tracking_windows_session",
+    "lines": 46,
+    "last_commit": "c6c30a826098db764a443441c952fc6bb1d39c59"
+  }
+]

@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/shift_end_actions_regression.py", line 115, in <module>
+    assert 'self.end_active_btn=QPushButton("ΛΗΞΗ ΕΝΕΡΓΗΣ ΘΕΣΗΣ")' in source
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
