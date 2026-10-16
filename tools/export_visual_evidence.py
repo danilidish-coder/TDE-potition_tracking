@@ -26,6 +26,20 @@ def main():
     report = args.source / "report.json"
     if report.is_file():
         shutil.copy2(report, args.out / "report.json")
+    # Retain original failure references over Git as well as the short-lived
+    # artifact. Thumbnails cannot establish exact pixel/background differences.
+    if report.is_file():
+        data = json.loads(report.read_text(encoding="utf-8"))
+        originals = args.out / "originals"
+        for startup in data.get("startup_runs", []):
+            if not startup.get("endpoint_flicker_detected"):
+                continue
+            prefix = f"startup_{startup['run']:02d}"
+            for pattern in (f"{prefix}_first.png", f"{prefix}_reference.png",
+                            f"{prefix}_desktop_reference.png", f"{prefix}_endpoint_01_*.png"):
+                for source in args.source.glob(pattern):
+                    originals.mkdir(exist_ok=True)
+                    shutil.copy2(source, originals / source.name)
     # Original lossless frames stay in the artifact. These sheets are an index
     # of the most divergent frame plus first/reference frames, not test inputs.
     paths = sorted(set(args.source.glob("*_endpoint_01_*.png")) |

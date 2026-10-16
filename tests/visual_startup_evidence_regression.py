@@ -34,6 +34,9 @@ class StartupEvidenceContract(unittest.TestCase):
             self.assertFalse(result['endpoint_flicker_detected'])
             self.assertEqual(result['desktop_loading_frames'], 1)
             self.assertEqual(result['application_frames'], 2)
+            self.assertEqual(result['endpoint_distances'][0]['desktop_distance'], 0)
+            self.assertIsNone(result['endpoint_distances'][0]['desktop_difference_bbox'])
+            self.assertEqual(result['endpoint_distances'][1]['desktop_difference_bbox'], (0, 0, 32, 24))
             self.assertGreater(result['endpoint_distances'][0]['distance'], .08)
             self.assertEqual(len(list((root / 'loading_sequence').glob('*.png'))), 3)
 

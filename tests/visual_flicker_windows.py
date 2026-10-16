@@ -224,7 +224,11 @@ def startup_endpoint_check(raw, out_dir: Path, prefix: str, threshold: float = 0
         "desktop_loading_frames": len(loading_indexes),
         "application_frames": len(scored) - len(loading_indexes),
         "endpoint_distances": [
-            {"t_s": round(t, 6), "distance": round(dist, 6), "unchanged_prelaunch_desktop": index in loading}
+            {"t_s": round(t, 6), "distance": round(dist, 6), "unchanged_prelaunch_desktop": index in loading,
+             "desktop_distance": (round(normalized_image_distance(scored[index][2], desktop_reference), 6)
+                                  if desktop_reference is not None else None),
+             "desktop_difference_bbox": (ImageChops.difference(scored[index][2].convert("RGB"), desktop_reference.convert("RGB")).getbbox()
+                                         if desktop_reference is not None else None)}
             for index, (t, dist, _) in enumerate(scored)
         ],
     }

@@ -131,3 +131,17 @@ Remote main remains `3c7a785a4008caa7b4fc1c7fd8d240cb8653ff99`.
 original task base `129e8cb`. No production v1.2.5 binary, tag, release or main
 was changed; no real operational data was used or edited. All work is confined
 to the development branch. Stop after publishing this checkpoint.
+
+## Resumed 2026-10-16 — diagnostic-only checkpoint
+
+User explicitly resumed development. Remote and local started at a323d9e878a7;
+main is still unchanged. No newer remote diagnostics existed. Public Actions
+confirmed 38806871743 module gate PASS, Linux 38806871712 PASS and Windows
+38806871707 FAIL for 22bc3bd. API access still returns tunnel 403; Git works.
+
+The next diagnostic-only revision leaves all src/ byte-identical to ec80b132c35c.
+It adds per-frame desktop distance/difference bounding boxes and persistent original
+failed-startup PNGs, with no acceptance change. Full local 36-script suite PASS
+(/tmp/tde-diagnostic-20261016), compileall and diff check PASS. Push triggers the
+three existing feature workflows, independently validating the saved theme source.
+Await exact run IDs/results; no Windows PASS is claimed in advance.
