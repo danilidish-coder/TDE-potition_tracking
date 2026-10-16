@@ -324,3 +324,7 @@ UI shift preview/membership/status controller: seven AST-identical effective
 methods; removed the previously shadowed duplicate _shift_admin definition while
 retaining its actual last definition. 41 scripts PASS (/tmp/tde-ui-shifts-20261016),
 compileall/diff PASS. This does not change the guarded end dialog behavior.
+
+UI report/archive dialogs: three methods, file-opening callback now explicitly
+supplied by WindowServices with the same original behavior. 41 scripts PASS
+(/tmp/tde-ui-reports-20261016), compileall/diff PASS.
