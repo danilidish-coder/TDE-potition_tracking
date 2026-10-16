@@ -222,3 +222,9 @@ SharedEventStore composition/maintenance now lives in position_tracking_store.py
 entry reexports the same class. Remaining class AST unchanged. Backend imports
 without entry/Qt. 39 scripts PASS (/tmp/tde-store-composition-20261016),
 compileall/diff PASS. The giant store has been replaced by responsibility modules.
+
+Qt artwork/renderers extracted with unchanged AST/string values; 39 scripts PASS
+(/tmp/tde-ui-assets-20261016), compileall/diff PASS. Windows f31fe5c run
+38862995734 failed BEFORE build/visual in settings_module_regression.py; inspect
+the retained .txt failure. Its visual hypothesis was NOT tested. Stop new UI
+units until that actual Windows failure is corrected.
