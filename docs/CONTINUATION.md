@@ -1,37 +1,89 @@
-# Exact continuation checkpoint — 2026-10-16, active final verification
+# Safe paused checkpoint — 2026-10-16
 
-The user explicitly resumed the task on 2026-10-16. The STOP instruction from
-2026-10-15 is superseded. Work exclusively on
-`feature/v125-modularization-20261013`, using the existing Python 3.12 `.venv`.
-No reinstall, new worktree, production deployment or main modification.
+PAUSED by explicit user instruction because of the remaining Codex quota.
+Do not resume development, tests, builds or Actions until the user resumes work.
+No new tests or Actions were started to create this checkpoint. The already
+running Windows Action may finish independently; it was not cancelled.
 
-## Current state — do not repeat completed modules
+## Exact saved state
 
-Structural modularization is complete: 43 source files, entry 88 lines,
-MainWindow 77, maximum module 366. Latest pushed code/configuration:
-`e243e53e9d0be62102364f1d2bb48ffe678efe42`.
-Current src/ tree: `efa779ebf0a24f02e72125dbc185d857e059493b`.
-All 226 owned function/method annotations resolve after restoring four missing
-imports. Full local **44 scripts PASS**, compileall src/tests/tools and diff PASS.
-Four native Windows process/fixture cases skip locally; EXE driver is Windows-only.
+- Branch: `feature/v125-modularization-20261013` only.
+- Last application/test/workflow commit: `762c3a369a199766ab629007b6b2a3c27885d5e1`.
+- Last fetched diagnostics commit: `ee3e5e9ff90050249097ea7e94f8c73904605e93`;
+  fast-forwarded locally without discarding changes.
+- Application src tree: `efa779ebf0a24f02e72125dbc185d857e059493b`.
+- This documentation checkpoint's exact SHA is available with
+  `git log -1 --format=%H -- docs/CONTINUATION.md` after commit/push.
+- Structural modularization complete: 43 source files (entry plus 42 modules),
+  entry 88 lines, MainWindow 77, largest module 366. All 226 owned function/method
+  annotations resolve. Store/UI AST behavior audit retained in validation docs.
+- Latest local suite: **45 scripts PASS**, compileall src/tests/tools PASS,
+  diff check PASS. Native Windows-only cases are not certified by Linux runs.
+  Existing final local logs/results are preserved in
+  `docs/validation/local-20261016/recovery-contract-budget/`.
 
-Current exact e243e53 workflows:
+## Last Actions for exact code commit 762c3a369a199766ab629007b6b2a3c27885d5e1
 
-- Linux **38870905814 PASS**.
-- Module gate **38870905823 PASS**.
-- Windows **38870905825 PENDING**: regressions/build/smoke, external frozen-EXE
-  workflow, strict visual and accepted artifact upload.
+- Linux **38874685771 PASS**; committed results:
+  `docs/validation/linux-38874685771-1/results.json`.
+- Modularization gate **38874685792 PASS**.
+- Windows Qt recovery diagnostic **38874685760 PASS, 8/8**; logs/provenance:
+  `docs/validation/ui-recovery-38874685760-1/`.
+- Full Windows **38874685744** was in progress at last observed Actions status.
+  During checkpoint push, CI committed its diagnostics in `ee3e5e9ff90050249097ea7e94f8c73904605e93`;
+  these were integrated without overwriting changes. Preserved visual report:
+  startup endpoint anomalies **0/20**, initial exact desktop loading **20/20**,
+  theme endpoint anomalies **0/30**, confirmed clicks **30/30**.
+  External frozen EXE functional report **PASS**: four operations, two completed
+  sessions, original IDs/timestamps preserved, temporary data only.
+  EXE SHA256: `beb836483229f3656e959c0891a7bd27cb7f58a0813b2bfa1015dabbf27699f7`.
+  Evidence: `docs/validation/windows-visual-38874685744-1/`.
+  Overall final Actions status and accepted artifact upload remain unverified;
+  do not claim overall PASS or availability until checked on resumption.
+  No waiting or new run was initiated for this checkpoint.
 
-**First next action:** inspect Windows 38870905825, fetch diagnostics/provenance,
-check frozen workflow (four receipts/two sessions, exact IDs/timestamps), strict
-20-start/30-toggle metrics, EXE SHA256 and actual upload. If failed, diagnose the
-preserved original error; do not repeat modules or waive criteria. Then update
-this checkpoint and MODULARIZATION_REPORT_EL.md with real final results.
+## Last known failure and completed correction
 
-Earlier complete structural source d128e6d Windows 38868081099 FAILED in the new
-driver; f44331e Windows 38869909515 exposed the original focus-fixture error.
-These are NOT pending or passed. See latest failure sections below. Source-only
-changes since d128 are missing type imports; algorithms remain AST-identical.
+Windows **38872859841**, commit
+`f4af1bddfbc628d6ad3926b50fb6940c33a0bcf6`, passed 44 regressions, build/smoke
+and the external frozen EXE data workflow: four receipts, two sessions, original
+IDs/timestamps preserved. Overall Action still FAILED after the successful
+functional JSON report: its Greek console JSON was incompatible with the
+Windows command pipe encoding. ASCII-safe console output now retains UTF-8
+report files, with a real cp1252 regression. That earlier run did not execute
+visual acceptance; its functional PASS is not an overall PASS.
+
+An earlier Qt recovery timeout (38870905825) had insufficient diagnostic state;
+its exact historical host delay cannot be established retrospectively. The old
+12-second test deadline was shorter than the existing backend lock contract
+(10-second schema lock + 15-second handoff lock + polling). The recovery-only
+budget now derives from those limits (31 seconds). A controlled real 13-second
+OS lock reproduced recovery beyond the old deadline: 14.854 seconds with 297
+responsive Qt heartbeats, four receipts/two sessions and unchanged data checks.
+Eight latest Windows diagnostic repetitions passed. Visual criteria and ordinary
+input deadlines were not relaxed. Preserve all original failed reports.
+
+## First action on explicit resumption
+
+Read this checkpoint, then inspect the existing Windows run **38874685744** and
+newer remote diagnostic commits. Fetch/fast-forward without losing changes.
+Verify exact source provenance, functional report, all regressions, strict
+20-start/30-theme metrics, EXE SHA256 and actual accepted artifact upload.
+Expected artifact name, only if genuinely uploaded after acceptance:
+`POSITION_TRACKING_WINDOWS_TEST-762c3a369a199766ab629007b6b2a3c27885d5e1-38874685744`.
+Do not repeat completed modules or successful checks for unchanged code.
+If that run failed, diagnose its preserved error before deciding on a small fix.
+
+Remaining: finish native acceptance of the complete modularized candidate;
+update final technical report and artifact/hash references with actual results.
+`MODULARIZATION_REPORT_EL.md` and older audit/plan status lines predate the latest
+candidate; this checkpoint takes precedence for current verification status.
+Real multi-computer SMB/Windows-user/offline/service-data acceptance remains
+UNEXECUTED; follow `docs/FIELD_ACCEPTANCE_EL.md` using isolated test data first.
+No main/stable v1.2.5/release/real service data changes or production deployment.
+
+Historical evidence below is retained; historical pending statuses are superseded
+by this paused checkpoint and are not current certification claims.
 
 ## Already certified presentation correction
 
