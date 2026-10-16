@@ -14,7 +14,7 @@ from typing import Optional
 from PIL import ImageGrab, ImageStat, ImageChops
 from support.windows_visual_processes import (
     descendant_pids, process_snapshot, stop_process_tree,
-    use_physical_pixel_coordinates, theme_button_point, stable_visual_desktop,
+    use_physical_pixel_coordinates, theme_button_point, stable_visual_desktop, activate_visual_background,
 )
 
 use_physical_pixel_coordinates()
@@ -299,8 +299,10 @@ def wait_for_window(pid: int, timeout=20.0):
     raise RuntimeError("Main window not found")
 
 
-def _run_visual_tests(exe, out, report):
+def _run_visual_tests(exe, out, report, background_hwnd=None):
     for run in range(1, 21):
+        if background_hwnd is not None:
+            activate_visual_background(background_hwnd)
         desktop = ImageGrab.grab(all_screens=True)
         desktop_origin = (user32.GetSystemMetrics(76), user32.GetSystemMetrics(77))
         p = subprocess.Popen([exe], cwd=str(Path(exe).parent))
@@ -380,8 +382,8 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     report = {"startup_runs": [], "theme_toggles": [], "capture_supported": True}
     try:
-        with stable_visual_desktop():
-            return _run_visual_tests(exe, out, report)
+        with stable_visual_desktop() as background:
+            return _run_visual_tests(exe, out, report, background_hwnd=background)
     except Exception as exc:
         report["error"] = {"type": type(exc).__name__, "message": str(exc)}
         raise

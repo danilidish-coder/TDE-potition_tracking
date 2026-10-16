@@ -79,43 +79,83 @@ def stop_process_tree(process):
 from contextlib import contextmanager
 
 
-@contextmanager
-def stable_visual_desktop():
-    """Own an inert background window so runner-console focus cannot change pixels.
-
-    This is behind the tested application, never an overlay. All application
-    frames remain captured, including unpainted white/black/partial content.
-    """
+def activate_visual_background(hwnd):
     user = ctypes.WinDLL('user32', use_last_error=True)
-    user.CreateWindowExW.argtypes = [wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR,
-                                    wintypes.DWORD, ctypes.c_int, ctypes.c_int,
-                                    ctypes.c_int, ctypes.c_int, wintypes.HWND,
-                                    wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID]
-    user.CreateWindowExW.restype = wintypes.HWND
-    for name in ('DestroyWindow', 'UpdateWindow', 'SetForegroundWindow'):
+    for name in ('SetForegroundWindow', 'BringWindowToTop', 'UpdateWindow'):
         getattr(user, name).argtypes = [wintypes.HWND]
         getattr(user, name).restype = wintypes.BOOL
     user.GetForegroundWindow.restype = wintypes.HWND
-    # STATIC/SS_GRAYRECT, borderless and non-topmost. Use the physical virtual
-    # desktop; the application can appear normally above this owned fixture.
-    hwnd = user.CreateWindowExW(0x80, 'STATIC', 'TDE visual background fixture',
-                               0x80000000 | 0x10000000 | 5,
-                               user.GetSystemMetrics(76), user.GetSystemMetrics(77),
-                               user.GetSystemMetrics(78), user.GetSystemMetrics(79),
-                               None, None, None, None)
-    if not hwnd:
-        raise ctypes.WinError(ctypes.get_last_error())
+    user.BringWindowToTop(hwnd)
+    user.SetForegroundWindow(hwnd)
+    if user.GetForegroundWindow() != hwnd:
+        raise RuntimeError('Cannot activate the owned visual background fixture')
+    user.UpdateWindow(hwnd)
+    dwm = ctypes.WinDLL('dwmapi')
+    dwm.DwmFlush.restype = ctypes.c_long
+    result = dwm.DwmFlush()
+    if result:
+        raise RuntimeError(f'Background DwmFlush failed: {result}')
+
+
+@contextmanager
+def stable_visual_desktop():
+    """Keep an owned, responsive background behind the app, never an overlay."""
+    import threading
+    ready, stop = threading.Event(), threading.Event()
+    state = {}
+
+    def serve():
+        hwnd = None
+        user = ctypes.WinDLL('user32', use_last_error=True)
+        try:
+            use_physical_pixel_coordinates()
+            user.CreateWindowExW.argtypes = [wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR,
+                                            wintypes.DWORD, ctypes.c_int, ctypes.c_int,
+                                            ctypes.c_int, ctypes.c_int, wintypes.HWND,
+                                            wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID]
+            user.CreateWindowExW.restype = wintypes.HWND
+            user.DestroyWindow.argtypes = [wintypes.HWND]
+            user.PeekMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), wintypes.HWND,
+                                         wintypes.UINT, wintypes.UINT, wintypes.UINT]
+            user.TranslateMessage.argtypes = [ctypes.POINTER(wintypes.MSG)]
+            user.DispatchMessageW.argtypes = [ctypes.POINTER(wintypes.MSG)]
+            user.DispatchMessageW.restype = wintypes.LPARAM
+            hwnd = user.CreateWindowExW(0x80, 'STATIC', 'TDE visual background fixture',
+                                       0x80000000 | 0x10000000 | 5,
+                                       user.GetSystemMetrics(76), user.GetSystemMetrics(77),
+                                       user.GetSystemMetrics(78), user.GetSystemMetrics(79),
+                                       None, None, None, None)
+            if not hwnd:
+                raise ctypes.WinError(ctypes.get_last_error())
+            activate_visual_background(hwnd)
+            state['hwnd'] = hwnd
+            ready.set()
+            message = wintypes.MSG()
+            # Serve only this fixture's queue, even while the test is blocked
+            # in EXE extraction/capture. Unpumped windows can become ghosted.
+            while not stop.wait(0.005):
+                while user.PeekMessageW(ctypes.byref(message), hwnd, 0, 0, 1):
+                    user.TranslateMessage(ctypes.byref(message))
+                    user.DispatchMessageW(ctypes.byref(message))
+        except BaseException as exc:
+            state['error'] = exc
+            ready.set()
+        finally:
+            if hwnd:
+                user.DestroyWindow(hwnd)
+
+    thread = threading.Thread(target=serve, name='TDE-visual-background', daemon=True)
+    thread.start()
     try:
-        user.UpdateWindow(hwnd)
-        user.SetForegroundWindow(hwnd)
-        if user.GetForegroundWindow() != hwnd:
-            raise RuntimeError('Cannot activate the owned visual background fixture')
-        dwm = ctypes.WinDLL('dwmapi')
-        dwm.DwmFlush.restype = ctypes.c_long
-        result = dwm.DwmFlush()
-        if result:
-            raise RuntimeError(f'Background DwmFlush failed: {result}')
-        yield hwnd
+        if not ready.wait(10):
+            raise RuntimeError('Visual background thread did not initialize')
+        if 'error' in state:
+            raise state['error']
+        yield state['hwnd']
+        if 'error' in state:
+            raise state['error']
     finally:
-        if not user.DestroyWindow(hwnd):
-            raise ctypes.WinError(ctypes.get_last_error())
+        stop.set()
+        thread.join(timeout=5)
+        if thread.is_alive():
+            raise RuntimeError('Visual background message thread did not terminate')

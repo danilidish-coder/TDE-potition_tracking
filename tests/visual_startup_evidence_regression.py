@@ -65,7 +65,7 @@ class StartupEvidenceContract(unittest.TestCase):
 
     def test_capture_failure_preserves_partial_report_and_original_error(self):
         main_node = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'main')
-        def fail(exe, out, report):
+        def fail(exe, out, report, **kwargs):
             report['startup_runs'].append({'run': 1, 'frames': 0})
             raise RuntimeError('injected clipped desktop')
         scope = {'Path': Path, 'argparse': argparse, 'json': json, '_run_visual_tests': fail, 'stable_visual_desktop': nullcontext}

@@ -280,3 +280,9 @@ allowing stale/ghosted desktop pixels). Fix fixture separately. Then replace the
 ineffective erase flag with a first-presentation readiness barrier: do not expose
 an unpainted native surface; release after the complete initial Qt paint. Retain
 all screenshot frames; no change to visual thresholds or theme transition checks.
+
+Owned visual background now has a dedicated Win32 message thread, physical DPI
+coordinates, checked foreground activation before EACH reference and deterministic
+thread/window cleanup. This fixes the fixture's unpumped/ghosted-window defect;
+40 local scripts PASS (/tmp/tde-background-message-loop-20261016), native cases
+still pending. No screenshot frame or acceptance criterion removed.
