@@ -1,12 +1,37 @@
 # Αδρανής έξοδος και επαγγελματική θωράκιση χάρτη — 16/10/2026
 
+## Τελική αυτοματοποιημένη αποδοχή της διόρθωσης
+
+Source SHA: `410bf72fe197e6e7d9a4a1a299a135a716c71bf3`.
+Windows **38916161811 SUCCESS**, Linux **38916162147 SUCCESS**, module gate
+**38916162111 SUCCESS**. 50 regression scripts, build/smoke και πραγματικό EXE:
+αδρανής έξοδος με normal process exit **0**, **0 καταγραφές**, χωρίς central/roster.
+Παράλληλα PASS το αρχικό data workflow: 4 πράξεις, 2 sessions, ίδια IDs/timestamps.
+Strict visual **0/20** startup, **0/30** theme, **30/30** επιβεβαιωμένα clicks.
+12 idle subprocess cases (μαζί με καθυστερημένη αποτυχία), 8 map και 6 exit tests PASS.
+
+[Νέο δοκιμαστικό EXE — Artifacts του επιτυχημένου run](https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/38916161811):
+`POSITION_TRACKING_WINDOWS_TEST-410bf72fe197e6e7d9a4a1a299a135a716c71bf3-38916161811` (60.6 MB, διατήρηση 7 ημερών).
+**EXE SHA256:** `3f896e307abfcbde477e201259e02f2e2cd683eafe18064b9ecea3a81a790f24`.
+Archive SHA256: `ff3736fe28a824b5bfd9207412b18d9e49506662d5902594c2eeac7d0c2c29fd`.
+Η διαθεσιμότητα επιβεβαιώθηκε στη completed Actions σελίδα· hash του EXE από
+πραγματικό native report και υποχρεωτική packaging gate, χωρίς download archive
+στο cloud. Evidence: `validation/windows-visual-38916161811-1/` και
+`validation/idle-exit-20261016/final-verification.json` / `commit-ledger.json`.
+
+Η τοπική άδεια είναι συντηρητική: αφορά παράθυρο που δεν επιχείρησε καταχώριση
+και έχει την παρακάτω απόδειξη. Σε παράθυρο με attempted καταχώριση/αβεβαιότητα
+παραμένει κεντρικός έλεγχος. Το απλό κλείσιμο δεν ισοδυναμεί με αποδέσμευση θέσης.
+Οι πραγματικές software/field εκκρεμότητες παρακάτω δεν χαρακτηρίζονται PASS.
+
+
 ## Τρέχουσα κατάσταση
 
 Αφετηρία checkpoint 278307b6ff46223db0685bcc867f9229b7e1554b.
 Αποκλειστικά feature/v125-modularization-20261013. Δεν επαναλήφθηκε η ολοκληρωμένη
 modularization ή εγκατάσταση. Δεν άλλαξαν main, σταθερή v1.2.5 ή υπηρεσιακά δεδομένα.
-Η νέα έκδοση έχει πλήρες τοπικό PASS 50 scripts. Windows/Linux/gate και το νέο
-accepted test EXE αναμένονται στον έναν συνδυασμένο τελικό κύκλο.
+Η τελική έκδοση έχει πλήρες τοπικό και Windows/Linux/gate PASS και διαθέσιμο
+accepted test EXE όπως τεκμηριώνεται παραπάνω.
 
 ## Αιτίες και διορθώσεις
 
@@ -88,3 +113,13 @@ EXE offline START/END, restart, replay, online START/END, 4 αρχικά IDs/tim
 - FIELD_ACCEPTANCE_EL.md: 15 πραγματικά PCs/SMB/ACL, Windows users/session/logoff/
   reboot, power loss/replay, 10:00 και 12/24h, DPI/printing/cold cached launch.
   Αυτές οι δοκιμές παραμένουν ΑΝΕΚΤΕΛΕΣΤΕΣ. Δεν υπάρχει παραγωγική έγκριση/release.
+
+## Οικονομία κύκλων και ιστορικό
+
+Ο ενδιάμεσος ec8eab7 πέρασε Windows 38914933955/Linux 38914934027/gate 38914933969,
+περιλαμβάνοντας πραγματικό native idle exit. Δεν ήταν τυφλή αποτυχία CI: νέα
+στοχευμένη τοπική δοκιμή αποκάλυψε εκ των υστέρων τη delayed-connection περίπτωση.
+Η ελάχιστη διόρθωση 410bf72 και τα δύο επιπλέον θετικά/αρνητικά cases δικαιολόγησαν
+τον τελικό νέο cycle. Αρχικά FAILs, ενδιάμεσα PASS και τελικά αποτελέσματα
+διατηρούνται με ακριβή SHA/run IDs. Δεν επαναλήφθηκε παλιά modularization/εγκατάσταση
+ή το παλιό 600s soak για διαφορετικό source και δεν μεταφέρθηκε η πιστοποίησή του.

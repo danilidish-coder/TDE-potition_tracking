@@ -1,5 +1,16 @@
 # Τεχνική αναφορά modular development — 16/10/2026
 
+## Τρέχον δοκιμαστικό EXE μετά τη διόρθωση εξόδου
+
+Το `410bf72fe197e6e7d9a4a1a299a135a716c71bf3` πέρασε Windows 38916161811, Linux 38916162147
+και gate 38916162111 SUCCESS, 50 scripts, πραγματική idle έξοδο χωρίς central/roster,
+υποχρεωτικό START/END/restart/replay workflow και strict visual 0/20 και 0/30.
+[Τρέχον accepted test artifact](https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/38916161811).
+EXE SHA256: `3f896e307abfcbde477e201259e02f2e2cd683eafe18064b9ecea3a81a790f24`.
+Νέες διορθώσεις και πραγματικές εκκρεμότητες: RELIABILITY_REPORT_EL.md.
+Τα επόμενα sections είναι ιστορική αποτύπωση προηγούμενων αποδεκτών εκδόσεων.
+
+
 ## Νεότερη θωράκιση και δοκιμαστικό EXE
 
 Η μεταγενέστερη έκδοση `1554dedb68afecc3c39fe6cfdeb275ad7263aa8e` πέρασε Windows

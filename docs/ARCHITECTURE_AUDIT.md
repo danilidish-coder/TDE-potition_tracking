@@ -103,3 +103,14 @@ strict native visual 0/20 startup and 0/30 theme, accepted test artifact.
 600-second real Qt synthetic soak PASS for the identical application source tree.
 Intentional reliability fixes and unresolved synchronous-I/O/OS cancellation
 risks are documented in RELIABILITY_REPORT_EL.md. Field acceptance remains open.
+
+## Idle-exit and map correction acceptance — latest
+
+410bf72fe197e6e7d9a4a1a299a135a716c71bf3: Windows 38916161811, Linux 38916162147 and gate
+38916162111 SUCCESS (50 scripts). Local idle exit requires strict journal proof
+and explicitly unused position state, including recheck after a delayed failing
+connection. Map END/time correction read and write now run off Qt; selected START
+identity is checked under existing locks. Owner-tracked map mutation drains before
+application/remote exit. Legacy correction API remains compatible. Module structure
+unchanged; other history/report/message/roster/shift/admin shared-I/O paths remain
+as documented in RELIABILITY_REPORT_EL.md. No claim of full field acceptance.
