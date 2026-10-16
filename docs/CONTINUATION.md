@@ -346,3 +346,20 @@ position_tracking_ui_application.py. No service/UI module imports entry. Full
 41 scripts PASS (/tmp/tde-entry-composition-20261016), compileall/diff PASS.
 This is structural/local completion only; final native acceptance and EXE
 functional coverage remain pending. No production readiness is claimed.
+
+Architecture guard: 43 source files, maximum 366 lines, entry 88 and MainWindow
+77. Dependency graph acyclic, no service/UI reverse import of entry; all backend/
+report modules import without entry/Qt/docx/openpyxl. Whole-module AST audit against
+0f6fee5 verifies all 66 store methods exactly unchanged and all 50 effective UI
+methods unchanged after explicit path callback normalization (constructor tested
+separately). Saved docs/validation/structure-20261016/ast-audit.json.
+42 scripts PASS (/tmp/tde-architecture-20261016), compileall/diff PASS.
+
+Native b943a8693a3eed2329dc8b1fc4601afe4e0990a3 full SUCCESS: Windows 38865827943,
+Linux 38865827783, gate 38865827824. Windows 41 regressions/build/smoke/visual and
+actual artifact upload PASS. Strict startup 0/20, theme 0/30, clicks 30/30; all 20
+initial desktop sequences are byte-identical and retained, with no white/partial
+application frames accepted. This certifies the presentation fix on that revision,
+not yet the latest complete structural extraction. Development EXE artifact:
+POSITION_TRACKING_WINDOWS_TEST-b943a8693a3eed2329dc8b1fc4601afe4e0990a3-38865827943
+(60.5 MB). Final complete-modularization native run still required.
