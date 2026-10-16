@@ -190,6 +190,8 @@ class ShiftControllerMixin:
 
 
     def _check_shift_updates(self):
+        if getattr(self, "_exit_in_progress", False):
+            return
         if not self.store:
             return
         future = self._shift_future

@@ -1,6 +1,9 @@
 """Safe window close, explicit operator exit and asynchronous client cleanup."""
 from __future__ import annotations
+import time
 from position_tracking_common import _clean
+from position_tracking_store_io import BusyError
+from PySide6.QtCore import QTimer
 from position_tracking_personnel import PersonnelRecord
 from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -15,25 +18,29 @@ class WindowLifecycleMixin:
 
 
     def _cleanup_client(self):
-        try:
-            self._network_pool.shutdown(wait=False, cancel_futures=True)
-            self._position_pool.shutdown(wait=False, cancel_futures=True)
-            self._state_pool.shutdown(wait=False, cancel_futures=True)
-        except Exception:
-            pass
-        if self.store:
-            try:
-                self.store.remove_client_heartbeat(self.client_id)
-            except Exception:
-                pass
+        # aboutToQuit must never perform SMB I/O. Normal confirmed exit removes
+        # its heartbeat in the worker; abrupt shutdown lets the heartbeat expire.
+        if getattr(self, "_client_cleanup_started", False):
+            return
+        self._client_cleanup_started = True
+        self._agms_query_serial = getattr(self, "_agms_query_serial", 0) + 1
+        for name in ("shift_timer", "communication_timer", "offline_timer"):
+            timer = getattr(self, name, None)
+            if timer is not None:
+                timer.stop()
+        for name in ("_network_pool", "_position_pool", "_state_pool"):
+            pool = getattr(self, name, None)
+            if pool is not None:
+                pool.shutdown(wait=False, cancel_futures=True)
 
 
-    def _end_own_active_positions(self) -> int:
+    def _end_own_active_positions(self, store=None) -> int:
         """Close only START records created by this exact app process."""
-        if not self.store:
-            return 0
+        store = store or self.store
+        if not store:
+            raise BusyError("Δεν επιβεβαιώθηκε σύνδεση με τα κεντρικά δεδομένα.")
         mine = [
-            item for item in self.store.active_all()
+            item for item in store.active_all()
             if _clean(item.get("client_id")) == self.client_id
         ]
         for item in mine:
@@ -43,7 +50,7 @@ class WindowLifecycleMixin:
                 surname=_clean(item.get("surname")),
                 given_name=_clean(item.get("given_name")),
             )
-            self.store.end(member, expected_start_event_id=_clean(item.get("event_id")))
+            store.end(member, expected_start_event_id=_clean(item.get("event_id")))
         return len(mine)
 
 
@@ -61,17 +68,62 @@ class WindowLifecycleMixin:
         )
         if answer != QMessageBox.Yes:
             return
-        try:
-            self._end_own_active_positions()
-        except Exception as exc:
-            QMessageBox.critical(
-                self, "Η λήξη δεν καταχωρίστηκε",
-                f"Δεν επιβεβαιώθηκε η αποδέσμευση της θέσης.\\n{exc}\\n"
-                "Ελέγξτε τον κεντρικό υπολογιστή ή ζητήστε από τον ΑΞΥΠ "
-                "να ολοκληρώσει τη θέση από τη ζωντανή εικόνα."
-            )
-            return
-        self._force_exit = True
-        self._cleanup_client()
-        QApplication.quit()
+        self._start_confirmed_exit()
 
+    def _start_confirmed_exit(self, command_id: str = ""):
+        if getattr(self, "_exit_in_progress", False):
+            return
+        self._exit_in_progress = True
+        self.start_btn.setEnabled(False)
+        self.end_btn.setEnabled(False)
+        self.info.setText("ΕΚΚΡΕΜΕΙ ΕΠΙΒΕΒΑΙΩΜΕΝΗ ΛΗΞΗ — η εφαρμογή παραμένει ανοικτή.")
+        offline_future = self._offline_future
+        local_future = self._position_operation_future
+        store = self.store
+
+        def work():
+            connected = store
+            # Local actions use this same single-worker executor, so any prior
+            # enqueue is durable before this closure starts. Reconciliation has
+            # a separate worker; wait without blocking Qt or overtaking its END.
+            if local_future is not None:
+                local_future.result(timeout=0)
+            if offline_future is not None:
+                connected, _ = offline_future.result(timeout=31)
+            if self.offline.pending_count():
+                raise BusyError("Υπάρχουν εκκρεμείς τοπικές καταχωρίσεις. Περιμένετε τον συγχρονισμό πριν από την έξοδο.")
+            self._end_own_active_positions(connected)
+            if command_id:
+                connected.acknowledge_command(command_id, self.client_id)
+            try:
+                connected.remove_client_heartbeat(self.client_id)
+            except Exception:
+                pass  # heartbeat expiry does not change confirmed END receipts
+
+        future = self._position_pool.submit(work)
+        self._exit_future = future
+        started = time.monotonic()
+
+        def poll():
+            if not future.done():
+                if time.monotonic() - started > 10:
+                    self.info.setText("ΑΝΑΜΟΝΗ ΚΕΝΤΡΙΚΟΥ ΓΙΑ ΛΗΞΗ — δεν επιβεβαιώθηκε έξοδος. Μην επαναλάβετε την εντολή.")
+                QTimer.singleShot(100, poll)
+                return
+            try:
+                future.result()
+            except Exception as exc:
+                self._exit_in_progress = False
+                self.info.setText("Η ΛΗΞΗ ΔΕΝ ΕΠΙΒΕΒΑΙΩΘΗΚΕ — η εφαρμογή παραμένει ανοικτή.")
+                self._agms_changed()
+                QMessageBox.critical(
+                    self, "Η λήξη δεν καταχωρίστηκε",
+                    f"Δεν επιβεβαιώθηκε η αποδέσμευση της θέσης.\n{exc}\n"
+                    "Ελέγξτε τον κεντρικό υπολογιστή ή ενημερώστε τον ΑΞΥΠ.",
+                )
+                return
+            self._force_exit = True
+            self._cleanup_client()
+            QApplication.quit()
+
+        QTimer.singleShot(100, poll)

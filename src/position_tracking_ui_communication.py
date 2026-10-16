@@ -65,6 +65,8 @@ class CommunicationMixin:
 
 
     def _communication_tick(self):
+        if getattr(self, "_exit_in_progress", False):
+            return
         if not self.store:
             return
         future = self._communication_future
@@ -85,20 +87,7 @@ class CommunicationMixin:
             if commands:
                 command = commands[0]
                 if _clean(command.get("type")).upper() == "CLOSE_APP":
-                    try:
-                        self._end_own_active_positions()
-                        self.store.acknowledge_command(
-                            _clean(command.get("command_id")), self.client_id
-                        )
-                    except Exception:
-                        if hasattr(self, "comm_status"):
-                            self.comm_status.setText(
-                                "ΕΚΚΡΕΜΕΙ ΛΗΞΗ ΘΕΣΗΣ — δεν εκτελέστηκε απομακρυσμένο κλείσιμο"
-                            )
-                        return
-                    self._force_exit = True
-                    self._cleanup_client()
-                    QApplication.quit()
+                    self._start_confirmed_exit(_clean(command.get("command_id")))
                     return
             if pending and not self._message_dialog_active:
                 self._show_message_alarm(pending[0])

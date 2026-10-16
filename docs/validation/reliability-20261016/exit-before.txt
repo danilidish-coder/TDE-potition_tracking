@@ -1,0 +1,39 @@
+Fontconfig error: No writable cache directories
+FFF
+======================================================================
+FAIL: test_failed_exit_preserves_active_start_and_does_not_acknowledge (__main__.ExitResponsiveness.test_failed_exit_preserves_active_start_and_does_not_acknowledge)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/exit_responsiveness_regression.py", line 73, in test_failed_exit_preserves_active_start_and_does_not_acknowledge
+    def test_failed_exit_preserves_active_start_and_does_not_acknowledge(self): self.exercise(failure=True)
+                                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/TDE-potition_tracking/tests/exit_responsiveness_regression.py", line 49, in exercise
+    self.assertLess(elapsed, .25, 'Confirmed exit blocked the Qt thread on shared I/O')
+AssertionError: 0.8000772400046117 not less than 0.25 : Confirmed exit blocked the Qt thread on shared I/O
+
+======================================================================
+FAIL: test_normal_exit_closes_only_confirmed_own_start_off_gui (__main__.ExitResponsiveness.test_normal_exit_closes_only_confirmed_own_start_off_gui)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/exit_responsiveness_regression.py", line 72, in test_normal_exit_closes_only_confirmed_own_start_off_gui
+    def test_normal_exit_closes_only_confirmed_own_start_off_gui(self): self.exercise()
+                                                                        ^^^^^^^^^^^^^^^
+  File "/workspace/TDE-potition_tracking/tests/exit_responsiveness_regression.py", line 49, in exercise
+    self.assertLess(elapsed, .25, 'Confirmed exit blocked the Qt thread on shared I/O')
+AssertionError: 0.8021677609940525 not less than 0.25 : Confirmed exit blocked the Qt thread on shared I/O
+
+======================================================================
+FAIL: test_pending_local_operation_prevents_false_success (__main__.ExitResponsiveness.test_pending_local_operation_prevents_false_success)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/exit_responsiveness_regression.py", line 74, in test_pending_local_operation_prevents_false_success
+    def test_pending_local_operation_prevents_false_success(self): self.exercise(pending=True)
+                                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/TDE-potition_tracking/tests/exit_responsiveness_regression.py", line 49, in exercise
+    self.assertLess(elapsed, .25, 'Confirmed exit blocked the Qt thread on shared I/O')
+AssertionError: 0.8017731599975377 not less than 0.25 : Confirmed exit blocked the Qt thread on shared I/O
+
+----------------------------------------------------------------------
+Ran 3 tests in 2.437s
+
+FAILED (failures=3)

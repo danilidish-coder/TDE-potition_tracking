@@ -66,6 +66,8 @@ class PositionActionsMixin:
 
 
     def _offline_tick(self):
+        if getattr(self, "_exit_in_progress", False):
+            return
         if self._offline_future is not None:
             if not self._offline_future.done():
                 return
@@ -110,6 +112,8 @@ class PositionActionsMixin:
 
 
     def _position_action(self, kind: str, person: PersonnelRecord, position: str = "", direction: str = ""):
+        if getattr(self, "_exit_in_progress", False):
+            return
         if self._handoff_initial_error:
             QMessageBox.warning(
                 self, "ΑΝΑΜΟΝΗ ΣΥΜΦΩΝΙΑΣ WINDOWS",

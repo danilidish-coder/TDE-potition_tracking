@@ -27,6 +27,8 @@ class PersonnelSelectionMixin:
         person = self._selected()
         self.start_btn.setEnabled(False)
         self.end_btn.setEnabled(False)
+        if getattr(self, "_exit_in_progress", False):
+            return
         if not person:
             self.person_name.setText("—")
             self.active_status.setText(
@@ -64,7 +66,7 @@ class PersonnelSelectionMixin:
 
         def poll():
             nonlocal future
-            if serial != self._agms_query_serial:
+            if serial != self._agms_query_serial or getattr(self, "_exit_in_progress", False):
                 return
             if future is None:
                 previous = getattr(self, "_agms_future", None)

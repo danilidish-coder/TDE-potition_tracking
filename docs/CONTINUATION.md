@@ -1,3 +1,18 @@
+## Reliability checkpoint: confirmed exit off the GUI thread
+
+Normal/remote exit no longer runs active scans, END, command ACK or heartbeat
+removal on Qt. A single guarded worker drains any preceding local enqueue,
+waits for already-started reconciliation (31-second future wait), refuses false
+success with pending local operations, and checks immutable START IDs. Duplicate
+exit requests do not spawn closures. Qt stays live; failures retain the app and
+unacknowledged command. Cleanup stops timers/executors idempotently without
+shared I/O. Abrupt application quit leaves heartbeat to normal expiry.
+Target tests (5) PASS; full portable suite **47 scripts PASS**. Before/after
+reports in `validation/reliability-20261016/`. An already-running blocking OS SMB
+call is NOT forcibly cancellable by thread shutdown; process exit during such a
+call remains a documented architectural/field risk. Next: safe local stall and
+resource diagnostics, then measured soak plus one final native CI candidate.
+
 ## Reliability checkpoint: stale shared observation
 
 Reproduced a delayed GUI remote read resurrecting a START in the shared machine
