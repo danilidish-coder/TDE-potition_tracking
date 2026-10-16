@@ -1,0 +1,38 @@
+{
+  "requested": 8,
+  "attempts": [
+    {
+      "attempt": 1,
+      "exit_code": 0
+    },
+    {
+      "attempt": 2,
+      "exit_code": 0
+    },
+    {
+      "attempt": 3,
+      "exit_code": 0
+    },
+    {
+      "attempt": 4,
+      "exit_code": 0
+    },
+    {
+      "attempt": 5,
+      "exit_code": 0
+    },
+    {
+      "attempt": 6,
+      "exit_code": 0
+    },
+    {
+      "attempt": 7,
+      "exit_code": 0
+    },
+    {
+      "attempt": 8,
+      "exit_code": 0
+    }
+  ],
+  "status": "PASS"
+}
