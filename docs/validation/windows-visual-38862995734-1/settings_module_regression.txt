@@ -1,0 +1,13 @@
+....F.
+======================================================================
+FAIL: test_legacy_injected_paths_and_frozen_app_directory (__main__.SettingsContract.test_legacy_injected_paths_and_frozen_app_directory)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\TDE-potition_tracking\TDE-potition_tracking\tests\settings_module_regression.py", line 84, in test_legacy_injected_paths_and_frozen_app_directory
+    self.assertEqual(settings._app_dir(), base)
+AssertionError: WindowsPath('C:/Users/runneradmin/AppData/Local/Temp/tmpfolagwgw') != WindowsPath('C:/Users/RUNNER~1/AppData/Local/Temp/tmpfolagwgw')
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.096s
+
+FAILED (failures=1)
