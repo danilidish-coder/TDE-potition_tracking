@@ -170,3 +170,6 @@ Store I/O/locks/SQLite primitives: seven AST-identical methods extracted into
 `position_tracking_store_io.py`, preserving BusyError identity via legacy export.
 39 scripts PASS, including 72-way locks, marker acknowledgement and replay cases;
 /tmp/tde-store-io-20261016. Compileall/diff PASS. Native CI pending.
+
+Communication store boundary: 12 AST-identical heartbeat/message/ack/command
+methods; 39 scripts PASS (/tmp/tde-communication-20261016), compileall/diff PASS.
