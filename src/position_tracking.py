@@ -1473,6 +1473,9 @@ def run(args=None) -> int:
     class MainWindow(QMainWindow):
         def __init__(self):
             super().__init__()
+            # Let the complete Qt backing-store paint supply the first content;
+            # avoid a separate native system-background erase on exposure.
+            self.setAttribute(Qt.WA_NoSystemBackground, True)
             self.config = AppConfig.load()
             self.people: tuple[PersonnelRecord, ...] = ()
             self._people_by_agms: dict[str, PersonnelRecord] = {}

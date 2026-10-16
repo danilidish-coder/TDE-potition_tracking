@@ -196,3 +196,9 @@ no captured application frames or criteria removed. White/black/partial UI still
 fails. Original failing theme PNGs will also persist. 39 local scripts PASS,
 with four native Windows process/fixture cases explicitly skipped on Linux;
 /tmp/tde-background-fixture-20261016. Compileall/diff PASS, native fixture pending.
+
+First-paint candidate: MainWindow sets Qt.WA_NoSystemBackground before building
+widgets to avoid a separate native background erase before complete backing-store
+content. No exposure delay, event pumping, screenshot overlay or test relaxation.
+39 local scripts PASS (/tmp/tde-first-paint-20261016), compileall/diff PASS. This
+is only a candidate until the next native startup/theme evidence demonstrates it.
