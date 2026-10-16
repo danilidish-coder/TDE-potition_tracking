@@ -1,3 +1,20 @@
+# ΤΡΕΧΟΥΣΑ ΤΑΥΤΟΤΗΤΑ — ΝΕΑ v1.2.6 (16/10/2026)
+
+**ΑΥΤΗ ΕΙΝΑΙ Η ΤΕΛΕΥΤΑΙΑ ΔΟΚΙΜΑΣΤΙΚΗ/ΝΕΑ ΕΚΔΟΣΗ — ΟΧΙ Η 410bf72, ΟΧΙ Η ΠΑΛΙΑ v1.2.5.**
+
+- **Επιβεβαιωμένο GitHub Pre-release:** `v1.2.6`, https://github.com/danilidish-coder/TDE-potition_tracking/releases/tag/v1.2.6
+- **ΑΠΕΥΘΕΙΑΣ EXE για τον χρήστη:** https://github.com/danilidish-coder/TDE-potition_tracking/releases/download/v1.2.6/TDE_Katagrafi_Theseon.exe
+- **Εσωτερική έκδοση/PE/VERSION.txt/manifest:** 1.2.6, επαληθευμένα.
+- **Ακριβές source SHA:** `eed6edab485c8ae5800c5b62f4c2cdfc29ee32e6`; **EXE SHA-256:** `7671ef27814cb35f3c7f26d625b65e5d7fb95e60fcd8c15ac06ff14fc51a1a88`; EXE bytes `63865026`.
+- **Native Windows PASS:** `38925657174`, 50/50 regression scripts, build/smoke, idle exit χωρίς central/roster, 4 operations/2 sessions, visual 0/20 & 0/30 anomalies, 30 clicks. **Linux:** `38925657143` SUCCESS. **Stage gate:** `38925657163` SUCCESS.
+- **ΕΠΑΛΗΘΕΥΜΕΝΟ ΜΟΝΙΜΟ ΑΝΤΙΓΡΑΦΟ ΣΤΟ DRIVE:** https://drive.google.com/file/d/1JkN6WI7ATRlTFh9DjHYod4YahdaEa7mq/view — αρχείο `KATAGRAFI_THESEON_v1.2.6_WINDOWS_VERIFIED.zip`, 63.520.399 bytes, περιέχει **το ακριβές EXE 1.2.6** με ίδιο SHA-256, επαληθεύτηκε μέσω ανάγνωσης των πραγματικών bytes. SHA-256 ZIP: `d8bdc5597d1f2b215ad49af604b6e123f764ab4017708d593d8c166a937cbbc0`. Φάκελος: https://drive.google.com/drive/folders/1UAQM5bF4Z6cSRqIicwgXNwFLxHNYesKO
+- **ΠΑΛΙΑ v1.2.5:** το χωριστό επίσημο ιστορικό release https://github.com/danilidish-coder/TDE-potition_tracking/releases/tag/v1.2.5 και Drive φάκελος https://drive.google.com/drive/folders/1doRyeKU5YkCHyt_ROvJOdMwsyowDjVvb, **δεν τροποποιήθηκαν ή διαγράφηκαν**. Το `main` παραμένει `3c7a785a4008caa7b4fc1c7fd8d240cb8653ff99`. Η παλιά έκδοση έχει αναφερμένα υπηρεσιακά προβλήματα, αλλά είναι προς το παρόν η τελευταία δημοσιευμένη μη-pre-release.
+- **ΠΡΟΣΟΧΗ — ΑΠΟΔΟΧΗ:** Η v1.2.6 είναι **PRE-RELEASE / ΔΟΚΙΜΑΣΤΙΚΗ**, όχι εγκεκριμένη παραγωγική. Το παλιότερο `410bf72` δοκιμάστηκε στο σπίτι· **δεν υπάρχει ακόμη δήλωση ότι ο χρήστης δοκίμασε την αριθμημένη v1.2.6 στο σπίτι ή στο υπηρεσιακό περιβάλλον**. Δεν γίνεται παραγωγική αντικατάσταση ή διαγραφή της v1.2.5 πριν από νέα ρητή έγκριση.
+- **ΕΠΟΜΕΝΗ ΕΝΕΡΓΕΙΑ:** Ο χρήστης κατεβάζει/δοκιμάζει το ακριβές v1.2.6 EXE. Όταν πει «τελευταία έκδοση», πλέον σημαίνει v1.2.6 για τη δοκιμαστική· «παλιά 5» σημαίνει την ιστορική v1.2.5. Σε μελλοντική έγκριση, πρώτα ανακτούμε αυτό το μητρώο, επαληθεύουμε τα τότε τελευταία release/assets/commits και ζητούμε επιβεβαίωση **της ακριβούς** νέας έκδοσης και των επιτρεπτών αλλαγών. Δεν χρησιμοποιείται αυτούσια η καταστροφική `publish-release.yml`.
+- **ΙΣΤΟΡΙΚΟ:** Οι παρακάτω ενότητες που λένε ότι «η v1.2.6 δεν έχει δημιουργηθεί», «ο φάκελος είναι άδειος» ή «η 410bf72 είναι η τελευταία» είναι **ΠΑΡΩΧΗΜΕΝΟ ΙΣΤΟΡΙΚΟ**, όχι τρέχουσα κατάσταση. Το παρόν τμήμα υπερισχύει.
+
+---
+
 ## Published v1.2.6 Pre-release — 2026-10-16
 
 Source: `eed6edab485c8ae5800c5b62f4c2cdfc29ee32e6` (version-only successor of certified `410bf72`).
