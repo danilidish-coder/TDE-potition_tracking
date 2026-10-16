@@ -14,6 +14,7 @@ def main():
     parser.add_argument("--commit", required=True)
     parser.add_argument("--run", required=True)
     parser.add_argument("--regressions", type=Path)
+    parser.add_argument("--functional", type=Path)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     if args.regressions and (args.regressions / "results.json").is_file():
@@ -23,6 +24,10 @@ def main():
             if result["exit_code"]:
                 stem = Path(result["test"]).stem
                 shutil.copy2(args.regressions / (stem + ".log"), args.out / (stem + ".txt"))
+    if args.functional and (args.functional / "report.json").is_file():
+        shutil.copy2(args.functional / "report.json", args.out / "functional-report.json")
+        for source in args.functional.glob("*.png"):
+            shutil.copy2(source, args.out / ("functional-" + source.name))
     report = args.source / "report.json"
     if report.is_file():
         shutil.copy2(report, args.out / "report.json")

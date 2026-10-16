@@ -14,16 +14,25 @@ class ArtifactGate(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.base=Path(self.tmp.name);self.exe=self.base/'test.exe';self.exe.write_bytes(b'fixture-exe-not-real')
         self.results=[{'test':p.name,'exit_code':0} for p in (ROOT/'tests').glob('*.py') if p.name!='visual_flicker_windows.py']
+        self.functional={'status':'PASS','operations':4,'source_commit':'a'*40,'exe_sha256':hashlib.sha256(self.exe.read_bytes()).hexdigest(),'original_ids_preserved':True,'original_timestamps_preserved':True}
         self.report={'capture_supported':True,'startup_runs':[{'application_frames':20,'endpoint_flicker_detected':False} for _ in range(20)],'theme_toggles':[{'theme_changed':True,'endpoint_flicker_detected':False} for _ in range(30)],'startup_endpoint_flicker_runs':0,'theme_endpoint_flicker_toggles':0,'theme_clicks_confirmed':30}
     def run_package(self):
         regressions=self.base/'results.json';visual=self.base/'visual.json'
         regressions.write_text(json.dumps(self.results));visual.write_text(json.dumps(self.report))
-        return package(self.exe,regressions,visual,'a'*40,self.base/'package')
+        functional=self.base/'functional.json'
+        functional.write_text(json.dumps(self.functional))
+        return package(self.exe,regressions,visual,'a'*40,self.base/'package',functional)
     def test_complete_gate_keeps_bytes_hash_and_source_identity(self):
         manifest=self.run_package()
         self.assertEqual(manifest['source_commit'],'a'*40)
         self.assertEqual(manifest['sha256'],hashlib.sha256(self.exe.read_bytes()).hexdigest())
         self.assertEqual((self.base/'package'/'test.exe').read_bytes(),self.exe.read_bytes())
+    def test_wrong_exe_or_failed_functional_workflow_cannot_be_packaged(self):
+        for key,value in [('status','FAILED'),('exe_sha256','0'*64),('source_commit','b'*40),('operations',3),('original_ids_preserved',False)]:
+            old=self.functional[key];self.functional[key]=value
+            with self.subTest(key=key),self.assertRaisesRegex(ValueError,'functional'):self.run_package()
+            self.functional[key]=old
+        self.assertFalse((self.base/'package').exists())
     def test_failed_or_missing_regression_cannot_be_packaged(self):
         self.results[0]['exit_code']=1
         with self.assertRaisesRegex(ValueError,'regression'):self.run_package()

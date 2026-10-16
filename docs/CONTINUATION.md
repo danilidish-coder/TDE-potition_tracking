@@ -370,3 +370,15 @@ ENTRY booth 1 START+END, two completed sessions, archive/live-map dialogs and
 wrong-PIN rejection. Only temporary XLSX/settings/SQLite/event files used.
 Full 43 scripts PASS (/tmp/tde-ui-workflow-20261016), compileall/diff PASS.
 Still need the external Windows EXE version of this workflow and final CI.
+
+External frozen EXE acceptance driver added to Windows CI: normal native mouse/
+keyboard, temporary settings/roster/outbox, offline booth 14 START/END, forced
+process-tree stop, same-journal restart with restored central directory, then
+online booth 1 START/END. It verifies four receipts, original timestamps/IDs,
+END links and two history rows. No self-test mode added to the application.
+Its own real Windows execution is PENDING. Diagnostic report/screenshots retained
+on failure; package now requires passing functional report for the SAME EXE hash
+and source SHA, in addition to strict visual/regression acceptance. Negative
+package tests reject wrong binary/source/operation count/status/ID preservation.
+43 local scripts PASS (/tmp/tde-final-functional-gate-20261016), compileall/diff
+PASS. The Windows-only external driver was not executed on Linux.

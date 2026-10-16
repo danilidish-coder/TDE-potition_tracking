@@ -100,6 +100,22 @@ jobs:
           Write-Host "Smoke test PASS"
           Write-Host "EXE SHA256: $((Get-FileHash $exe -Algorithm SHA256).Hash)"
 
+      - name: Exercise frozen EXE offline restart and online GUI actions
+        id: functional
+        shell: pwsh
+        run: |
+          python tools/exercise_windows_exe.py --exe dist/TDE_Katagrafi_Theseon.exe --out artifact/exe-functional --commit "$env:GITHUB_SHA"
+          if ($LASTEXITCODE -ne 0) { throw 'Frozen EXE functional acceptance failed' }
+
+      - name: Upload frozen EXE functional evidence
+        if: ${{ always() && steps.functional.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: POSITION_TRACKING_EXE_FUNCTIONAL-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifact/exe-functional/**
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Visual flicker test
         id: visual
         shell: powershell
@@ -121,7 +137,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $out = "docs/validation/windows-visual-${{ github.run_id }}-${{ github.run_attempt }}"
-          python tools/export_visual_evidence.py --source visual_flicker --regressions artifact/regressions --out $out --commit "$env:GITHUB_SHA" --run "${{ github.run_id }}"
+          python tools/export_visual_evidence.py --source visual_flicker --functional artifact/exe-functional --regressions artifact/regressions --out $out --commit "$env:GITHUB_SHA" --run "${{ github.run_id }}"
           if ($LASTEXITCODE -ne 0) { throw "Visual evidence export failed" }
           git fetch origin "$env:GITHUB_REF_NAME"
           if ($LASTEXITCODE -ne 0) { throw "Evidence branch fetch failed" }
@@ -195,7 +211,7 @@ jobs:
         if: ${{ success() && github.ref == 'refs/heads/feature/v125-modularization-20261013' }}
         shell: pwsh
         run: |
-          python tools/package_development_exe.py --exe dist/TDE_Katagrafi_Theseon.exe --regressions artifact/regressions/results.json --visual visual_flicker/report.json --commit "$env:GITHUB_SHA" --out artifact/development-exe
+          python tools/package_development_exe.py --exe dist/TDE_Katagrafi_Theseon.exe --regressions artifact/regressions/results.json --visual visual_flicker/report.json --functional artifact/exe-functional/report.json --commit "$env:GITHUB_SHA" --out artifact/development-exe
           if ($LASTEXITCODE -ne 0) { throw 'Development package acceptance failed' }
 
       - name: Upload Windows test EXE
