@@ -39,7 +39,7 @@ def click(hwnd, x, y):
     user32.mouse_event(4, 0, 0, 0, 0)
 
 
-def notice_windows(pid):
+def notice_windows(pid, title='ΕΚΚΡΕΜΕΙ ΣΥΓΧΡΟΝΙΣΜΟΣ'):
     owners = descendant_pids(pid, process_snapshot()); result=[]
     @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
     def visit(hwnd, _):
@@ -47,7 +47,7 @@ def notice_windows(pid):
         if owner.value in owners and user32.IsWindowVisible(hwnd):
             size=user32.GetWindowTextLengthW(hwnd)
             text=ctypes.create_unicode_buffer(size+1);user32.GetWindowTextW(hwnd,text,size+1)
-            if text.value=='ΕΚΚΡΕΜΕΙ ΣΥΓΧΡΟΝΙΣΜΟΣ':result.append(hwnd)
+            if text.value==title:result.append(hwnd)
         return True
     user32.EnumWindows(visit,0)
     return result
@@ -100,9 +100,9 @@ def exercise(exe, out, report):
         environment=dict(os.environ,TDE_POSITION_LOCAL_ROOT=str(local),TDE_POSITION_MACHINE_ROOT=str(queue),
                          LOCALAPPDATA=str(base/'account'),APPDATA=str(base/'appdata'),PUBLIC=str(base/'public'))
         journal=queue/'position_outbox.sqlite3'
-        def launch():
+        def launch(*, isolated_environment=None, select_person=True):
             activate_visual_background(background)
-            p=subprocess.Popen([str(frozen)],cwd=client,env=environment)
+            p=subprocess.Popen([str(frozen)],cwd=client,env=isolated_environment or environment)
             try:
                 hwnd=wait_for_window(p.pid)
                 dwm=ctypes.WinDLL('dwmapi');dwm.DwmGetWindowAttribute.argtypes=[wintypes.HWND,wintypes.DWORD,wintypes.LPVOID,wintypes.DWORD]
@@ -112,8 +112,9 @@ def exercise(exe, out, report):
                         raise RuntimeError('Cannot inspect frozen EXE presentation readiness')
                     return not cloaked.value
                 wait(presented,p)
-                click(hwnd,350,230);user32.keybd_event(17,0,0,0);key(65);user32.keybd_event(17,0,2,0)
-                for digit in '910001':key(ord(digit))
+                if select_person:
+                    click(hwnd,350,230);user32.keybd_event(17,0,0,0);key(65);user32.keybd_event(17,0,2,0)
+                    for digit in '910001':key(ord(digit))
                 return p,hwnd
             except BaseException as exc:
                 report['launch_error']={'type':type(exc).__name__,'message':str(exc)}
@@ -121,6 +122,36 @@ def exercise(exe, out, report):
                 stop_process_tree(p);raise
         p=None
         try:
+            # Separate untouched profile: reproduce the actual reported home
+            # launch. No hidden test mode, roster, service folder or START/END.
+            idle=base/'idle';idle_local=idle/'local';idle_local.mkdir(parents=True)
+            idle_central=idle/'missing-central';idle_queue=idle/'queue'
+            missing_roster=idle/'missing-personnel.xlsx'
+            (idle_local/'position_tracking.settings.json').write_text(json.dumps({
+                'central_root':str(idle_central),'personnel_file':str(missing_roster),
+                'shared_exe_path':str(idle/'missing.exe'),'theme':'light'
+            }),encoding='utf-8')
+            idle_environment=dict(environment,TDE_POSITION_LOCAL_ROOT=str(idle_local),
+                                  TDE_POSITION_MACHINE_ROOT=str(idle_queue))
+            p,hwnd=launch(isolated_environment=idle_environment,select_person=False)
+            assert not idle_central.exists() and not missing_roster.exists()
+            assert (idle_queue/'position_outbox.sqlite3').is_file()
+            ImageGrab.grab(bbox=client_bbox(hwnd),all_screens=True).save(out/'idle-start.png')
+            left,top,right,bottom=client_bbox(hwnd)
+            scale=user32.GetDpiForWindow(hwnd)/96.0
+            click(hwnd,(right-left)/scale*.82,(bottom-top)/scale-94)
+            wait(lambda:bool(notice_windows(p.pid,'Έξοδος από το πρόγραμμα')),p,seconds=10)
+            confirmation=notice_windows(p.pid,'Έξοδος από το πρόγραμμα')[0]
+            user32.SetForegroundWindow(confirmation)
+            ImageGrab.grab(all_screens=True).save(out/'idle-confirmation.png')
+            # Qt Yes/No: No is the default. Move focus explicitly to Yes.
+            key(37);key(13)
+            exit_code=p.wait(timeout=10)
+            assert exit_code==0 and not user32.IsWindow(hwnd)
+            assert not operations(idle_queue/'position_outbox.sqlite3') and not idle_central.exists()
+            report['idle_exit']={'status':'PASS','exit_code':exit_code,'operations':0,
+                                 'central_created':False,'configured_personnel_missing':True}
+            p=None
             p,hwnd=launch()
             click(hwnd,350,374);key(35);key(13)
             perform(hwnd,p,journal,out,'offline',1,'START')

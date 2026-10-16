@@ -1,3 +1,16 @@
+## Native idle-exit acceptance gate ready
+
+Extended the frozen EXE driver with a separate fresh profile, missing central
+folder/personnel, native Exit/Yes input and actual normal process termination.
+No hidden application test mode. Accepted packaging now also requires this
+idle-exit evidence and two completed data sessions. Local tool gates 5 tests
+PASS, driver fixture contracts 3 PASS, compileall/diff PASS. Native execution
+remains pending Windows CI; no local Windows claim is made.
+
+Before that final combined run, address the other demonstrated live-map mutation:
+correction-time selection/write still synchronous and lacks selected START guard.
+The completed END correction and 50-script suite are not repeated unnecessarily.
+
 # Current checkpoint: map END and offline idle exit — 2026-10-16
 
 Idle-exit correction c7cdfd5: real empty/offline application can close without

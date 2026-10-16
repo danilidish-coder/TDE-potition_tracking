@@ -14,7 +14,7 @@ class ArtifactGate(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.base=Path(self.tmp.name);self.exe=self.base/'test.exe';self.exe.write_bytes(b'fixture-exe-not-real')
         self.results=[{'test':p.name,'exit_code':0} for p in (ROOT/'tests').glob('*.py') if p.name!='visual_flicker_windows.py']
-        self.functional={'status':'PASS','operations':4,'source_commit':'a'*40,'exe_sha256':hashlib.sha256(self.exe.read_bytes()).hexdigest(),'original_ids_preserved':True,'original_timestamps_preserved':True}
+        self.functional={'status':'PASS','operations':4,'source_commit':'a'*40,'exe_sha256':hashlib.sha256(self.exe.read_bytes()).hexdigest(),'original_ids_preserved':True,'original_timestamps_preserved':True,'completed_sessions':2,'idle_exit':{'status':'PASS','exit_code':0,'operations':0,'central_created':False,'configured_personnel_missing':True}}
         self.report={'capture_supported':True,'startup_runs':[{'application_frames':20,'endpoint_flicker_detected':False} for _ in range(20)],'theme_toggles':[{'theme_changed':True,'endpoint_flicker_detected':False} for _ in range(30)],'startup_endpoint_flicker_runs':0,'theme_endpoint_flicker_toggles':0,'theme_clicks_confirmed':30}
     def run_package(self):
         regressions=self.base/'results.json';visual=self.base/'visual.json'
@@ -33,6 +33,18 @@ class ArtifactGate(unittest.TestCase):
             with self.subTest(key=key),self.assertRaisesRegex(ValueError,'functional'):self.run_package()
             self.functional[key]=old
         self.assertFalse((self.base/'package').exists())
+    def test_missing_or_failed_idle_exit_cannot_be_packaged(self):
+        original=self.functional['idle_exit']
+        for value in [None,{},dict(original,status='FAILED'),dict(original,exit_code=1),
+                      dict(original,operations=1),dict(original,central_created=True),
+                      dict(original,configured_personnel_missing=False)]:
+            self.functional['idle_exit']=value
+            with self.subTest(value=value),self.assertRaisesRegex(ValueError,'idle exit'):self.run_package()
+        self.functional['idle_exit']=original
+        self.functional['completed_sessions']=1
+        with self.assertRaisesRegex(ValueError,'completed sessions'):self.run_package()
+        self.assertFalse((self.base/'package').exists())
+
     def test_failed_or_missing_regression_cannot_be_packaged(self):
         self.results[0]['exit_code']=1
         with self.assertRaisesRegex(ValueError,'regression'):self.run_package()

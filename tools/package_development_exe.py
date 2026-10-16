@@ -35,6 +35,12 @@ def package(exe, regressions, visual, commit, out, functional=None):
             or not functional_report.get('original_ids_preserved')
             or not functional_report.get('original_timestamps_preserved')):
         raise ValueError('Frozen EXE functional acceptance required')
+    idle = functional_report.get('idle_exit') or {}
+    if (idle.get('status') != 'PASS' or idle.get('exit_code') != 0
+            or idle.get('operations') != 0 or idle.get('central_created') is not False
+            or idle.get('configured_personnel_missing') is not True
+            or functional_report.get('completed_sessions') != 2):
+        raise ValueError('Frozen EXE idle exit and completed sessions functional acceptance required')
     if not exe.stat().st_size:
         raise ValueError('Empty executable')
     out.mkdir(parents=True, exist_ok=True)
