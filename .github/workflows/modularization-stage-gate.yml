@@ -37,8 +37,8 @@ jobs:
       - name: Ensure release baseline remains v1.2.5
         shell: pwsh
         run: |
-          $s=Get-Content src/position_tracking.py -Raw
-          if($s -notmatch 'APP_VERSION = "1.2.5"') {throw "Production version unexpectedly modified"}
+          python -c "import sys; sys.path.insert(0, 'src'); import position_tracking as app; assert app.APP_VERSION == '1.2.5', app.APP_VERSION"
+          if($LASTEXITCODE -ne 0) {throw "Production version unexpectedly modified"}
           if(-not(Test-Path src/position_tracking_offline.py)){throw "Offline module missing"}
           Write-Host 'STAGE1_BASELINE_VERSION_AND_MODULES: PASS'
   linux-contract:

@@ -328,3 +328,9 @@ compileall/diff PASS. This does not change the guarded end dialog behavior.
 UI report/archive dialogs: three methods, file-opening callback now explicitly
 supplied by WindowServices with the same original behavior. 41 scripts PASS
 (/tmp/tde-ui-reports-20261016), compileall/diff PASS.
+
+Personnel history/statistics/PDF dialog extracted with unchanged method AST and
+unchanged PIN/application constants now owned by position_tracking_constants.py.
+Stage gate verifies the actual exported APP_VERSION value, rather than requiring
+its literal assignment to remain in entry. 41 scripts PASS
+(/tmp/tde-ui-history-20261016), compileall/diff PASS. No version/PIN value changed.
