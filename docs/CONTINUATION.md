@@ -228,3 +228,8 @@ Qt artwork/renderers extracted with unchanged AST/string values; 39 scripts PASS
 38862995734 failed BEFORE build/visual in settings_module_regression.py; inspect
 the retained .txt failure. Its visual hypothesis was NOT tested. Stop new UI
 units until that actual Windows failure is corrected.
+
+Windows settings failure is a test fixture path alias, not a persistence defect:
+Path.resolve expands C:/Users/RUNNER~1 to C:/Users/runneradmin. Frozen-path expected
+value now uses base.resolve(), preserving the original canonicalization contract.
+39-script rerun PASS (/tmp/tde-settings-windows-path-20261016), compileall/diff PASS.

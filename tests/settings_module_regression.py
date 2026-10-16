@@ -81,7 +81,7 @@ class SettingsContract(unittest.TestCase):
                 self.assertEqual(legacy.AppConfig(theme='dark').save(), base / 'local' / settings.SETTINGS_NAME)
                 self.assertEqual(legacy.AppConfig.load().theme, 'dark')
             with patch.object(settings.sys, 'frozen', True, create=True), patch.object(settings.sys, 'executable', str(base / 'client.exe')):
-                self.assertEqual(settings._app_dir(), base)
+                self.assertEqual(settings._app_dir(), base.resolve())
 
     def test_import_independent_of_entry_and_qt(self):
         code = "import sys;sys.modules['position_tracking']=None;sys.modules['PySide6']=None;import position_tracking_settings as s;assert s.AppConfig().cutoff=='10:00'"
