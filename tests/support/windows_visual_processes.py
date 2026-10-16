@@ -85,8 +85,43 @@ def activate_visual_background(hwnd):
         getattr(user, name).argtypes = [wintypes.HWND]
         getattr(user, name).restype = wintypes.BOOL
     user.GetForegroundWindow.restype = wintypes.HWND
-    user.BringWindowToTop(hwnd)
-    user.SetForegroundWindow(hwnd)
+    user.SendMessageTimeoutW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM,
+                                          wintypes.LPARAM, wintypes.UINT, wintypes.UINT,
+                                          ctypes.POINTER(ctypes.c_size_t)]
+    user.SendMessageTimeoutW.restype = wintypes.LPARAM
+
+    def request_activation():
+        user.BringWindowToTop(hwnd)
+        user.SetForegroundWindow(hwnd)
+        # Cross-thread foreground activation is asynchronous. A WM_NULL
+        # acknowledgement proves the fixture serviced that request before
+        # checking its actual foreground identity or taking a reference.
+        result = ctypes.c_size_t()
+        if not user.SendMessageTimeoutW(hwnd, 0, 0, 0, 2, 1000, ctypes.byref(result)):
+            raise RuntimeError('Visual background did not acknowledge activation')
+
+    request_activation()
+    if user.GetForegroundWindow() != hwnd:
+        # Native keyboard input in the EXE can give its queue foreground rights.
+        # Temporarily join the actual foreground input queue for this owned test
+        # window, then detach immediately; no application messages are pumped.
+        kernel = ctypes.WinDLL('kernel32')
+        kernel.GetCurrentThreadId.restype = wintypes.DWORD
+        current = kernel.GetCurrentThreadId()
+        user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+        foreground = user.GetWindowThreadProcessId(user.GetForegroundWindow(), None)
+        message = wintypes.MSG()
+        user.PeekMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), wintypes.HWND,
+                                     wintypes.UINT, wintypes.UINT, wintypes.UINT]
+        user.PeekMessageW(ctypes.byref(message), None, 0, 0, 0)
+        user.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+        if not foreground or foreground == current or not user.AttachThreadInput(current, foreground, True):
+            raise RuntimeError('Cannot obtain test foreground input ownership')
+        try:
+            request_activation()
+        finally:
+            if not user.AttachThreadInput(current, foreground, False):
+                raise RuntimeError('Cannot detach test foreground input queue')
     if user.GetForegroundWindow() != hwnd:
         raise RuntimeError('Cannot activate the owned visual background fixture')
     user.UpdateWindow(hwnd)

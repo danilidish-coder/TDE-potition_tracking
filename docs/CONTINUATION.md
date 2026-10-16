@@ -160,3 +160,18 @@ change. Architecture regression now resolves all 226 owned function/method type
 annotations, guarding the complete module surface. 44 scripts PASS
 (/tmp/tde-annotation-contract-20261016), compileall/diff PASS. This src-only import
 correction is local until the pending f44331e native diagnostics are recovered.
+
+f44331e Windows 38869909515: 44 regressions/build/smoke PASS, EXE driver FAIL.
+Reader cleanup error is gone; the preserved original error is exactly
+'Cannot activate the owned visual background fixture' after native input in the
+first EXE. No second EXE was launched; both original PENDING IDs/timestamps remain
+unchanged and no central events were created. This is test foreground ownership,
+not demonstrated application data loss. Linux 38869909478 and gate 38869909506 PASS.
+
+Fixture focus correction: wait for WM_NULL acknowledgement of asynchronous
+cross-thread SetForegroundWindow; where native EXE input owns foreground rights,
+create the caller message queue and temporarily AttachThreadInput to the actual
+foreground queue, then detach immediately. Actual foreground HWND is still
+strictly checked before capture/launch. No sleeps, frame filtering or threshold
+change. 44 local scripts PASS (/tmp/tde-foreground-ack-20261016), compileall/diff
+PASS; native validation required. Keep this failed report/evidence in Git.
