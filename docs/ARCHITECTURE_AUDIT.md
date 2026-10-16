@@ -70,9 +70,12 @@ frame hiding/exclusion or screenshot overlay. See CONTINUATION.md for exact runs
 
 b943a869: full Windows 38865827943 SUCCESS, strict startup 0/20 and theme 0/30,
 30/30 confirmed clicks; Linux/module gate PASS and real EXE artifact uploaded.
-Latest complete structural source e243e53: 44 local scripts PASS, Linux 38870905814
-and gate 38870905823 PASS. Windows 38870905825 final certification pending,
-including new external frozen-EXE mouse/keyboard data workflow.
+Complete structural source `762c3a369a199766ab629007b6b2a3c27885d5e1`: 45 scripts PASS;
+Windows 38874685744 SUCCESS, Linux 38874685771 SUCCESS, gate 38874685792 SUCCESS,
+Windows recovery 38874685760 SUCCESS (8/8). External frozen EXE workflow PASS;
+strict startup 0/20, theme 0/30, confirmed clicks 30/30. Accepted EXE artifact
+uploaded. See MODULARIZATION_REPORT_EL.md for exact EXE hash and artifact name.
+Professional reliability hardening is a subsequent stage, not renewed extraction.
 
 ## Field acceptance gaps
 

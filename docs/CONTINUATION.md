@@ -1,3 +1,22 @@
+# Resumed reliability hardening — 2026-10-16
+
+Explicit user resumption supersedes the paused instruction below.
+Starting checkpoint: `801f91db09b17e5cdf77a952f8c21326ce5513a7`.
+Remote HEAD matched this checkpoint; clean worktree. No setup repeated.
+Read current MODULARIZATION_REPORT_EL.md, FIELD_ACCEPTANCE_EL.md and preserved
+validation. GitHub public run pages verified SUCCESS for 38874685744 (Windows),
+38874685771 (Linux), 38874685792 (gate), 38874685760 (recovery 8/8).
+Source `762c3a369a199766ab629007b6b2a3c27885d5e1` is fully modularized and accepted.
+Its test EXE is uploaded; exact artifact and EXE hash in MODULARIZATION_REPORT_EL.md.
+No unchanged successful suite was repeated.
+
+Next work: reproduce bounded-worker backlog during rapid personnel selection,
+then audit synchronous GUI I/O/exit and safe local hang diagnostics. Keep changes
+small, target regression first, preserve event schemas/IDs/timestamps and journals.
+Existing field acceptance remains unexecuted. Branch restrictions unchanged.
+
+The remainder is historical checkpoint evidence, not current pending status.
+
 # Safe paused checkpoint — 2026-10-16
 
 PAUSED by explicit user instruction because of the remaining Codex quota.

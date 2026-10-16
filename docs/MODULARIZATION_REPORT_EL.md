@@ -5,13 +5,14 @@
 Η δομική διάσπαση ολοκληρώθηκε: **43 αρχεία Python συνολικά**, κύριο αρχείο
 **88 γραμμών**, σύνθεση MainWindow **77 γραμμών**, μεγαλύτερο module **366 γραμμών**.
 Ο κώδικας βρίσκεται αποκλειστικά στο `feature/v125-modularization-20261013`.
-Η τελευταία έκδοση προς τελική πιστοποίηση είναι
-`e243e53e9d0be62102364f1d2bb48ffe678efe42`.
-
-**Το Windows run 38870905825 εκκρεμεί.** Linux 38870905814 και module gate
-38870905823 PASS για αυτό το commit. Το τελευταίο πλήρες Windows SUCCESS αφορά
-`b943a8693a3eed2329dc8b1fc4601afe4e0990a3`, run 38865827943, με πραγματικό
-δοκιμαστικό EXE artifact. Δεν μεταφέρεται αυτόματα η πιστοποίησή του στη νεότερη έκδοση.
+Η τελική δομική έκδοση `762c3a369a199766ab629007b6b2a3c27885d5e1` έχει πλήρη αυτοματοποιημένη πιστοποίηση:
+Windows **38874685744 SUCCESS**, Linux **38874685771 SUCCESS**, modular gate
+**38874685792 SUCCESS**, Windows Qt recovery **38874685760 SUCCESS (8/8)**.
+Το GitHub ελέγχθηκε ξανά κατά την επανέναρξη στις 16/10/2026, χωρίς νέα εκτέλεση.
+45 regression scripts, build/smoke, πραγματικό frozen EXE data workflow PASS:
+4 πράξεις, 2 συνεδρίες, ίδια IDs/timestamps. Αυστηρά visual: startup **0/20**,
+theme **0/30**, επιβεβαιωμένα clicks **30/30**.
+Η νέα επαγγελματική θωράκιση είναι χωριστό στάδιο· δεν απαιτεί νέα modularization.
 
 ## Αρχιτεκτονική και συμβατότητα
 
@@ -131,11 +132,14 @@ JSON/SQLite schemas, IDs, timestamps, κατάλογοι, ονόματα ανα�
 | d128e6db / Windows 38868081099 | FAIL στον εξωτερικό driver: SQLite reader cleanup έκρυψε αρχικό error, όχι visual PASS |
 | f44331e / Windows 38869909515 | 44 regressions/build/smoke PASS· FAIL επανενεργοποίησης test background μετά πληκτρολόγηση, pending δεδομένα άθικτα |
 | e243e53 / Linux 38870905814, gate 38870905823 | PASS |
-| e243e53 / Windows 38870905825 | PENDING: διορθωμένο acknowledgement/foreground fixture και τελικό accepted artifact |
+| e243e53 / Windows 38870905825 | FAIL: timeout στο Qt recovery· ιστορικό, όχι σημερινή εκκρεμότητα |
+| f4af1bdd / Windows 38872859841 | Functional EXE PASS, συνολικό FAIL στην κονσόλα cp1252 μετά το report |
+| 762c3a36 / Windows 38874685744 | SUCCESS: 45 regressions, EXE workflow, strict visual, accepted upload |
+| 762c3a36 / Linux 38874685771, gate 38874685792, recovery 38874685760 | SUCCESS, recovery 8/8 |
 
 Τα τοπικά αποτελέσματα κάθε μικρής αλλαγής, συμπεριλαμβανομένων τριών αποτυχημένων
 σταδίων πριν από διόρθωση, αποθηκεύτηκαν στο `validation/local-20261016/` με index.
-Το τελευταίο πλήρες τοπικό suite έχει **44 scripts PASS**, compileall src/tests/tools
+Το τελευταίο πλήρες τοπικό suite έχει **45 scripts PASS**, compileall src/tests/tools
 και git diff --check PASS. Τέσσερις native Windows process/fixture περιπτώσεις
 παραλείπονται ρητά στο Linux. Ο εξωτερικός EXE driver δεν εκτελείται στο Linux.
 Τα παλιά αποθηκευμένα reports δεν προσμετρήθηκαν ως νέες εκτελέσεις.
@@ -149,10 +153,18 @@ PyInstaller EXE με native mouse/keyboard και αναγκαστικό stop τ
 
 ## Δοκιμαστικό EXE και όρια παράδοσης
 
-Τελευταίο ήδη διαθέσιμο, προγενέστερο δοκιμαστικό artifact:
-`POSITION_TRACKING_WINDOWS_TEST-b943a8693a3eed2329dc8b1fc4601afe4e0990a3-38865827943`,
-60.5 MB, στο https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/38865827943 .
-Το τελικό artifact της πλήρους διάσπασης εκκρεμεί μέχρι το νέο πλήρες PASS/upload.
+Διαθέσιμο πιστοποιημένο δοκιμαστικό artifact πλήρους διάσπασης (60.5 MB):
+`POSITION_TRACKING_WINDOWS_TEST-762c3a369a199766ab629007b6b2a3c27885d5e1-38874685744`.
+https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/38874685744
+
+Source SHA: `762c3a369a199766ab629007b6b2a3c27885d5e1`.
+**EXE SHA256:** `beb836483229f3656e959c0891a7bd27cb7f58a0813b2bfa1015dabbf27699f7`.
+Το SHA256 του GitHub artifact archive διαφέρει:
+`27d252e4e2b781ed0dc53661e3600619953838452338f714e257a1d01c1f992b`.
+Η διαθεσιμότητα/όνομα/μέγεθος επιβεβαιώθηκαν από τη σελίδα GitHub· η άμεση λήψη
+archive μέσω API δεν είναι διαθέσιμη στο παρόν περιβάλλον. Το hash του EXE
+τεκμηριώνεται στο αποθηκευμένο functional report της ίδιας έκδοσης.
+
 Κάθε αποδεκτό πακέτο περιλαμβάνει EXE, SHA256SUMS, manifest, regressions, visual και
 functional report. Διατήρηση 7 ημερών. Δεν δημιουργείται tag ή GitHub release.
 
