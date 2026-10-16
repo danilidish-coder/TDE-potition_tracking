@@ -1,5 +1,9 @@
 # Final late-connection candidate checkpoint — 2026-10-16
 
+Exact candidate: 410bf72fe197e6e7d9a4a1a299a135a716c71bf3.
+Final runs: Windows 38916161811, Linux 38916162147, gate 38916162111.
+Gate observed SUCCESS; Windows/Linux final conclusions still to inspect.
+
 Intermediate source ec8eab72e5c95f7b31add2b2b4208d30fb2493ee: Windows
 38914933955 SUCCESS, Linux 38914934027 SUCCESS, gate 38914933969 SUCCESS.
 Native report verifies actual empty-profile/no-central/no-roster EXE normal exit,
