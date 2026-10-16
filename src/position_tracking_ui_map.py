@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from position_tracking_common import _clean
 from position_tracking_personnel import PersonnelRecord
+from position_tracking_store import SharedEventStore
 
 
 class BoothMapWidget(QWidget):

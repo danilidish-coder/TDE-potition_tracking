@@ -152,3 +152,11 @@ Application src/ tree remains da3f565224a4b973c2b702c462402447fc5f1f1b.
 First action is now inspect the corrective run, not repeat modules. Diagnose any
 remaining ORIGINAL error rather than treating a cleanup failure as application
 corruption or claiming the frozen workflow passed.
+
+Final interface audit found four missing annotation imports introduced by
+extraction: LiveMapDialog SharedEventStore, SessionIndex clock dtime/search date,
+and ShiftLifecycle Path. Added only these imports; no algorithm/signature/data
+change. Architecture regression now resolves all 226 owned function/method type
+annotations, guarding the complete module surface. 44 scripts PASS
+(/tmp/tde-annotation-contract-20261016), compileall/diff PASS. This src-only import
+correction is local until the pending f44331e native diagnostics are recovered.
