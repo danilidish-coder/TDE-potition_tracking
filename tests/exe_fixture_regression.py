@@ -29,6 +29,21 @@ class ExeFixtureContract(unittest.TestCase):
             self.assertEqual(calls,[True])
             path.unlink()
             self.assertEqual(namespace['operations'](path),[])
+    def test_greek_report_survives_cp1252_console_without_changing_utf8_evidence(self):
+        import io,json
+        from contextlib import redirect_stdout
+        tree=ast.parse(SOURCE.read_text(encoding='utf-8'))
+        function=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='persist_report')
+        namespace={'json':json}
+        exec(compile(ast.Module(body=[function],type_ignores=[]),str(SOURCE),'exec'),namespace)
+        report={'status':'PASS','direction':'ΕΞΟΔΟΣ','person':'ΔΟΚΙΜΗ'}
+        buffer=io.BytesIO();stream=io.TextIOWrapper(buffer,encoding='cp1252',write_through=True)
+        with tempfile.TemporaryDirectory() as directory:
+            with redirect_stdout(stream):namespace['persist_report'](Path(directory),report)
+            self.assertEqual(json.loads(buffer.getvalue().decode('cp1252')),report)
+            self.assertEqual(json.loads((Path(directory)/'report.json').read_text(encoding='utf-8')),report)
+        stream.close()
+
     def test_both_driver_sqlite_connections_have_explicit_closing(self):
         tree=ast.parse(SOURCE.read_text(encoding='utf-8'))
         connections=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Attribute) and isinstance(n.func.value,ast.Name) and n.func.value.id=='sqlite3' and n.func.attr=='connect']

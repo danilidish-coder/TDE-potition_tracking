@@ -164,6 +164,13 @@ def exercise(exe, out, report):
             if p is not None:stop_process_tree(p)
 
 
+def persist_report(out, report):
+    (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    # A native Windows command pipe can be cp1252. Keep its JSON ASCII-safe;
+    # the retained UTF-8 report still contains the original Greek strings.
+    print(json.dumps(report,ensure_ascii=True,indent=2))
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--exe',type=Path,required=True);parser.add_argument('--out',type=Path,required=True);parser.add_argument('--commit',required=True)
     args=parser.parse_args();args.out.mkdir(parents=True,exist_ok=True)
@@ -171,5 +178,4 @@ if __name__=='__main__':
     try:exercise(args.exe.resolve(),args.out,report)
     except BaseException as exc:report['error']={'type':type(exc).__name__,'message':str(exc)};raise
     finally:
-        (args.out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-        print(json.dumps(report,ensure_ascii=False,indent=2))
+        persist_report(args.out,report)

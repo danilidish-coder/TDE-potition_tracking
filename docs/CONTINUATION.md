@@ -170,3 +170,15 @@ recovery diagnostic workflow now executes up to eight trials, stops at first
 failure and preserves exact logs/provenance through Git. This is diagnostic work,
 not a replacement for the full native EXE/visual acceptance pipeline.
 First action: recover that Windows diagnostic state and fix its evidenced cause.
+
+f4af1bd: bounded Windows recovery diagnostic 38872859978 PASS all eight attempts;
+Linux 38872859829 and gate 38872859906 PASS. Windows 38872859841 ran 44 regressions,
+build/smoke and the ACTUAL frozen EXE offline/restart/online data scenario PASS:
+four original receipts, two sessions, IDs/timestamps preserved, binary SHA256
+243b70a56332067da0f06df1bd24ccaa074d5cb11ef4de3101ce6ac14d873c85.
+Workflow nevertheless FAILED after its successful functional report was written;
+visual did not run. Sole remaining CLI operation was printing unescaped Greek
+JSON to a Windows command pipe. New portable regression reproduces cp1252 console
+encoding and verifies ASCII-safe JSON output plus unchanged UTF-8 evidence file.
+44 local scripts PASS (/tmp/tde-exe-console-encoding-20261016), compileall/diff PASS.
+This is a driver reporting correction, not a waiver of its nonzero exit status.
