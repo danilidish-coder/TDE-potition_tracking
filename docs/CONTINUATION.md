@@ -158,3 +158,6 @@ at import; entry reexports retain object identity. No Windows PASS claimed yet.
 PDF/history summary module: function ASTs exactly unchanged, legacy identities
 retained; 39 scripts PASS (/tmp/tde-pdf-20261016), compileall/diff PASS. Independent
 service import and missing-Qt failure contracts added; Windows still pending.
+
+Word document/archive naming module: 39 local scripts PASS, including an actual
+DOCX create/read round-trip; /tmp/tde-documents-20261016. Compileall/diff PASS.
