@@ -165,9 +165,6 @@ def run(args=None) -> int:
     class MainWindow(PositionActionsMixin, PersonnelSelectionMixin, MessageDialogsMixin, CommunicationMixin, ConfigurationMixin, MainViewMixin, QMainWindow):
         def __init__(self):
             super().__init__()
-            # Let the complete Qt backing-store paint supply the first content;
-            # avoid a separate native system-background erase on exposure.
-            self.setAttribute(Qt.WA_NoSystemBackground, True)
             self._services = WindowServices(AppConfig, _app_dir, _local_root, _machine_queue_root, _open_path)
             self.config = self._services.config_type.load()
             self.people: tuple[PersonnelRecord, ...] = ()
@@ -1491,6 +1488,8 @@ def run(args=None) -> int:
         # Fail closed on an inaccessible shared queue or old pending records.
         QMessageBox.critical(None, "ΚΟΙΝΗ ΟΥΡΑ ΘΕΣΕΩΝ — ΑΣΦΑΛΕΙΑ", str(exc))
         return 2
+    from position_tracking_ui_presentation import arm_initial_presentation
+    presentation = arm_initial_presentation(window)
     window.show()
     return app.exec()
 

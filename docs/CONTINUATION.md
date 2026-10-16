@@ -286,3 +286,13 @@ coordinates, checked foreground activation before EACH reference and determinist
 thread/window cleanup. This fixes the fixture's unpumped/ghosted-window defect;
 40 local scripts PASS (/tmp/tde-background-message-loop-20261016), native cases
 still pending. No screenshot frame or acceptance criterion removed.
+
+Initial native presentation candidate replaces ineffective WA_NoSystemBackground.
+Windows native surface is initially DWM-cloaked while its REAL Qt backing store
+renders; a queued callback after root+descendant Paint delivery releases it once.
+No snapshots/overlay, timed delay, processEvents or later theme hiding. Actual
+Qt tests assert both top and bottom children painted BEFORE release, no re-cloak
+on theme updates, refusal after show, and offscreen/non-Windows compatibility.
+41 local scripts PASS (/tmp/tde-first-presentation-20261016), compileall/diff PASS.
+Native verification remains mandatory; this does not certify the pending visual
+issue. All captured desktop/application frames still use unchanged criteria.
