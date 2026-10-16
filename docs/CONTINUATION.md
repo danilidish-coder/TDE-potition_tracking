@@ -182,3 +182,20 @@ JSON to a Windows command pipe. New portable regression reproduces cp1252 consol
 encoding and verifies ASCII-safe JSON output plus unchanged UTF-8 evidence file.
 44 local scripts PASS (/tmp/tde-exe-console-encoding-20261016), compileall/diff PASS.
 This is a driver reporting correction, not a waiver of its nonzero exit status.
+
+Recovery timing contract correction is evidenced, not an arbitrary timeout
+relaxation: production permits 10s schema-lock + 15s handoff-lock waits, with 3s
+poll delivery. The new test's old 12s end-to-end assumption was invalid. Recovery
+budget now derives from those bounds (10+15+2*3 = 31s), while all ordinary input
+waits stay 12s and every receipt/ID/time/assertion remains. A NEW real OS-held
+handoff lock lasting 13s proved the counterexample: recovery 14.854s with 297 Qt
+heartbeats, four preserved receipts/two sessions, no UI freeze or data loss.
+The original intermittent Windows timeout had no historical state diagnostics;
+no claim is made that its exact old host delay was recovered retroactively.
+All subsequent timeouts retain the full state; all eight bounded Windows trials
+on f4af1bd passed even before this budget correction.
+
+Full **45 scripts PASS** (/tmp/tde-recovery-contract-budget-20261016), compileall
+src/tests/tools and diff PASS. Strict visual .08/20 starts/30 toggles unchanged.
+Application src/ tree still efa779ebf0a24f02e72125dbc185d857e059493b. Await final
+native validation of these TEST/DRIVER corrections; do not declare completion yet.

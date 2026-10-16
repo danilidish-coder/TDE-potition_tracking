@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import tempfile
 import time
+import threading
 import unittest
 from unittest.mock import patch
 from openpyxl import Workbook
@@ -15,11 +16,12 @@ ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'src'))
 from position_tracking_settings import AppConfig
 from position_tracking_ui_context import WindowServices
 from position_tracking_ui_main import MainWindow
+from position_tracking_store import SharedEventStore
 
 class ActualUIWorkflow(unittest.TestCase):
-    def test_offline_restart_and_online_receipts_preserve_ids_and_timestamps(self):
+    def exercise(self, hold_handoff_lock=False):
         app=QApplication.instance() or QApplication([]);app.setQuitOnLastWindowClosed(False)
-        windows=[];notices=[]
+        windows=[];notices=[];release=None;locker=None;release_timer=None
         with tempfile.TemporaryDirectory() as directory:
             base=Path(directory);settings=base/'local'/'settings.json';central=base/'central';roster=base/'people.xlsx'
             wb=Workbook();ws=wb.active;ws.append(['ΑΓΜΣ','ΒΑΘΜΟΣ','ΕΠΩΝΥΜΟ','ΟΝΟΜΑ']);ws.append(['910001','ΑΣΤ','ΔΟΚΙΜΗ','ΠΡΟΣΩΠΙΚΟ']);wb.save(roster)
@@ -29,8 +31,8 @@ class ActualUIWorkflow(unittest.TestCase):
                 def save(self):return super().save(path=settings)
             Config(central_root=str(central),personnel_file=str(roster)).save()
             services=WindowServices(Config,lambda:base,lambda:base/'local',lambda:base/'queue',lambda p:None)
-            def wait(predicate):
-                end=time.monotonic()+12
+            def wait(predicate, seconds=12):
+                end=time.monotonic()+seconds
                 while time.monotonic()<end:
                     if predicate():return
                     QTest.qWait(10)
@@ -69,8 +71,32 @@ class ActualUIWorkflow(unittest.TestCase):
                     wait(lambda:w.offline.pending_count()==2 and w._position_operation_future is None)
                     original=w.offline._rows(('PENDING',));self.assertEqual([x['kind'] for x in original],['START','END'])
                     self.assertFalse(central.exists());close_window(w)
-                    central.mkdir();w=open_window()
-                    wait(lambda:w.store is not None and w.offline.pending_count()==0)
+                    central.mkdir()
+                    if hold_handoff_lock:
+                        fixture=SharedEventStore(central);acquired=threading.Event();release=threading.Event();lock_errors=[]
+                        def own_handoff_lock():
+                            try:
+                                with fixture.officer_lock('__WINDOWS_USER_HANDOFF__',timeout=3):
+                                    acquired.set();release.wait(40)
+                            except BaseException as exc:lock_errors.append(exc);acquired.set()
+                        locker=threading.Thread(target=own_handoff_lock,daemon=True);locker.start()
+                        self.assertTrue(acquired.wait(5));self.assertFalse(lock_errors,repr(lock_errors))
+                    w=open_window();ticks=[];heartbeat=QTimer(w)
+                    heartbeat.timeout.connect(lambda:ticks.append(time.monotonic()));heartbeat.start(50)
+                    if hold_handoff_lock:
+                        release_timer=threading.Timer(13,release.set);release_timer.start()
+                    started=time.monotonic()
+                    # Production permits a 10s schema lock + 15s handoff lock;
+                    # allow two actual 3s polling periods to deliver results.
+                    recovery_budget=10+15+2*3
+                    wait(lambda:w.store is not None and w.offline.pending_count()==0,seconds=recovery_budget)
+                    recovery_elapsed=time.monotonic()-started;heartbeat.stop()
+                    print(f'RECOVERY_ELAPSED_SECONDS={recovery_elapsed:.3f}; HEARTBEATS={len(ticks)}',flush=True)
+                    if hold_handoff_lock:
+                        self.assertGreater(recovery_elapsed,12,'The old 12s assumption must be disproved by the real lock fixture')
+                        self.assertGreater(len(ticks),100,'Qt must stay responsive during the legitimate lock wait')
+                        locker.join(5);self.assertFalse(locker.is_alive());self.assertFalse(lock_errors)
+
                     events={e['event_id']:e for e in w.store.iter_all_events()}
                     self.assertEqual(set(events),{x['id'] for x in original})
                     for row in original:self.assertEqual(events[row['id']]['timestamp'],row['created_at'])
@@ -99,6 +125,12 @@ class ActualUIWorkflow(unittest.TestCase):
                         w.history_btn.click()
                     self.assertTrue(any('Λανθασμένος' in str(n) for n in notices))
                 finally:
+                    if release_timer is not None:release_timer.cancel()
+                    if release is not None:release.set()
+                    if locker is not None:locker.join(5)
                     for w in windows:close_window(w)
+
+    def test_offline_restart_and_online_receipts_preserve_ids_and_timestamps(self):
+        self.exercise()
 
 if __name__=='__main__':unittest.main()
