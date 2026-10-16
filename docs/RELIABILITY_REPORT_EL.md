@@ -16,7 +16,7 @@ gate 38874685792 και recovery 38874685760 (8/8): SUCCESS. Το προηγού
 | Απεριόριστη συσσώρευση αναγνώσεων επιλογής | 200 αλλαγές με μπλοκαρισμένη remote ανάγνωση άφησαν 199 queued εργασίες | 4ef0041: μία ενεργή ανάγνωση, η τελευταία επιλογή ανανεώνεται μετά την ανάκαμψη. Πλήρης suite 46 PASS |
 | Καθυστερημένο START ανέστησε κλεισμένη εγγραφή στην κοινή cache | Δεύτερο journal ολοκλήρωσε END· παλιά GUI ανάγνωση επανέγραψε START | 39b44f0: ατομικό compare revision σε SQLite πριν από remember, χωρίς lock κατά το SMB I/O. Delayed START και delayed empty-read regressions PASS, suite 46 PASS |
 | GUI μπλοκάρισμα στην κανονική/απομακρυσμένη έξοδο | Ελεγχόμενο κεντρικό I/O κράτησε το Qt callback περίπου 0.8s | 1589663: μία ασύγχρονη επιβεβαιωμένη έξοδος, heartbeat Qt ζωντανό, duplicate guard, ACK μόνο μετά END, αποτυχία/pending δεν κλείνει την εφαρμογή. 5 targeted tests και suite 47 PASS |
-| Απουσία ανεξάρτητης αιτιολόγησης παγώματος | Οι παλιές αποτυχίες έλειπαν από stack/resource στοιχεία | Τοπικός watchdog καταγράφει GUI/worker stall και ανακάμψεις, stacks χωρίς locals/source lines/πλήρη paths, πόρους/ουρές. 4 targeted tests και suite 48 PASS |
+| Απουσία ανεξάρτητης αιτιολόγησης παγώματος | Οι παλιές αποτυχίες έλειπαν από stack/resource στοιχεία | Τοπικός watchdog καταγράφει GUI/worker stall και ανακάμψεις, stacks χωρίς locals/source lines/πλήρη paths, πόρους/ουρές. 4 αρχικά targeted tests και suite 48 PASS τοπικά (πριν τα παρακάτω νέα CI ευρήματα) |
 
 Τα αρχικά FAIL και τα αποτελέσματα μετά τη διόρθωση βρίσκονται στο
 `validation/reliability-20261016/`. Τα ενδιάμεσα commits διατηρήθηκαν με skip CI
@@ -87,3 +87,21 @@ lock/disconnect/logoff/reboot, ACL denied, power loss/replay, τουλάχιστ
 watchdog logs και ακριβών αρχικών/τελικών IDs/timestamps. Ψυχρή cached εκκίνηση,
 πραγματικά DPI/εκτυπώσεις/Office και τελική ανθρώπινη έγκριση παραμένουν υποχρεωτικά.
 Δεν εγκρίθηκε παραγωγική εγκατάσταση, release/tag ή μεταβολή πραγματικών δεδομένων.
+
+## Διατηρημένη αποτυχία του πρώτου native κύκλου θωράκισης
+
+Source 5231b30928066ddb6d86256a95c48698baabd287:
+Linux 38904486037 FAIL και Windows 38904486330 FAIL στο νέο test διαγνωστικών·
+gate 38904486493 SUCCESS. Το Windows build/EXE/visual δεν εκτελέστηκε.
+Ο observer του test διάβαζε live rotating αρχεία: Linux FileNotFoundError μετά
+rename και Windows PermissionError κατά rotation. Τα πλήρη αρχικά logs και οι
+48 εγγραφές αποτελεσμάτων διατηρούνται στους αντίστοιχους validation φακέλους.
+
+Η πρώτη επισκευή χώρισε worker-age από rotation και διάβαζε μετά το writer close.
+Πέντε targeted επαναλήψεις PASS αλλά η πλήρης τοπική suite έδειξε ότι 400ms
+δεν εγγυώνται πραγματική rotation (παρήχθη μόνο ένα αρχείο). Δεν θεωρήθηκε PASS.
+Η μέθοδος αλλάζει πλέον σε 30 πραγματικές resource probes με hard deadline,
+μεταγενέστερη ανάγνωση και διατήρηση όλων των assertions: worker age/μία ειδοποίηση,
+όντως >=2 rotated files, <=3 συνολικά, ίδιο όριο bytes και valid JSON για κάθε row.
+Δεν τροποποιήθηκε ο παραγωγικός watchdog ούτε χαλάρωσε κάποιο κριτήριο.
+Ο νέος CI κύκλος δικαιολογείται από αυτή τη συγκεκριμένη επισκευή test.

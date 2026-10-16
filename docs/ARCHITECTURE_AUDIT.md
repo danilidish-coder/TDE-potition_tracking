@@ -5,7 +5,10 @@ This is development verification, not field/production acceptance.
 
 ## Current structure
 
-43 source files; entry 88 lines, MainWindow composition 77, largest module 366.
+The completed modularization source 762c3a36 has 43 source files; entry 88 lines,
+MainWindow composition 77, largest module 366. Reliability candidate 5231b30
+has 44 files after adding the independent stdlib-only diagnostics utility;
+intentional UI/offline corrections are documented in RELIABILITY_REPORT_EL.md.
 The full per-file responsibility/line/commit inventory is in
 MODULARIZATION_REPORT_EL.md and validation/structure-20261016/modules.json.
 The original monolith inventory remains in Git history at checkpoint a323d9e.
@@ -54,7 +57,7 @@ flowchart TD
     Offline --> Models
 ```
 
-Whole-module AST audit: all 66 store methods unchanged versus 0f6fee5; all 50
+Historical modularization AST audit at 762c3a36: all 66 store methods unchanged versus 0f6fee5; all 50
 effective UI methods unchanged after explicit path callback normalization.
 Constructor composition is checked by real UI workflows. SQL/HTML string values
 are compared using complete owning-module ASTs, without text dedentation.

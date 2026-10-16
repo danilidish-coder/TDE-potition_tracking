@@ -39,6 +39,13 @@ JSON/SQLite schemas, IDs, timestamps, κατάλογοι, ονόματα ανα�
 
 ## Πλήρης κατάλογος modules
 
+Ο κατάλογος/γραμμές παρακάτω αποτυπώνουν το ολοκληρωμένο modularization source
+762c3a36. Η μεταγενέστερη θωράκιση 5231b30 προσθέτει το ανεξάρτητο
+`position_tracking_diagnostics.py` (150 γραμμές, bounded local watchdog/metrics)
+και μικρές τεκμηριωμένες διορθώσεις στους υπάρχοντες controllers/offline journal.
+Η αρχιτεκτονική παραμένει ίδια· συνολικά πλέον 44 source files.
+Για την τρέχουσα αξιοπιστία/πιστοποίηση δείτε RELIABILITY_REPORT_EL.md.
+
 | Αρχείο | Γραμμές | Ευθύνη |
 |---|---:|---|
 | [position_tracking.py](../src/position_tracking.py) | 88 | Συμβατό σημείο εισόδου, παλιά exports και σύνθεση runtime providers |

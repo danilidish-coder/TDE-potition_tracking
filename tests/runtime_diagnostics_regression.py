@@ -8,6 +8,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 from PySide6.QtCore import QTimer
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QWidget
@@ -42,23 +43,46 @@ class RuntimeDiagnosticsRegression(unittest.TestCase):
             self.assertIn('block_gui', text); self.assertNotIn(sensitive, text)
             self.assertNotIn(str(ROOT), text); self.assertFalse(d.thread.is_alive())
 
-    def test_worker_age_is_not_reset_by_gui_heartbeat_and_rotation_is_bounded(self):
+    def test_worker_age_is_not_reset_by_gui_heartbeat(self):
         app = QApplication.instance() or QApplication([])
         with tempfile.TemporaryDirectory() as directory:
             d = RuntimeDiagnostics(Path(directory), gui_timeout=2, worker_timeout=.1,
-                                   interval=.01, sample_interval=.02, max_bytes=1200, backups=2)
+                                   interval=.01, sample_interval=.02)
             try:
                 self.wait(lambda:d.available)
                 deadline = time.monotonic() + .4
-                observed = False
                 while time.monotonic() < deadline:
                     d.heartbeat({'offline':123}, {'network':1})
                     QTest.qWait(10)
-                    observed |= any('worker_stall' in p.read_text() for p in Path(directory).glob('*'))
-                self.assertTrue(observed)
             finally:d.stop(wait=True)
-            files = list(Path(directory).glob('*')); self.assertLessEqual(len(files), 3)
+            events = [json.loads(line) for line in d.path.read_text().splitlines()]
+            stalls = [event for event in events if event['event']=='worker_stall']
+            self.assertEqual(len(stalls), 1)
+            self.assertGreaterEqual(stalls[0]['workers']['offline'], .1)
+
+    def test_rotation_is_bounded_and_records_remain_valid_after_writer_closes(self):
+        app = QApplication.instance() or QApplication([])
+        with tempfile.TemporaryDirectory() as directory:
+            d = RuntimeDiagnostics(Path(directory), gui_timeout=2, interval=.01,
+                                   sample_interval=.02, max_bytes=1200, backups=2)
+            with patch('position_tracking_diagnostics.process_resources', wraps=process_resources) as probe:
+                try:
+                    self.wait(lambda:d.available)
+                    deadline = time.monotonic() + 5
+                    while probe.call_count < 30 and time.monotonic() < deadline:
+                        d.heartbeat(); QTest.qWait(10)
+                finally:d.stop(wait=True)
+                # Drive actual writes, not an assumed scheduler throughput in
+                # a fixed 400ms window. All real resource probes still execute.
+                self.assertGreaterEqual(probe.call_count, 30)
+            # Never enumerate and tail a rotating writer concurrently: the old
+            # test raced a legitimate rename. Assert every retained record here.
+            self.assertFalse(d.thread.is_alive())
+            files = list(Path(directory).glob('*')); self.assertGreaterEqual(len(files), 2)
+            self.assertLessEqual(len(files), 3)
             self.assertLess(sum(f.stat().st_size for f in files), 15000)
+            for file in files:
+                for line in file.read_text().splitlines(): self.assertIn('event', json.loads(line))
 
     def test_unwritable_destination_does_not_crash_or_leak_thread(self):
         with tempfile.TemporaryDirectory() as directory:

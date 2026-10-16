@@ -1,3 +1,27 @@
+# Current reliability verification checkpoint — 2026-10-16
+
+Source/application candidate: 5231b30928066ddb6d86256a95c48698baabd287.
+First native cycle: Linux 38904486037 FAIL; Windows 38904486330 FAIL, both in
+new diagnostic test observer (live file rotation read race), not an app failure.
+Gate 38904486493 SUCCESS. Native build/EXE/visual did not execute on that run.
+CI diagnostic commits 577d98a / 048ddbf integrated fast-forward, failures retained.
+
+Observer repair now waits for 30 real resource probes and closes the writer
+before asserting rotation/valid JSON; the original age/size/file-count checks
+remain. First fixed-time repair failed full suite and is preserved, not waived.
+Final local **48 scripts PASS**, 5 targeted repeated diagnostic suites PASS
+(5 tests each), compileall src/tests/tools and diff checks PASS.
+Application src/ and soak tool unchanged from 5231b30; only tests/docs changed.
+The already-running 600s soak is valid for that exact application source tree.
+
+Next: inspect the corrected test commit's Windows/Linux/gate workflows and the
+600s soak report. Native acceptance/artifact for the hardened candidate is still
+pending. Older 762c3a36 test EXE remains the last accepted binary meanwhile.
+Use RELIABILITY_REPORT_EL.md and FIELD_ACCEPTANCE_EL.md for actual field risks.
+No main/v1.2.5/releases/data changes; development branch only.
+
+Earlier checkpoint headers are retained history and superseded by this header.
+
 # Active professional reliability candidate — 2026-10-16
 
 User explicitly resumed from 801f91d; pause is superseded. Existing environment
