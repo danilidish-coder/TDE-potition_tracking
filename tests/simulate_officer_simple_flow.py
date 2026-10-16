@@ -93,7 +93,8 @@ with tempfile.TemporaryDirectory() as td:
     # UI markers: απλός αξ/υπ + κάτω κουμπιά + θέματα.
     import inspect
     from position_tracking_ui_view import MainViewMixin
-    source = SRC.read_text(encoding="utf-8") + inspect.getsource(MainViewMixin)
+    from position_tracking_ui_shift_end import ShiftEndDialogMixin
+    source = SRC.read_text(encoding="utf-8") + inspect.getsource(MainViewMixin) + inspect.getsource(ShiftEndDialogMixin)
     for marker in (
         "ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ",
         "ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ",

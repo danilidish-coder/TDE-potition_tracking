@@ -108,7 +108,8 @@ with tempfile.TemporaryDirectory() as tmp:
 # the pre-existing live-map end control must remain in the same source.
 import inspect
 from position_tracking_ui_map import LiveMapDialog
-source = (ROOT / "src" / "position_tracking.py").read_text(encoding="utf-8") + inspect.getsource(LiveMapDialog)
+from position_tracking_ui_shift_end import ShiftEndDialogMixin
+source = (ROOT / "src" / "position_tracking.py").read_text(encoding="utf-8") + inspect.getsource(LiveMapDialog) + inspect.getsource(ShiftEndDialogMixin)
 # Check actual button constructors, independent of whitespace/quote formatting
 # introduced when a nested Qt class becomes an independent module.
 import ast

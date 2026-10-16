@@ -314,3 +314,8 @@ had imported PySide6 into the stdlib-only backend contract. It now parses the
 actual controller methods by AST and asserts their bases are linked to MainWindow,
 keeping all order/identity scenarios. python -S handoff replay contract PASS;
 full 41-script suite PASS (/tmp/tde-lightweight-gate-20261016), compileall/diff PASS.
+
+Resumed pending shift-completion modal after prerequisite test fixes. Method AST
+unchanged, same single/bulk/finalize controls; 41 scripts PASS
+(/tmp/tde-ui-shift-end-verified-20261016), compileall/diff PASS. Earlier failure
+in this extraction cycle was the diagnosed pre-exposure test timer, not waived.
