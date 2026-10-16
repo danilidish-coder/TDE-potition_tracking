@@ -94,7 +94,8 @@ with tempfile.TemporaryDirectory() as td:
     import inspect
     from position_tracking_ui_view import MainViewMixin
     from position_tracking_ui_shift_end import ShiftEndDialogMixin
-    source = SRC.read_text(encoding="utf-8") + inspect.getsource(MainViewMixin) + inspect.getsource(ShiftEndDialogMixin)
+    from position_tracking_ui_shifts import ShiftControllerMixin
+    source = SRC.read_text(encoding="utf-8") + inspect.getsource(MainViewMixin) + inspect.getsource(ShiftEndDialogMixin) + inspect.getsource(ShiftControllerMixin)
     for marker in (
         "ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ",
         "ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ",

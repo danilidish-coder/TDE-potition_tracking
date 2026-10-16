@@ -319,3 +319,8 @@ Resumed pending shift-completion modal after prerequisite test fixes. Method AST
 unchanged, same single/bulk/finalize controls; 41 scripts PASS
 (/tmp/tde-ui-shift-end-verified-20261016), compileall/diff PASS. Earlier failure
 in this extraction cycle was the diagnosed pre-exposure test timer, not waived.
+
+UI shift preview/membership/status controller: seven AST-identical effective
+methods; removed the previously shadowed duplicate _shift_admin definition while
+retaining its actual last definition. 41 scripts PASS (/tmp/tde-ui-shifts-20261016),
+compileall/diff PASS. This does not change the guarded end dialog behavior.
