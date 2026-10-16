@@ -214,3 +214,6 @@ real protected-ID/replay cases. Full rerun 39 scripts PASS
 Shift lifecycle/membership boundary: eleven AST-identical methods, including
 pending/approved/excluded reversal and guarded END handling. 39 scripts PASS
 (/tmp/tde-shifts-20261016), compileall/diff PASS.
+
+Event/roster/shift query boundary: eight AST-identical methods, 39 scripts PASS
+(/tmp/tde-event-queries-20261016), compileall/diff PASS.
