@@ -6,10 +6,10 @@
 **88 γραμμών**, σύνθεση MainWindow **77 γραμμών**, μεγαλύτερο module **366 γραμμών**.
 Ο κώδικας βρίσκεται αποκλειστικά στο `feature/v125-modularization-20261013`.
 Η τελευταία έκδοση προς τελική πιστοποίηση είναι
-`d128e6db8cde73b174b8fb20020228058c9daf7a`.
+`e243e53e9d0be62102364f1d2bb48ffe678efe42`.
 
-**Το τελικό Windows run 38868081099 εκκρεμεί.** Linux 38868080997 και module gate
-38868081064 PASS για αυτό το commit. Το τελευταίο πλήρες Windows SUCCESS αφορά
+**Το Windows run 38870905825 εκκρεμεί.** Linux 38870905814 και module gate
+38870905823 PASS για αυτό το commit. Το τελευταίο πλήρες Windows SUCCESS αφορά
 `b943a8693a3eed2329dc8b1fc4601afe4e0990a3`, run 38865827943, με πραγματικό
 δοκιμαστικό EXE artifact. Δεν μεταφέρεται αυτόματα η πιστοποίησή του στη νεότερη έκδοση.
 
@@ -59,7 +59,7 @@ JSON/SQLite schemas, IDs, timestamps, κατάλογοι, ονόματα ανα�
 | [position_tracking_session_index.py](../src/position_tracking_session_index.py) | 250 | Ευρετήριο προσωπικών συνεδριών και reconciliation |
 | [position_tracking_settings.py](../src/position_tracking_settings.py) | 132 | Ρυθμίσεις, migration, ατομική αποθήκευση και διαδρομές |
 | [position_tracking_shift_index.py](../src/position_tracking_shift_index.py) | 166 | Σχήμα SQLite, snapshots και ευρετήριο αναφορών βάρδιας |
-| [position_tracking_shifts.py](../src/position_tracking_shifts.py) | 322 | Κύκλος βάρδιας, pending/approved/excluded και ασφαλής λήξη |
+| [position_tracking_shifts.py](../src/position_tracking_shifts.py) | 323 | Κύκλος βάρδιας, pending/approved/excluded και ασφαλής λήξη |
 | [position_tracking_statistics.py](../src/position_tracking_statistics.py) | 127 | Στατιστικά Excel και γραφήματα |
 | [position_tracking_store.py](../src/position_tracking_store.py) | 116 | Μικρή σύνθεση storage capabilities, audit και backups |
 | [position_tracking_store_io.py](../src/position_tracking_store_io.py) | 124 | Κλειδώματα αρχείων, ατομικά JSON και συνδέσεις SQLite |
@@ -73,7 +73,7 @@ JSON/SQLite schemas, IDs, timestamps, κατάλογοι, ονόματα ανα�
 | [position_tracking_ui_history.py](../src/position_tracking_ui_history.py) | 366 | Εξουσιοδοτημένο ιστορικό προσωπικού, αναζήτηση και PDF |
 | [position_tracking_ui_lifecycle.py](../src/position_tracking_ui_lifecycle.py) | 77 | Ασφαλής έξοδος χειριστή και καθαρισμός clients/executors |
 | [position_tracking_ui_main.py](../src/position_tracking_ui_main.py) | 77 | Αρχικοποίηση παραθύρου και σύνθεση controllers |
-| [position_tracking_ui_map.py](../src/position_tracking_ui_map.py) | 287 | Ζωντανός χάρτης θέσεων και ασύγχρονη ανανέωση |
+| [position_tracking_ui_map.py](../src/position_tracking_ui_map.py) | 288 | Ζωντανός χάρτης θέσεων και ασύγχρονη ανανέωση |
 | [position_tracking_ui_messages.py](../src/position_tracking_ui_messages.py) | 194 | Διάλογοι μηνυμάτων, παραληπτών και επιβεβαιωμένων close requests |
 | [position_tracking_ui_positions.py](../src/position_tracking_ui_positions.py) | 179 | GUI καταχώριση START/END, offline worker και εμφάνιση conflicts |
 | [position_tracking_ui_presentation.py](../src/position_tracking_ui_presentation.py) | 58 | Πρώτη native παρουσίαση μετά την ολοκληρωμένη ζωγραφική Qt |
@@ -128,11 +128,14 @@ JSON/SQLite schemas, IDs, timestamps, κατάλογοι, ονόματα ανα�
 | b943a869 / Windows 38865827943 | Full SUCCESS: 41 scripts, EXE build/smoke, 0/20 startup, 0/30 theme, 30/30 clicks, upload artifacts |
 | b943a869 / Linux 38865827783, gate 38865827824 | PASS |
 | d128e6db / Linux 38868080997, gate 38868081064 | PASS |
-| d128e6db / Windows 38868081099 | PENDING — τελικό EXE + εξωτερικές GUI ενέργειες |
+| d128e6db / Windows 38868081099 | FAIL στον εξωτερικό driver: SQLite reader cleanup έκρυψε αρχικό error, όχι visual PASS |
+| f44331e / Windows 38869909515 | 44 regressions/build/smoke PASS· FAIL επανενεργοποίησης test background μετά πληκτρολόγηση, pending δεδομένα άθικτα |
+| e243e53 / Linux 38870905814, gate 38870905823 | PASS |
+| e243e53 / Windows 38870905825 | PENDING: διορθωμένο acknowledgement/foreground fixture και τελικό accepted artifact |
 
 Τα τοπικά αποτελέσματα κάθε μικρής αλλαγής, συμπεριλαμβανομένων τριών αποτυχημένων
 σταδίων πριν από διόρθωση, αποθηκεύτηκαν στο `validation/local-20261016/` με index.
-Το τελευταίο πλήρες τοπικό suite έχει **43 scripts PASS**, compileall src/tests/tools
+Το τελευταίο πλήρες τοπικό suite έχει **44 scripts PASS**, compileall src/tests/tools
 και git diff --check PASS. Τέσσερις native Windows process/fixture περιπτώσεις
 παραλείπονται ρητά στο Linux. Ο εξωτερικός EXE driver δεν εκτελείται στο Linux.
 Τα παλιά αποθηκευμένα reports δεν προσμετρήθηκαν ως νέες εκτελέσεις.
@@ -177,3 +180,18 @@ Main: `3c7a785a4008caa7b4fc1c7fd8d240cb8653ff99`.
 Tag v1.2.5: `33ea13ca2133ddbfb93b1d051d4b25dc35bd954f`.
 `release/`, `VERSION.txt`, production release workflow αμετάβλητα έναντι 129e8cb.
 Καμία συγχώνευση, παραγωγική δημοσίευση ή επεξεργασία πραγματικών δεδομένων.
+
+## Πρόσθετες διορθώσεις τελικής επαλήθευσης
+
+Ο εξωτερικός driver έκλεινε λανθασμένα SQLite readers μόνο με το transaction
+context manager. Πλέον τους κλείνει ρητά, διατηρεί αρχική εξαίρεση/screenshot και
+δεν επιτρέπει στο cleanup να κρύβει την αιτία. Η επόμενη εκτέλεση αποκάλυψε αποτυχία
+εστίασης του test background μετά τα native inputs. Η διόρθωση επιβεβαιώνει
+WM_NULL acknowledgement και πραγματικό foreground HWND, με προσωρινό input-queue
+attachment όπου απαιτείται και άμεσο detach. Τα αρχικά pending IDs/timestamps
+διατηρήθηκαν άθικτα και στα δύο αποτυχημένα runs.
+
+Εντοπίστηκαν και διορθώθηκαν τέσσερα missing type imports. Νέος έλεγχος επιλύει
+και τα 226 annotations των ιδιόκτητων functions/methods. Κανένας αλγόριθμος ή
+σχήμα δεδομένων δεν άλλαξε από αυτές τις διορθώσεις. Το πλήρες επιτόπιο πρωτόκολλο
+βρίσκεται στο FIELD_ACCEPTANCE_EL.md και παραμένει ανεκτέλεστο.

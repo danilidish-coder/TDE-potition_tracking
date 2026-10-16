@@ -1,8 +1,10 @@
 {
   "reference_commit": "0f6fee53ed5194d98318fd9f1037052012056184",
-  "source_tree": "da3f565224a4b973c2b702c462402447fc5f1f1b",
+  "source_tree": "efa779ebf0a24f02e72125dbc185d857e059493b",
   "store_methods_verified": 66,
   "ui_methods_verified": 50,
   "mismatches": [],
-  "method": "Whole owning-module AST preserves exact multiline SQL/HTML literals; UI path/open callbacks normalized to explicit providers. Constructor independently tested through the real application."
+  "method": "Whole owning-module AST preserves exact multiline SQL/HTML literals; UI path/open callbacks normalized to explicit providers. Constructor independently tested through the real application.",
+  "previous_source_tree": "da3f565224a4b973c2b702c462402447fc5f1f1b",
+  "interface_correction": "Only missing annotation imports added; AST method bodies unchanged, all 226 annotations resolve in architecture contract."
 }

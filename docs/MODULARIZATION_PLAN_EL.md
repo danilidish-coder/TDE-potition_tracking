@@ -48,10 +48,10 @@
 
 Η διάσπαση ολοκληρώθηκε σε 43 source files, κύριο αρχείο 88 γραμμών και μικρή
 σύνθεση παραθύρου 77 γραμμών. Όλες οι ενεργές store/UI μέθοδοι διατηρήθηκαν με
-AST audit και ρητή έγχυση path providers. Τελευταίο πλήρες τοπικό suite: 43 scripts
+AST audit και ρητή έγχυση path providers. Τελευταίο πλήρες τοπικό suite: 44 scripts
 PASS, με πραγματικές Qt offline/restart/online ενέργειες. Το b943a869 έχει πλήρες
 Windows/Linux/gate PASS και δοκιμαστικό artifact, με 0/20 startup και 0/30 theme.
-Η πλήρης δομική έκδοση d128e6d περνά Linux και gate· το τελικό Windows 38868081099
+Η πλήρης δομική έκδοση e243e53 περνά Linux και gate· το Windows 38870905825
 εκκρεμεί, μαζί με νέα εξωτερική δοκιμή του πραγματικού frozen EXE.
 
 Η σημερινή ακριβής κατάσταση βρίσκεται στο CONTINUATION.md και η πλήρης τεχνική

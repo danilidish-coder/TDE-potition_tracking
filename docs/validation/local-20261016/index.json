@@ -1,6 +1,12 @@
 {
-  "platform": "Linux Python 3.12 existing .venv; native Windows cases skipped, EXE desktop driver unrun locally",
+  "platform": "Linux Python 3.12 existing .venv; native Windows cases skipped, EXE driver unrun locally",
   "stages": [
+    {
+      "stage": "tde-annotation-contract-20261016",
+      "scripts": 44,
+      "failed": [],
+      "results": "tde-annotation-contract-20261016.json"
+    },
     {
       "stage": "tde-architecture-20261016",
       "scripts": 42,
@@ -56,6 +62,12 @@
       "results": "tde-event-queries-20261016.json"
     },
     {
+      "stage": "tde-exe-reader-close-20261016",
+      "scripts": 44,
+      "failed": [],
+      "results": "tde-exe-reader-close-20261016.json"
+    },
+    {
       "stage": "tde-final-functional-gate-20261016",
       "scripts": 43,
       "failed": [],
@@ -72,6 +84,12 @@
       "scripts": 41,
       "failed": [],
       "results": "tde-first-presentation-20261016.json"
+    },
+    {
+      "stage": "tde-foreground-ack-20261016",
+      "scripts": 44,
+      "failed": [],
+      "results": "tde-foreground-ack-20261016.json"
     },
     {
       "stage": "tde-frozen-functional-gate-20261016",

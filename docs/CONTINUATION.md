@@ -8,30 +8,30 @@ No reinstall, new worktree, production deployment or main modification.
 ## Current state — do not repeat completed modules
 
 Structural modularization is complete: 43 source files, entry 88 lines,
-MainWindow composition 77 lines, largest module 366 lines. All legacy APIs/data
-formats remain. New real Qt workflow and architecture contracts pass.
-Latest code/configuration commit: `d128e6db8cde73b174b8fb20020228058c9daf7a`.
-Source-only tree: `da3f565224a4b973c2b702c462402447fc5f1f1b`.
-Composition extraction: `9ac9eb9d921cb5c0dbf17f015054ff82ce2f4431`.
-Real Qt workflow: `dd170354aa9b705f09456c875037442bb051a24b`.
+MainWindow 77, maximum module 366. Latest pushed code/configuration:
+`e243e53e9d0be62102364f1d2bb48ffe678efe42`.
+Current src/ tree: `efa779ebf0a24f02e72125dbc185d857e059493b`.
+All 226 owned function/method annotations resolve after restoring four missing
+imports. Full local **44 scripts PASS**, compileall src/tests/tools and diff PASS.
+Four native Windows process/fixture cases skip locally; EXE driver is Windows-only.
 
-Full local **43 scripts PASS**, compileall src/tests/tools and git diff --check
-PASS. Four native Windows process/fixture cases skip on Linux. External native
-EXE driver is Windows-only and was not executed locally.
+Current exact e243e53 workflows:
 
-Current final workflows for exact d128e6d:
+- Linux **38870905814 PASS**.
+- Module gate **38870905823 PASS**.
+- Windows **38870905825 PENDING**: regressions/build/smoke, external frozen-EXE
+  workflow, strict visual and accepted artifact upload.
 
-- Linux **38868080997 PASS**.
-- Modularization gate **38868081064 PASS**.
-- Windows **38868081099 PENDING**: build, smoke, NEW external EXE offline/restart/
-  online mouse/keyboard workflow, strict visual test and gated artifact upload.
+**First next action:** inspect Windows 38870905825, fetch diagnostics/provenance,
+check frozen workflow (four receipts/two sessions, exact IDs/timestamps), strict
+20-start/30-toggle metrics, EXE SHA256 and actual upload. If failed, diagnose the
+preserved original error; do not repeat modules or waive criteria. Then update
+this checkpoint and MODULARIZATION_REPORT_EL.md with real final results.
 
-**First next action:** inspect completion of Windows 38868081099, fetch its
-Git diagnostic commit and verify report provenance, actual functional results,
-strict 20-start/30-toggle metrics, EXE hash and artifact upload. Do not claim PASS
-or a final artifact until all of these finish. If failed, diagnose the retained
-actual error/screenshots and correct that small cause; do not start more modules.
-Then update this checkpoint and `MODULARIZATION_REPORT_EL.md` with exact results.
+Earlier complete structural source d128e6d Windows 38868081099 FAILED in the new
+driver; f44331e Windows 38869909515 exposed the original focus-fixture error.
+These are NOT pending or passed. See latest failure sections below. Source-only
+changes since d128 are missing type imports; algorithms remain AST-identical.
 
 ## Already certified presentation correction
 
@@ -134,44 +134,21 @@ If a source correction is necessary, run its focused repro plus full suite:
 `XDG_CACHE_HOME=/tmp/tde-cache .venv/bin/python tools/run_regressions.py --out /tmp/tde-next`;
 then compileall/diff check and new native CI, retaining failures/provenance.
 
-## Latest native failure and corrective fixture checkpoint
+## Driver fixture and interface corrections already saved
 
-Windows 38868081099/d128e6d completed FAIL after 43 regressions/build/smoke PASS.
-External EXE correctly recorded offline START/END on EXIT 14 with original END
-link, then failed during restart/cleanup. Its driver left read-only sqlite3
-connections open (`with Connection` does not close it), causing Windows WinError32
-and potentially masking the original workflow exception. No final visual or
-accepted EXE package was produced for this run. Evidence retained at
-validation/windows-visual-38868081099-1/functional-report.json and screenshots.
+d128e6d/Windows 38868081099: 43 regressions/build/smoke PASS, external driver FAIL.
+Two real offline EXIT 14 operations were durable. Its unclosed read-only SQLite
+connections caused WinError32 during cleanup and hid the original workflow error.
+Both readers now close explicitly; exception/screenshots survive cleanup.
 
-Corrective change is TEST DRIVER ONLY: explicitly close both readers, preserve
-original workflow/launch exception and screenshot before temporary cleanup.
-New portable fixture contract checks actual close and unchanged row identity.
-Full **44 scripts PASS** (/tmp/tde-exe-reader-close-20261016), compileall/diff PASS.
-Application src/ tree remains da3f565224a4b973c2b702c462402447fc5f1f1b.
-First action is now inspect the corrective run, not repeat modules. Diagnose any
-remaining ORIGINAL error rather than treating a cleanup failure as application
-corruption or claiming the frozen workflow passed.
+f44331e/Windows 38869909515: 44 regressions/build/smoke PASS; original error now
+visible: cannot activate owned test background after native keyboard input. No
+second EXE was launched, no central data existed and pending IDs/times were intact.
+Corrected cross-thread WM_NULL acknowledgement and checked temporary input-queue
+attachment/detach are in e243e53. Linux 38869909478 and gate 38869909506 PASS.
 
-Final interface audit found four missing annotation imports introduced by
-extraction: LiveMapDialog SharedEventStore, SessionIndex clock dtime/search date,
-and ShiftLifecycle Path. Added only these imports; no algorithm/signature/data
-change. Architecture regression now resolves all 226 owned function/method type
-annotations, guarding the complete module surface. 44 scripts PASS
-(/tmp/tde-annotation-contract-20261016), compileall/diff PASS. This src-only import
-correction is local until the pending f44331e native diagnostics are recovered.
-
-f44331e Windows 38869909515: 44 regressions/build/smoke PASS, EXE driver FAIL.
-Reader cleanup error is gone; the preserved original error is exactly
-'Cannot activate the owned visual background fixture' after native input in the
-first EXE. No second EXE was launched; both original PENDING IDs/timestamps remain
-unchanged and no central events were created. This is test foreground ownership,
-not demonstrated application data loss. Linux 38869909478 and gate 38869909506 PASS.
-
-Fixture focus correction: wait for WM_NULL acknowledgement of asynchronous
-cross-thread SetForegroundWindow; where native EXE input owns foreground rights,
-create the caller message queue and temporarily AttachThreadInput to the actual
-foreground queue, then detach immediately. Actual foreground HWND is still
-strictly checked before capture/launch. No sleeps, frame filtering or threshold
-change. 44 local scripts PASS (/tmp/tde-foreground-ack-20261016), compileall/diff
-PASS; native validation required. Keep this failed report/evidence in Git.
+Type-contract audit restored SharedEventStore, dtime/date and Path imports in
+three extracted modules. All 226 annotations resolve. Full local 44-script suites
+for reader, type and foreground fixes PASS; see saved local stage evidence.
+These were small verified corrections, not another module cycle. Final native
+result is still required. Full isolated field protocol: FIELD_ACCEPTANCE_EL.md.

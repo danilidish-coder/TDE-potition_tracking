@@ -70,8 +70,8 @@ frame hiding/exclusion or screenshot overlay. See CONTINUATION.md for exact runs
 
 b943a869: full Windows 38865827943 SUCCESS, strict startup 0/20 and theme 0/30,
 30/30 confirmed clicks; Linux/module gate PASS and real EXE artifact uploaded.
-Latest complete structural source d128e6d: 43 local scripts PASS, Linux 38868080997
-and gate 38868081064 PASS. Windows 38868081099 final certification pending,
+Latest complete structural source e243e53: 44 local scripts PASS, Linux 38870905814
+and gate 38870905823 PASS. Windows 38870905825 final certification pending,
 including new external frozen-EXE mouse/keyboard data workflow.
 
 ## Field acceptance gaps
@@ -84,3 +84,7 @@ Required: real host + 2+ clients, denied/reconnected share, power-off/replay,
 cached cold launch, small/high-DPI displays and real printing. Preserve original
 START/END IDs, timestamps, history and pending queue throughout those trials.
 No operational data or production deployment is authorized by this work.
+
+All 226 owned function/method annotations now resolve; four extraction import
+omissions were restored without algorithm changes. The external EXE driver
+reader/focus-fixture failures and their corrections are retained in CONTINUATION.md.
