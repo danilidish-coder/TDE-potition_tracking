@@ -264,3 +264,6 @@ inspects actual extracted heartbeat method. 40 scripts PASS
 Message/remote-close dialogs: three AST-identical methods, 40 scripts PASS
 (/tmp/tde-ui-messages-20261016), compileall/diff PASS. No messages were sent to
 real users; backend communication tests remain isolated filesystem simulations.
+
+UI personnel selection/active-state polling: six AST-identical methods,
+40 scripts PASS (/tmp/tde-ui-selection-20261016), compileall/diff PASS.
