@@ -22,6 +22,7 @@ on:
       - ".github/workflows/build-windows.yml"
 
 permissions:
+  actions: read
   contents: write
   pull-requests: write
 
@@ -81,7 +82,7 @@ jobs:
         id: build_exe
         shell: powershell
         run: |
-          python -m PyInstaller --noconfirm --clean --windowed --onefile --icon "build_assets\position_tracking_network.ico" --name "TDE_Katagrafi_Theseon" "src\position_tracking.py"
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --icon "build_assets\position_tracking_network.ico" --version-file "tools/windows_version_info.txt" --name "TDE_Katagrafi_Theseon" "src\position_tracking.py"
           if (-not (Test-Path "dist\TDE_Katagrafi_Theseon.exe")) { throw "EXE was not created" }
 
       - name: Smoke test launch
@@ -222,6 +223,17 @@ jobs:
           path: artifact/development-exe/**
           if-no-files-found: error
           retention-days: 7
+
+      - name: Publish only the explicitly requested new v1.2.6 pre-release
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/feature/v125-modularization-20261013' && startsWith(github.event.head_commit.message, 'Release v1.2.6 safely') }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = (Get-Item dist/TDE_Katagrafi_Theseon.exe).VersionInfo
+          if ($v.FileVersion -ne '1.2.6.0' -or $v.ProductVersion -ne '1.2.6') { throw 'EXE version resource mismatch' }
+          python tools/publish_v126_prerelease.py
+          if ($LASTEXITCODE -ne 0) { throw 'Safe pre-release publication failed' }
 
       - name: Report isolated Windows build outcome to PR 5
         if: ${{ always() && github.ref == 'refs/heads/fix/shift-recovery-20261009' }}

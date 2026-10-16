@@ -53,7 +53,7 @@ class ModularArchitecture(unittest.TestCase):
                             typing.get_type_hints(member)
 
     def test_legacy_entry_can_be_imported_without_qt(self):
-        code="import sys;sys.modules['PySide6']=None;import position_tracking as app;assert app.APP_VERSION=='1.2.5';assert callable(app.run);assert callable(app.SharedEventStore.start)"
+        code="import sys;sys.modules['PySide6']=None;import position_tracking as app;assert app.APP_VERSION=='1.2.6';assert callable(app.run);assert callable(app.SharedEventStore.start)"
         result=subprocess.run([sys.executable,'-c',code],env=dict(os.environ,PYTHONPATH=str(SRC)),capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
 

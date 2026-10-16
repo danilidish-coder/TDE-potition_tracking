@@ -25,8 +25,26 @@ class ArtifactGate(unittest.TestCase):
     def test_complete_gate_keeps_bytes_hash_and_source_identity(self):
         manifest=self.run_package()
         self.assertEqual(manifest['source_commit'],'a'*40)
+        self.assertEqual(manifest['version'], 'v1.2.6')
         self.assertEqual(manifest['sha256'],hashlib.sha256(self.exe.read_bytes()).hexdigest())
         self.assertEqual((self.base/'package'/'test.exe').read_bytes(),self.exe.read_bytes())
+    def test_application_manifest_and_windows_resource_versions_agree(self):
+        import ast
+        sys.path.insert(0, str(ROOT/'src'))
+        from position_tracking_constants import APP_VERSION
+        self.assertEqual('v'+APP_VERSION, (ROOT/'VERSION.txt').read_text().strip())
+        tree=ast.parse((ROOT/'tools/windows_version_info.txt').read_text())
+        strings={node.args[0].value:node.args[1].value for node in ast.walk(tree)
+                 if isinstance(node,ast.Call) and isinstance(node.func,ast.Name)
+                 and node.func.id=='StringStruct'}
+        self.assertEqual(strings['ProductVersion'],APP_VERSION)
+        self.assertEqual(strings['FileVersion'],APP_VERSION+'.0')
+        fixed=next(node for node in ast.walk(tree) if isinstance(node,ast.Call)
+                   and isinstance(node.func,ast.Name) and node.func.id=='FixedFileInfo')
+        for field in ('filevers','prodvers'):
+            value=next(k.value for k in fixed.keywords if k.arg==field)
+            self.assertEqual(ast.literal_eval(value), tuple(map(int,APP_VERSION.split('.')))+(0,))
+
     def test_wrong_exe_or_failed_functional_workflow_cannot_be_packaged(self):
         for key,value in [('status','FAILED'),('exe_sha256','0'*64),('source_commit','b'*40),('operations',3),('original_ids_preserved',False)]:
             old=self.functional[key];self.functional[key]=value

@@ -1,3 +1,12 @@
+## v1.2.6 publication in progress — 2026-10-16
+
+Version-only successor of certified 410bf72fe197e6e7d9a4a1a299a135a716c71bf3.
+Application, VERSION.txt, Windows PE metadata and package manifest now target v1.2.6.
+Publication is gated on the newly built exact EXE and independent exact-source CI.
+No PASS or new EXE hash claimed before completion. Existing releases remain intact.
+Only the explicit release commit opts into additive pre-release creation;
+no existing publish-release.yml execution, replacement or deletion.
+
 # Exact accepted checkpoint — 2026-10-16
 
 Only feature/v125-modularization-20261013. Started from 278307b6ff46223db0685bcc867f9229b7e1554b.

@@ -34,11 +34,11 @@ jobs:
         run: python tests/offline_durability_stage4_regression.py
       - name: Stage 5 common helpers extraction contract
         run: python tests/common_module_regression.py
-      - name: Ensure release baseline remains v1.2.5
+      - name: Verify new pre-release version v1.2.6
         shell: pwsh
         run: |
-          python -c "import sys; sys.path.insert(0, 'src'); import position_tracking as app; assert app.APP_VERSION == '1.2.5', app.APP_VERSION"
-          if($LASTEXITCODE -ne 0) {throw "Production version unexpectedly modified"}
+          python -c "import sys; sys.path.insert(0, 'src'); import position_tracking as app; assert app.APP_VERSION == '1.2.6', app.APP_VERSION"
+          if($LASTEXITCODE -ne 0) {throw "Pre-release version mismatch"}
           if(-not(Test-Path src/position_tracking_offline.py)){throw "Offline module missing"}
           Write-Host 'STAGE1_BASELINE_VERSION_AND_MODULES: PASS'
   linux-contract:

@@ -48,7 +48,8 @@ def package(exe, regressions, visual, commit, out, functional=None):
     shutil.copy2(regressions, out / 'regressions.json')
     shutil.copy2(visual, out / 'visual-report.json')
     shutil.copy2(functional, out / 'functional-report.json')
-    manifest = {'source_commit': commit, 'exe': exe.name, 'sha256': digest,
+    version = (Path(__file__).resolve().parents[1] / 'VERSION.txt').read_text().strip()
+    manifest = {'version': version, 'source_commit': commit, 'exe': exe.name, 'sha256': digest,
                 'bytes': exe.stat().st_size, 'regression_scripts': len(results),
                 'startup_runs': 20, 'theme_toggles': 30,
                 'status': 'DEVELOPMENT TEST BUILD — not a production release',
