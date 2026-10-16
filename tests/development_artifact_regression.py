@@ -1,0 +1,40 @@
+"""An incomplete or failed validation must never produce an accepted package."""
+import hashlib
+import json
+from pathlib import Path
+import sys
+import tempfile
+import unittest
+ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'tools'))
+from package_development_exe import package
+
+class ArtifactGate(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.base=Path(self.tmp.name);self.exe=self.base/'test.exe';self.exe.write_bytes(b'fixture-exe-not-real')
+        self.results=[{'test':p.name,'exit_code':0} for p in (ROOT/'tests').glob('*.py') if p.name!='visual_flicker_windows.py']
+        self.report={'capture_supported':True,'startup_runs':[{'application_frames':20,'endpoint_flicker_detected':False} for _ in range(20)],'theme_toggles':[{'theme_changed':True,'endpoint_flicker_detected':False} for _ in range(30)],'startup_endpoint_flicker_runs':0,'theme_endpoint_flicker_toggles':0,'theme_clicks_confirmed':30}
+    def run_package(self):
+        regressions=self.base/'results.json';visual=self.base/'visual.json'
+        regressions.write_text(json.dumps(self.results));visual.write_text(json.dumps(self.report))
+        return package(self.exe,regressions,visual,'a'*40,self.base/'package')
+    def test_complete_gate_keeps_bytes_hash_and_source_identity(self):
+        manifest=self.run_package()
+        self.assertEqual(manifest['source_commit'],'a'*40)
+        self.assertEqual(manifest['sha256'],hashlib.sha256(self.exe.read_bytes()).hexdigest())
+        self.assertEqual((self.base/'package'/'test.exe').read_bytes(),self.exe.read_bytes())
+    def test_failed_or_missing_regression_cannot_be_packaged(self):
+        self.results[0]['exit_code']=1
+        with self.assertRaisesRegex(ValueError,'regression'):self.run_package()
+        self.results=self.results[1:]
+        with self.assertRaisesRegex(ValueError,'regression'):self.run_package()
+        self.assertFalse((self.base/'package').exists())
+    def test_visual_failure_or_missing_click_or_partial_run_cannot_be_packaged(self):
+        for key,value in [('startup_endpoint_flicker_runs',1),('theme_endpoint_flicker_toggles',1),('theme_clicks_confirmed',29),('startup_runs',[])]:
+            old=self.report[key];self.report[key]=value
+            with self.subTest(key=key),self.assertRaisesRegex(ValueError,'visual'):self.run_package()
+            self.report[key]=old
+        self.assertFalse((self.base/'package').exists())
+
+if __name__=='__main__':unittest.main()

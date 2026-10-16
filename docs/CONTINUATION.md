@@ -233,3 +233,11 @@ Windows settings failure is a test fixture path alias, not a persistence defect:
 Path.resolve expands C:/Users/RUNNER~1 to C:/Users/runneradmin. Frozen-path expected
 value now uses base.resolve(), preserving the original canonicalization contract.
 39-script rerun PASS (/tmp/tde-settings-windows-path-20261016), compileall/diff PASS.
+
+Development EXE packaging enabled ONLY on this feature branch after successful
+build/smoke and complete strict visual results (20 startup, zero anomalies,
+30 confirmed toggles). Package includes exact source SHA, EXE SHA256, regression
+and visual reports; upload errors fail the workflow. No release/tag/archive update.
+Three negative/positive package contracts, 40 local scripts PASS
+(/tmp/tde-artifact-gate-20261016); compileall/diff PASS. Artifact is not available
+until a real Windows run passes AND upload succeeds.

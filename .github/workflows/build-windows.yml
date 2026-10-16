@@ -191,15 +191,21 @@ jobs:
           Write-Host "PUBLISHED_EXE_SHA256=$hash"
           Write-Host "PUBLISHED_EXE_URL=https://github.com/$env:REPO/releases/download/$tag/$exe"
 
+      - name: Package strictly validated development EXE
+        if: ${{ success() && github.ref == 'refs/heads/feature/v125-modularization-20261013' }}
+        shell: pwsh
+        run: |
+          python tools/package_development_exe.py --exe dist/TDE_Katagrafi_Theseon.exe --regressions artifact/regressions/results.json --visual visual_flicker/report.json --commit "$env:GITHUB_SHA" --out artifact/development-exe
+          if ($LASTEXITCODE -ne 0) { throw 'Development package acceptance failed' }
+
       - name: Upload Windows test EXE
-        if: ${{ false }} # Disabled: artifact quota / incomplete offline acceptance. Retain step for later gated release.
-        continue-on-error: true
+        if: ${{ success() && github.ref == 'refs/heads/feature/v125-modularization-20261013' }}
         uses: actions/upload-artifact@v4
         with:
-          name: POSITION_TRACKING_WINDOWS_TEST
-          path: dist/TDE_Katagrafi_Theseon.exe
+          name: POSITION_TRACKING_WINDOWS_TEST-${{ github.sha }}-${{ github.run_id }}
+          path: artifact/development-exe/**
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7
 
       - name: Report isolated Windows build outcome to PR 5
         if: ${{ always() && github.ref == 'refs/heads/fix/shift-recovery-20261009' }}
