@@ -106,10 +106,17 @@ with tempfile.TemporaryDirectory() as tmp:
 
 # UI guard: the new modal must contain per-row and bulk actions, while
 # the pre-existing live-map end control must remain in the same source.
-source = (ROOT / "src" / "position_tracking.py").read_text(encoding="utf-8")
-assert 'button = QPushButton("ΛΗΞΗ")' in source
-assert 'QPushButton("ΟΜΑΔΙΚΗ ΛΗΞΗ")' in source
-assert 'QPushButton("ΟΛΟΚΛΗΡΩΣΗ ΒΑΡΔΙΑΣ")' in source
-assert 'self.end_active_btn=QPushButton("ΛΗΞΗ ΕΝΕΡΓΗΣ ΘΕΣΗΣ")' in source
+import inspect
+from position_tracking_ui_map import LiveMapDialog
+source = (ROOT / "src" / "position_tracking.py").read_text(encoding="utf-8") + inspect.getsource(LiveMapDialog)
+# Check actual button constructors, independent of whitespace/quote formatting
+# introduced when a nested Qt class becomes an independent module.
+import ast
+labels = {n.args[0].value for n in ast.walk(ast.parse(source))
+          if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+          and n.func.id == 'QPushButton' and n.args
+          and isinstance(n.args[0], ast.Constant)}
+for required in ('ΛΗΞΗ', 'ΟΜΑΔΙΚΗ ΛΗΞΗ', 'ΟΛΟΚΛΗΡΩΣΗ ΒΑΡΔΙΑΣ', 'ΛΗΞΗ ΕΝΕΡΓΗΣ ΘΕΣΗΣ'):
+    assert required in labels, required
 
 print("SHIFT_END_ACTIONS_REGRESSION: PASS (single, group, stale start, wrong shift, excluded unaffected)")

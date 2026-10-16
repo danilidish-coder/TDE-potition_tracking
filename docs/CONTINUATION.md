@@ -241,3 +241,9 @@ and visual reports; upload errors fail the workflow. No release/tag/archive upda
 Three negative/positive package contracts, 40 local scripts PASS
 (/tmp/tde-artifact-gate-20261016); compileall/diff PASS. Artifact is not available
 until a real Windows run passes AND upload succeeds.
+
+Live map Qt module: class ASTs unchanged. Initial full suite failed a UI source
+string's quote/spacing assertion after equivalent AST rendering. The guard now
+checks the same actual QPushButton constructors by AST, without dropping required
+actions. Full 40-script rerun PASS (/tmp/tde-ui-map-verified-20261016); initial
+failure /tmp/tde-ui-map-20261016. Compileall/diff PASS.
