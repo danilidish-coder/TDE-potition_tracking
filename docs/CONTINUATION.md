@@ -260,3 +260,7 @@ persistence under injected temporary paths; compileall/diff PASS.
 UI heartbeat/alarm controller: five AST-identical methods, handoff guard now
 inspects actual extracted heartbeat method. 40 scripts PASS
 (/tmp/tde-ui-communication-20261016), compileall/diff PASS.
+
+Message/remote-close dialogs: three AST-identical methods, 40 scripts PASS
+(/tmp/tde-ui-messages-20261016), compileall/diff PASS. No messages were sent to
+real users; backend communication tests remain isolated filesystem simulations.
