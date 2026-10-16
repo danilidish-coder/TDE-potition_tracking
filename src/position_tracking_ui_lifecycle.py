@@ -93,21 +93,30 @@ class WindowLifecycleMixin:
                 local_future.result(timeout=0)
             if map_future is not None and not map_future.done():
                 map_future.result(timeout=31)
-            background_settled = all(
-                future is None or future.done() for future in (
-                    offline_future, getattr(self, "_communication_future", None),
-                    getattr(self, "_shift_future", None), getattr(self, "_shift_closure_future", None),
-                    getattr(self, "_agms_future", None), getattr(self, "_shift_status_future", None),
+            def can_close_locally():
+                background_settled = all(
+                    future is None or future.done() for future in (
+                        offline_future, getattr(self, "_communication_future", None),
+                        getattr(self, "_shift_future", None), getattr(self, "_shift_closure_future", None),
+                        getattr(self, "_agms_future", None), getattr(self, "_shift_status_future", None),
+                    )
                 )
-            )
-            if (not command_id and getattr(self, "_position_activity_attempted", None) is False
-                    and not getattr(self, "_handoff_initial_error", "") and background_settled
-                    and self.offline.proves_no_position_obligations()):
-                # This instance never issued START/END. This is application
-                # closure only: do not emit END, ACK, or touch an absent share.
+                return (not command_id and getattr(self, "_position_activity_attempted", None) is False
+                        and not getattr(self, "_handoff_initial_error", "") and background_settled
+                        and self.offline.proves_no_position_obligations())
+            if can_close_locally():
+                # Application closure only: no END, ACK or absent-share access.
                 return "local_idle"
             if offline_future is not None:
-                connected, _ = offline_future.result(timeout=31)
+                try:
+                    connected, _ = offline_future.result(timeout=31)
+                except Exception:
+                    # An initially pending connection may have just failed. Once
+                    # settled, re-prove idle state; a timeout on running work or
+                    # any journal obligation still fails closed.
+                    if can_close_locally():
+                        return "local_idle"
+                    raise
             if self.offline.pending_count():
                 raise BusyError("Υπάρχουν εκκρεμείς τοπικές καταχωρίσεις. Περιμένετε τον συγχρονισμό πριν από την έξοδο.")
             self._end_own_active_positions(connected)

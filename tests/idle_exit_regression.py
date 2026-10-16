@@ -26,9 +26,9 @@ def child(case, root):
         def save(self): return super().save(path=settings)
     Config(central_root=str(central), shared_exe_path=str(root/'absent.exe')).save()
     journal = OfflineJournal(root/'queue'); person = PersonnelRecord('1','TEST','SYNTHETIC','ONLY')
-    if case in ('pending', 'conflict', 'applied-unclosed'):
+    if case in ('pending', 'conflict', 'applied-unclosed', 'late-pending'):
         op = journal.enqueue('START', person, '14', 'ΕΞΟΔΟΣ')
-        if case!='pending': journal._mark(op['operation_id'], 'CONFLICT' if case=='conflict' else 'APPLIED', 'fixture')
+        if case not in ('pending','late-pending'): journal._mark(op['operation_id'], 'CONFLICT' if case=='conflict' else 'APPLIED', 'fixture')
     elif case=='observed-active':
         journal.remember('1', {'event_id':'known-start','agms':'1','position':'14'})
     elif case=='applied-closed':
@@ -47,6 +47,15 @@ def child(case, root):
     real_window = application.MainWindow
     def construct(services):
         w = real_window(services); windows.append(w)
+        if case in ('late-empty','late-pending'):
+            import threading
+            from position_tracking_store_io import BusyError
+            release=threading.Event()
+            def delayed_connection_failure():
+                if not release.wait(3): raise RuntimeError('Qt event loop failed to release connection fixture')
+                raise BusyError('injected delayed unavailable central folder')
+            w._offline_future=w._network_pool.submit(delayed_connection_failure)
+            QTimer.singleShot(500,release.set)
         if case=='background-inflight':
             from concurrent.futures import Future
             w._agms_future=Future()
@@ -58,7 +67,7 @@ def child(case, root):
                     confirmations.append(box.text()); QTest.mouseClick(box.button(QMessageBox.Yes), Qt.LeftButton)
                 else:
                     errors.append(box.text()); QTest.mouseClick(box.button(QMessageBox.Ok), Qt.LeftButton)
-                    QTimer.singleShot(50, lambda:QApplication.exit(7 if case in ('empty','applied-closed') else 0))
+                    QTimer.singleShot(50, lambda:QApplication.exit(7 if case in ('empty','applied-closed','late-empty') else 0))
         timer = QTimer(w); timer.timeout.connect(drive_dialogs); timer.start(20)
         w._test_dialog_timer=timer
         def deadline(): deadline_fired.append(True); QApplication.exit(9)
@@ -96,6 +105,8 @@ class IdleExitRegression(unittest.TestCase):
     def test_remote_command_cannot_skip_central_ack(self): self.exercise('remote-idle',False)
     def test_inflight_cache_read_prevents_local_shortcut(self): self.exercise('background-inflight',False)
     def test_attempted_position_action_prevents_local_shortcut(self): self.exercise('position-attempted',False)
+    def test_idle_exit_rechecks_proof_after_slow_connection_failure(self): self.exercise('late-empty',True)
+    def test_slow_connection_failure_cannot_waive_pending_start(self): self.exercise('late-pending',False)
     def test_real_startup_and_process_exit_without_central_roster_or_operations(self): self.exercise('empty',True)
     def test_pending_start_is_not_waived_by_empty_roster(self): self.exercise('pending',False)
     def test_conflict_is_not_waived_by_empty_roster(self): self.exercise('conflict',False)

@@ -34,7 +34,7 @@ IDs/timestamps, outbox, receipts, cache durability ή υπάρχουσες αν�
 
 ## Επαληθευμένοι έλεγχοι και διατήρηση FAILs
 
-- 10 πραγματικά Python subprocess/Qt application-loop σενάρια idle exit: άδειο
+- 12 πραγματικά Python subprocess/Qt application-loop σενάρια idle exit: άδειο
   προφίλ, confirmed closed history και αρνητικά pending, conflict, unmatched
   APPLIED START με άδεια cache, active/corrupt observation, in-flight εργασία,
   attempted action και remote command. Τα θετικά τερματίζουν πραγματικά το process.
@@ -52,6 +52,17 @@ validation/live-map-end-20261016/, validation/live-map-correction-20261016/.
 Τα προηγούμενα Windows artifacts/CI/600s soak διατηρούνται ιστορικά στο
 validation/idle-exit-20261016/reliability-history.md. Δεν πιστοποιούν αυτόματα
 τον μεταγενέστερο κώδικα ούτε χρησιμοποιήθηκαν ως ψευδές νέο PASS.
+
+## Καθυστερημένη αποτυχία σύνδεσης
+
+Πρόσθετη αναπαραγωγή έδειξε ότι η πρώτη διόρθωση απαιτούσε η σύνδεση να έχει
+ήδη αποτύχει πριν πατηθεί ΕΞΟΔΟΣ. Αν αποτύγχανε αργότερα, το ίδιο άδειο προφίλ
+παρέμενε ανοικτό με σφάλμα. Τώρα, μετά την ολοκλήρωση της εργασίας, επανελέγχεται
+η ίδια αυστηρή απόδειξη αδρανούς κατάστασης. Δεν αγνοείται ενεργή εργασία,
+pending START, άγνωστη κατάσταση ή remote ACK. Οι 12 real-process περιπτώσεις
+και ολόκληρη η suite των 50 scripts PASS. Αρχικό FAIL/τελικά reports βρίσκονται
+στο validation/idle-exit-late-20261016/. Αυτή η πραγματική αλλαγή δικαιολογεί
+τελικό νέο native κύκλο· δεν μεταφέρεται το PASS από προγενέστερο commit.
 
 ## Native EXE acceptance πριν από νέο artifact
 
