@@ -217,3 +217,8 @@ pending/approved/excluded reversal and guarded END handling. 39 scripts PASS
 
 Event/roster/shift query boundary: eight AST-identical methods, 39 scripts PASS
 (/tmp/tde-event-queries-20261016), compileall/diff PASS.
+
+SharedEventStore composition/maintenance now lives in position_tracking_store.py;
+entry reexports the same class. Remaining class AST unchanged. Backend imports
+without entry/Qt. 39 scripts PASS (/tmp/tde-store-composition-20261016),
+compileall/diff PASS. The giant store has been replaced by responsibility modules.
