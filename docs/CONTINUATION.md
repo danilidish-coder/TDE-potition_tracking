@@ -1,3 +1,14 @@
+## Reliability checkpoint: selection backpressure
+
+Reproduced on source 762c3a36: 200 rapid selection changes while a remote read
+was blocked left 199 queued work items. Fixed by coalescing to one active read
+and the latest Qt selection, with existing 3-second local fallback and automatic
+refresh on recovery. No event format/storage changes. New real Qt regression
+PASS; full portable suite **46 scripts PASS**. Evidence in
+`validation/reliability-20261016/selection-before.txt` and
+`selection-after-regressions.json`. Native CI deferred to the final combined
+candidate to avoid repeated builds. Next: audit stale remote cache observations.
+
 # Resumed reliability hardening — 2026-10-16
 
 Explicit user resumption supersedes the paused instruction below.

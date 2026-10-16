@@ -55,19 +55,28 @@ class PersonnelSelectionMixin:
             record = self.store.get_active(person.agms)
             self.offline.remember(person.agms, record)
             return record
-        future = self._state_pool.submit(load_remote)
+        future = None
         query_started = time.monotonic()
 
         def poll():
+            nonlocal future
             if serial != self._agms_query_serial:
                 return
-            if not future.done():
+            if future is None:
+                previous = getattr(self, "_agms_future", None)
+                # Coalesce keystrokes while one remote read is blocked. A thread
+                # timeout cannot cancel SMB I/O; never build an unbounded queue.
+                if previous is None or previous.done():
+                    future = self._state_pool.submit(load_remote)
+                    self._agms_future = future
+            if future is None or not future.done():
                 if time.monotonic() - query_started > 3.0:
                     local = self.offline.local_active(person.agms)
                     self.active_status.setText("ΔΙΚΤΥΟ ΧΩΡΙΣ ΑΠΟΚΡΙΣΗ — τοπική λειτουργία με εκκρεμή επιβεβαίωση")
                     self.start_btn.setEnabled(not bool(local))
                     self.end_btn.setEnabled(bool(local))
-                    return
+                    # Keep one current-selection poll so a recovered host
+                    # refreshes the latest selection without another keystroke.
                 QTimer.singleShot(200, poll)
                 return
             try:

@@ -1,0 +1,14 @@
+Fontconfig error: No writable cache directories
+F
+======================================================================
+FAIL: test_blocked_selection_reads_are_coalesced_and_latest_selection_recovers (__main__.SelectionBackpressure.test_blocked_selection_reads_are_coalesced_and_latest_selection_recovers)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/selection_backpressure_regression.py", line 44, in test_blocked_selection_reads_are_coalesced_and_latest_selection_recovers
+    self.assertLessEqual(w._state_pool._work_queue.qsize(), 1,
+AssertionError: 199 not less than or equal to 1 : Every selection was queued behind blocked SMB reads
+
+----------------------------------------------------------------------
+Ran 1 test in 0.372s
+
+FAILED (failures=1)
