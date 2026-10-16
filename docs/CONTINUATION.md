@@ -308,3 +308,9 @@ hard no-paint timeout and retains all 60 synchronous child-paint/persistence
 assertions. Full 41-script suite PASS (/tmp/tde-render-readiness-20261016).
 Initial failure logs: /tmp/tde-ui-shift-end-20261016; CI Linux 38865045885 and
 Windows 38865045894 failed this same prerequisite before native build/visual.
+
+Lightweight stage gate failure reproduced with python -S: UI method inspection
+had imported PySide6 into the stdlib-only backend contract. It now parses the
+actual controller methods by AST and asserts their bases are linked to MainWindow,
+keeping all order/identity scenarios. python -S handoff replay contract PASS;
+full 41-script suite PASS (/tmp/tde-lightweight-gate-20261016), compileall/diff PASS.

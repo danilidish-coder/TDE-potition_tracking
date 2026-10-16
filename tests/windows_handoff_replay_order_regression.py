@@ -37,12 +37,23 @@ def replay(store,journal,machine,user):
 def all_ends(store,agms):
     return [x for x in store.iter_all_events() if x.get("kind")=="END" and x.get("agms")==agms]
 
-main=(ROOT/"src"/"position_tracking.py").read_text(encoding="utf-8")
-import inspect
-from position_tracking_ui_communication import CommunicationMixin
-communication=inspect.getsource(CommunicationMixin._communication_io)
-from position_tracking_ui_positions import PositionActionsMixin
-worker=inspect.getsource(PositionActionsMixin._offline_tick)
+# This backend stage intentionally runs with stdlib only. Inspect the actual
+# linked controller methods without importing Qt presentation dependencies.
+import ast
+main_source=ROOT/"src"/"position_tracking_ui_main.py"
+if not main_source.exists():main_source=ROOT/"src"/"position_tracking.py"
+main_tree=ast.parse(main_source.read_text(encoding="utf-8"))
+window=next(n for n in ast.walk(main_tree) if isinstance(n,ast.ClassDef) and n.name=="MainWindow")
+
+def controller_method(module, owner, name):
+    assert any(isinstance(b,ast.Name) and b.id==owner for b in window.bases), "Controller must be linked to actual MainWindow"
+    source=(ROOT/"src"/(module+".py")).read_text(encoding="utf-8")
+    cls=next(n for n in ast.parse(source).body if isinstance(n,ast.ClassDef) and n.name==owner)
+    method=next(n for n in cls.body if isinstance(n,ast.FunctionDef) and n.name==name)
+    return ast.get_source_segment(source,method)
+
+communication=controller_method("position_tracking_ui_communication","CommunicationMixin","_communication_io")
+worker=controller_method("position_tracking_ui_positions","PositionActionsMixin","_offline_tick")
 assert "close_previous_windows_user_positions(" not in communication, "Independent heartbeat must never overtake original offline END"
 assert "reconcile_handoff_before_replay(" in worker, "Worker must resolve central handoff BEFORE replaying offline"
 assert "report = self.offline.sync(store" not in worker, "Old sync-before-handoff regression"
