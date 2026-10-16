@@ -1,3 +1,34 @@
+# Active professional reliability candidate — 2026-10-16
+
+User explicitly resumed from 801f91d; pause is superseded. Existing environment
+reused. Completed modularization/previous native acceptance confirmed without
+rerunning unchanged old code. Professional corrections in small commits:
+- 4ef0041: coalesce blocked selection reads; full local 46 scripts PASS.
+- 39b44f0: reject stale remote cache observations; full local 46 PASS.
+- 1589663: confirmed asynchronous local/remote exit; full local 47 PASS.
+- Current candidate: local bounded watchdog/resource logs; full local 48 PASS,
+  compileall src/tests/tools PASS, targeted watchdog tests 4 PASS.
+`tools/soak_reliability.py` drives one real Qt window, synthetic offline EXIT14
+START/END/replay cycles, 100-input bursts and separate repeated 15-process client
+waves. Preliminary 30-second tool validation PASS (before candidate commit;
+parent git_head alone is not exact source provenance). Next: run 600-second soak
+on the committed candidate and inspect one new Windows/Linux/gate cycle. No
+repeated eight-run recovery workflow is requested; full current suite includes
+both real Qt recovery and the 13-second lock counterexample.
+
+Diagnostics: private local_root/diagnostics/runtime-PID.jsonl, rotation 512 KiB
+plus 3 backups per process. Qt heartbeat 500 ms, GUI stall 5s, worker age 45s,
+resource sample 30s. Writes and stack capture off Qt; no data values/locals,
+exception contents or full paths. No automatic thread termination or DB changes.
+Full technical risk/correction report: RELIABILITY_REPORT_EL.md.
+
+First next action: inspect the candidate's actual CI and 600s soak outcomes;
+fix genuine failures before final acceptance. Preserve original failures/results.
+All main/v1.2.5/release/operational-data protections remain in force. Real SMB,
+actual Windows identity switching, power loss and 12/24-hour trials remain pending.
+
+Earlier checkpoint sections below are historical and superseded by this header.
+
 ## Reliability checkpoint: confirmed exit off the GUI thread
 
 Normal/remote exit no longer runs active scans, END, command ACK or heartbeat
