@@ -247,3 +247,7 @@ string's quote/spacing assertion after equivalent AST rendering. The guard now
 checks the same actual QPushButton constructors by AST, without dropping required
 actions. Full 40-script rerun PASS (/tmp/tde-ui-map-verified-20261016); initial
 failure /tmp/tde-ui-map-20261016. Compileall/diff PASS.
+
+Main widget layout/theme controller: three AST-identical methods, 40 scripts PASS
+(/tmp/tde-ui-view-20261016), including 60 real whole-window theme/persistence
+changes. UI label guards follow the actual extracted class. Compileall/diff PASS.

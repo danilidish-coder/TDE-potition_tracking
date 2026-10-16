@@ -91,7 +91,9 @@ with tempfile.TemporaryDirectory() as td:
     assert final["excluded"] == []
 
     # UI markers: απλός αξ/υπ + κάτω κουμπιά + θέματα.
-    source = SRC.read_text(encoding="utf-8")
+    import inspect
+    from position_tracking_ui_view import MainViewMixin
+    source = SRC.read_text(encoding="utf-8") + inspect.getsource(MainViewMixin)
     for marker in (
         "ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ",
         "ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ",
