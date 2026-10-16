@@ -251,3 +251,8 @@ failure /tmp/tde-ui-map-20261016. Compileall/diff PASS.
 Main widget layout/theme controller: three AST-identical methods, 40 scripts PASS
 (/tmp/tde-ui-view-20261016), including 60 real whole-window theme/persistence
 changes. UI label guards follow the actual extracted class. Compileall/diff PASS.
+
+UI configuration controller + explicit WindowServices providers: six methods,
+with only app/local path calls redirected to the exact legacy-supplied callbacks.
+40 scripts PASS (/tmp/tde-ui-configuration-20261016), including real config/theme
+persistence under injected temporary paths; compileall/diff PASS.
