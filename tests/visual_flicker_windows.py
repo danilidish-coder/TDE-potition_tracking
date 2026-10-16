@@ -14,7 +14,7 @@ from typing import Optional
 from PIL import ImageGrab, ImageStat, ImageChops
 from support.windows_visual_processes import (
     descendant_pids, process_snapshot, stop_process_tree,
-    use_physical_pixel_coordinates, theme_button_point,
+    use_physical_pixel_coordinates, theme_button_point, stable_visual_desktop,
 )
 
 use_physical_pixel_coordinates()
@@ -380,7 +380,8 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     report = {"startup_runs": [], "theme_toggles": [], "capture_supported": True}
     try:
-        return _run_visual_tests(exe, out, report)
+        with stable_visual_desktop():
+            return _run_visual_tests(exe, out, report)
     except Exception as exc:
         report["error"] = {"type": type(exc).__name__, "message": str(exc)}
         raise

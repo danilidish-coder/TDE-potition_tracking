@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from contextlib import nullcontext
 from pathlib import Path
 
 from PIL import Image, ImageChops
@@ -67,7 +68,7 @@ class StartupEvidenceContract(unittest.TestCase):
         def fail(exe, out, report):
             report['startup_runs'].append({'run': 1, 'frames': 0})
             raise RuntimeError('injected clipped desktop')
-        scope = {'Path': Path, 'argparse': argparse, 'json': json, '_run_visual_tests': fail}
+        scope = {'Path': Path, 'argparse': argparse, 'json': json, '_run_visual_tests': fail, 'stable_visual_desktop': nullcontext}
         exec(compile(ast.Module(body=[main_node], type_ignores=[]), str(SOURCE), 'exec'), scope)
         with tempfile.TemporaryDirectory() as temporary:
             with patch.object(sys, 'argv', ['visual', '--exe', 'test.exe', '--out', temporary]):

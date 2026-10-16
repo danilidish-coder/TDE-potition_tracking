@@ -189,3 +189,10 @@ left console border (focus change). Startup_09/_10 are solid white real window
 frames, not normal unchanged desktop. Neither has been waived. Next isolate the
 CI background focus fixture, then correct actual first-paint/presentation and
 retain originals for the failing theme toggle too. No threshold change allowed.
+
+Stable visual background fixture: owned non-topmost STATIC/SS_GRAYRECT window
+behind the application removes console-focus border changes from the experiment;
+no captured application frames or criteria removed. White/black/partial UI still
+fails. Original failing theme PNGs will also persist. 39 local scripts PASS,
+with four native Windows process/fixture cases explicitly skipped on Linux;
+/tmp/tde-background-fixture-20261016. Compileall/diff PASS, native fixture pending.

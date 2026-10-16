@@ -74,3 +74,48 @@ def stop_process_tree(process):
     elif process.poll() is None:
         process.terminate()
         process.wait(timeout=10)
+
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def stable_visual_desktop():
+    """Own an inert background window so runner-console focus cannot change pixels.
+
+    This is behind the tested application, never an overlay. All application
+    frames remain captured, including unpainted white/black/partial content.
+    """
+    user = ctypes.WinDLL('user32', use_last_error=True)
+    user.CreateWindowExW.argtypes = [wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR,
+                                    wintypes.DWORD, ctypes.c_int, ctypes.c_int,
+                                    ctypes.c_int, ctypes.c_int, wintypes.HWND,
+                                    wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID]
+    user.CreateWindowExW.restype = wintypes.HWND
+    for name in ('DestroyWindow', 'UpdateWindow', 'SetForegroundWindow'):
+        getattr(user, name).argtypes = [wintypes.HWND]
+        getattr(user, name).restype = wintypes.BOOL
+    user.GetForegroundWindow.restype = wintypes.HWND
+    # STATIC/SS_GRAYRECT, borderless and non-topmost. Use the physical virtual
+    # desktop; the application can appear normally above this owned fixture.
+    hwnd = user.CreateWindowExW(0x80, 'STATIC', 'TDE visual background fixture',
+                               0x80000000 | 0x10000000 | 5,
+                               user.GetSystemMetrics(76), user.GetSystemMetrics(77),
+                               user.GetSystemMetrics(78), user.GetSystemMetrics(79),
+                               None, None, None, None)
+    if not hwnd:
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        user.UpdateWindow(hwnd)
+        user.SetForegroundWindow(hwnd)
+        if user.GetForegroundWindow() != hwnd:
+            raise RuntimeError('Cannot activate the owned visual background fixture')
+        dwm = ctypes.WinDLL('dwmapi')
+        dwm.DwmFlush.restype = ctypes.c_long
+        result = dwm.DwmFlush()
+        if result:
+            raise RuntimeError(f'Background DwmFlush failed: {result}')
+        yield hwnd
+    finally:
+        if not user.DestroyWindow(hwnd):
+            raise ctypes.WinError(ctypes.get_last_error())

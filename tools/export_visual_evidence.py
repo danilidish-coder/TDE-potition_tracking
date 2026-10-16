@@ -40,6 +40,13 @@ def main():
                 for source in args.source.glob(pattern):
                     originals.mkdir(exist_ok=True)
                     shutil.copy2(source, originals / source.name)
+    if report.is_file():
+        for toggle in data.get("theme_toggles", []):
+            if not toggle.get("endpoint_flicker_detected"):
+                continue
+            for source in args.source.glob(f"theme_{toggle['toggle']:02d}_*.png"):
+                originals.mkdir(exist_ok=True)
+                shutil.copy2(source, originals / source.name)
     # Original lossless frames stay in the artifact. These sheets are an index
     # of the most divergent frame plus first/reference frames, not test inputs.
     paths = sorted(set(args.source.glob("*_endpoint_01_*.png")) |

@@ -7,7 +7,7 @@ import unittest
 
 from support.windows_visual_processes import (
     descendant_pids, process_snapshot, stop_process_tree,
-    use_physical_pixel_coordinates, theme_button_point,
+    use_physical_pixel_coordinates, theme_button_point, stable_visual_desktop,
 )
 
 
@@ -21,6 +21,21 @@ class VisualProcessContract(unittest.TestCase):
     def test_theme_click_scales_to_physical_monitor_pixels(self):
         self.assertEqual(theme_button_point((10, 20, 1210, 820), 96), (1006, 71))
         self.assertEqual(theme_button_point((10, 20, 1810, 1220), 144), (1504, 96))
+
+    @unittest.skipUnless(os.name == 'nt', 'Actual Windows visual background fixture')
+    def test_native_background_fixture_covers_desktop_and_is_destroyed(self):
+        import ctypes
+        from ctypes import wintypes
+        with stable_visual_desktop() as hwnd:
+            user=ctypes.WinDLL('user32')
+            user.IsWindow.argtypes=[wintypes.HWND]
+            self.assertTrue(user.IsWindow(hwnd))
+            rect=wintypes.RECT()
+            user.GetWindowRect.argtypes=[wintypes.HWND,ctypes.POINTER(wintypes.RECT)]
+            self.assertTrue(user.GetWindowRect(hwnd,ctypes.byref(rect)))
+            self.assertEqual(rect.right-rect.left,user.GetSystemMetrics(78))
+            self.assertEqual(rect.bottom-rect.top,user.GetSystemMetrics(79))
+        self.assertFalse(user.IsWindow(hwnd))
 
     @unittest.skipUnless(os.name == 'nt', 'Actual Windows DPI API contract')
     def test_native_physical_pixel_context(self):
