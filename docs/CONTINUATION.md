@@ -334,3 +334,7 @@ unchanged PIN/application constants now owned by position_tracking_constants.py.
 Stage gate verifies the actual exported APP_VERSION value, rather than requiring
 its literal assignment to remain in entry. 41 scripts PASS
 (/tmp/tde-ui-history-20261016), compileall/diff PASS. No version/PIN value changed.
+
+Officer admin/audit/backup/navigation controller: six AST-identical effective
+methods, retaining last _live_map implementation and removing its dead shadowed
+predecessor. 41 scripts PASS (/tmp/tde-ui-admin-20261016), compileall/diff PASS.
