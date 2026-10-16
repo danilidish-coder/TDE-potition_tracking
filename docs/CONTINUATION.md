@@ -152,3 +152,21 @@ three extracted modules. All 226 annotations resolve. Full local 44-script suite
 for reader, type and foreground fixes PASS; see saved local stage evidence.
 These were small verified corrections, not another module cycle. Final native
 result is still required. Full isolated field protocol: FIELD_ACCEPTANCE_EL.md.
+
+## Latest unreproduced Windows Qt recovery failure — do not waive
+
+Windows 38870905825/e243e53 failed before build/EXE in ui_workflow_regression.py:
+the second-window store/pending replay condition did not finish within the
+unchanged 12s deadline. No diagnostic state was previously printed. Other
+regressions, Linux 38870905814 and gate 38870905823 PASS. Current native foreground
+fix has NOT yet reached the external EXE step, so it is not certified.
+
+Added timeout diagnostics: info/status, handoff error, pending/conflict/applied
+rows, actual timer state and future outcome. Eight controlled fresh-process
+Linux repetitions PASS (/tmp/tde-ui-recovery-repro.json), plus full 44-script suite
+PASS (/tmp/tde-recovery-diagnostics-20261016), compileall/diff PASS. No timeout,
+assertion, scenario or failure criterion relaxed. A separate bounded Windows
+recovery diagnostic workflow now executes up to eight trials, stops at first
+failure and preserves exact logs/provenance through Git. This is diagnostic work,
+not a replacement for the full native EXE/visual acceptance pipeline.
+First action: recover that Windows diagnostic state and fix its evidenced cause.

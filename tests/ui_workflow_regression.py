@@ -34,7 +34,21 @@ class ActualUIWorkflow(unittest.TestCase):
                 while time.monotonic()<end:
                     if predicate():return
                     QTest.qWait(10)
-                self.fail('Qt workflow condition did not complete')
+                latest=windows[-1] if windows else None
+                state={}
+                if latest is not None:
+                    state={'info':latest.info.text(),'active_status':latest.active_status.text(),
+                           'handoff_error':latest._handoff_initial_error,
+                           'timer_active':latest.offline_timer.isActive(),
+                           'timer_remaining':latest.offline_timer.remainingTime(),
+                           'pool_shutdown':latest._network_pool._shutdown,
+                           'operations':latest.offline._rows(('PENDING','CONFLICT','APPLIED'))}
+                    future=latest._offline_future
+                    state['future_done']=future.done() if future else None
+                    if future is not None and future.done():
+                        try:state['future_result']=str(future.result()[1])
+                        except Exception as exc:state['future_error']=repr(exc)
+                self.fail('Qt workflow condition did not complete: '+repr(state))
             def open_window():
                 w=MainWindow(services);windows.append(w);w.show()
                 wait(lambda:w.windowHandle().isExposed())
