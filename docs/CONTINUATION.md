@@ -363,3 +363,10 @@ application frames accepted. This certifies the presentation fix on that revisio
 not yet the latest complete structural extraction. Development EXE artifact:
 POSITION_TRACKING_WINDOWS_TEST-b943a8693a3eed2329dc8b1fc4601afe4e0990a3-38865827943
 (60.5 MB). Final complete-modularization native run still required.
+
+Actual Qt input workflow PASS: offline EXIT booth 14 START+END, close/reopen,
+central recovery with exact original IDs/timestamps and END→START link, online
+ENTRY booth 1 START+END, two completed sessions, archive/live-map dialogs and
+wrong-PIN rejection. Only temporary XLSX/settings/SQLite/event files used.
+Full 43 scripts PASS (/tmp/tde-ui-workflow-20261016), compileall/diff PASS.
+Still need the external Windows EXE version of this workflow and final CI.
