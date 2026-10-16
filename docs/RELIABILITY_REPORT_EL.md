@@ -46,7 +46,18 @@ timestamps και END links, bursts 100 εισόδων και κύματα 15 α
 Πύλες: GUI gap <1s, RSS αύξηση μετά warmup <32MiB, handles αύξηση <=16,
 CPU <25% ενός core κατά μέσο όρο, bounded queue sizes, ακριβής συμφωνία receipts.
 Αυτά είναι όρια της δοκιμής, όχι εγγύηση μηδενικής διαρροής ή υπηρεσιακό SLA.
-Το τελικό 600s report και τα native CI αποτελέσματα εκκρεμούν σε αυτό το checkpoint.
+Το τελικό 600s report είναι **PASS**: 600.023s, 29.823 Qt heartbeats,
+μέγιστο gap 0.128s, RSS +2.195MiB μετά warmup, handles +1, μέση CPU 2.03%
+ενός core (μόνο GUI process). Peak queues network/state/position = 2/1/1.
+17 ελεγχόμενες αποσυνδέσεις/recoveries, 34 αρχικές εγγραφές/17 sessions,
+5 επιτυχή κύματα ×15 =75 ξεχωριστές συνθετικές client διεργασίες.
+Κανένα GUI/worker stall event στο διατηρημένο runtime log. Δεν αποδεικνύεται
+απουσία μακροχρόνιας διαρροής από 10 λεπτά· 12/24h field trials παραμένουν.
+Evidence, raw samples, logs και source-tree equivalence:
+`validation/reliability-20261016/soak-600s/`. Soak commit 5231b30 και native
+candidate 1554ded έχουν ακριβώς ίδιο src tree και ίδιο soak tool blob.
+Linux 38905426334 και gate 38905426542 SUCCESS για 1554ded· Windows
+38905426410 εκκρεμεί μέχρι την πραγματική τελική κατάσταση/artifact.
 
 ## Διαγνωστικά στην υπηρεσιακή δοκιμή
 
@@ -105,3 +116,7 @@ rename και Windows PermissionError κατά rotation. Τα πλήρη αρχ�
 όντως >=2 rotated files, <=3 συνολικά, ίδιο όριο bytes και valid JSON για κάθε row.
 Δεν τροποποιήθηκε ο παραγωγικός watchdog ούτε χαλάρωσε κάποιο κριτήριο.
 Ο νέος CI κύκλος δικαιολογείται από αυτή τη συγκεκριμένη επισκευή test.
+
+Η τελική επισκευή observer πέρασε 5 πλήρεις targeted επαναλήψεις (5 tests κάθε
+φορά), όλα τα 48 portable scripts και compileall src/tests/tools. Δεν παρακάμφθηκε
+το πρώτο αποτυχημένο πλήρες suite· logs/results κάθε σταδίου διατηρούνται.

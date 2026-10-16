@@ -1,0 +1,7 @@
+{
+  "soak_started_at_commit": "5231b30928066ddb6d86256a95c48698baabd287",
+  "native_candidate_commit": "1554dedb68afecc3c39fe6cfdeb275ad7263aa8e",
+  "identical_src_tree": "b64def01b4762ce123711e9eec0fe5debae1da5c",
+  "identical_soak_tool_blob": "99224fe6ac80025a7696277faa7c9f25e6de232b",
+  "scope": "600s application/UI/independent-client soak; subsequent change only diagnostic test observer and documentation. No runtime source/tool changes during soak. Synthetic data only."
+}

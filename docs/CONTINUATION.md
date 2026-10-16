@@ -1,364 +1,78 @@
-# Current reliability verification checkpoint — 2026-10-16
+# Exact reliability checkpoint — 2026-10-16
 
-Source/application candidate: 5231b30928066ddb6d86256a95c48698baabd287.
-First native cycle: Linux 38904486037 FAIL; Windows 38904486330 FAIL, both in
-new diagnostic test observer (live file rotation read race), not an app failure.
-Gate 38904486493 SUCCESS. Native build/EXE/visual did not execute on that run.
-CI diagnostic commits 577d98a / 048ddbf integrated fast-forward, failures retained.
+Task explicitly resumed from 801f91db09b17e5cdf77a952f8c21326ce5513a7.
+Only feature/v125-modularization-20261013; existing .venv reused. No production,
+main, release/tag or operational-data changes. No new modularization is needed.
 
-Observer repair now waits for 30 real resource probes and closes the writer
-before asserting rotation/valid JSON; the original age/size/file-count checks
-remain. First fixed-time repair failed full suite and is preserved, not waived.
-Final local **48 scripts PASS**, 5 targeted repeated diagnostic suites PASS
-(5 tests each), compileall src/tests/tools and diff checks PASS.
-Application src/ and soak tool unchanged from 5231b30; only tests/docs changed.
-The already-running 600s soak is valid for that exact application source tree.
+## Current code and completed work
 
-Next: inspect the corrected test commit's Windows/Linux/gate workflows and the
-600s soak report. Native acceptance/artifact for the hardened candidate is still
-pending. Older 762c3a36 test EXE remains the last accepted binary meanwhile.
-Use RELIABILITY_REPORT_EL.md and FIELD_ACCEPTANCE_EL.md for actual field risks.
-No main/v1.2.5/releases/data changes; development branch only.
+Current source/test candidate: 1554dedb68afecc3c39fe6cfdeb275ad7263aa8e.
+Application src tree: b64def01b4762ce123711e9eec0fe5debae1da5c.
+This documentation commit is identifiable by git log -1 -- docs/CONTINUATION.md.
 
-Earlier checkpoint headers are retained history and superseded by this header.
+- 4ef0041: blocked personnel reads coalesced; 200 changes previously queued 199
+  requests. One active read/current selection now; full local 46 scripts PASS.
+- 39b44f0: delayed GUI observation cannot resurrect an ended START or erase a
+  newer START after another journal process advanced state. Atomic local revision
+  comparison, no network-spanning SQLite transaction; full local 46 PASS.
+- 1589663: local/remote confirmed exit off Qt, single exit worker, original START
+  identity guards, no false ACK/quit with failure/pending data; cleanup has no
+  shared I/O. Five targeted cases and full local 47 scripts PASS.
+- 5231b30: bounded local runtime watchdog/resource samples and real Qt soak tool.
+  Logs under local_root/diagnostics; no personnel/text/locals/full paths.
+- 1554ded: deterministic post-close diagnostic test observer; no app source change.
+  Final local 48 scripts PASS, targeted diagnostic suite 5/5 repeats PASS,
+  compileall src/tests/tools and diff checks PASS.
 
-# Active professional reliability candidate — 2026-10-16
+## Exact CI status for 1554ded
 
-User explicitly resumed from 801f91d; pause is superseded. Existing environment
-reused. Completed modularization/previous native acceptance confirmed without
-rerunning unchanged old code. Professional corrections in small commits:
-- 4ef0041: coalesce blocked selection reads; full local 46 scripts PASS.
-- 39b44f0: reject stale remote cache observations; full local 46 PASS.
-- 1589663: confirmed asynchronous local/remote exit; full local 47 PASS.
-- Current candidate: local bounded watchdog/resource logs; full local 48 PASS,
-  compileall src/tests/tools PASS, targeted watchdog tests 4 PASS.
-`tools/soak_reliability.py` drives one real Qt window, synthetic offline EXIT14
-START/END/replay cycles, 100-input bursts and separate repeated 15-process client
-waves. Preliminary 30-second tool validation PASS (before candidate commit;
-parent git_head alone is not exact source provenance). Next: run 600-second soak
-on the committed candidate and inspect one new Windows/Linux/gate cycle. No
-repeated eight-run recovery workflow is requested; full current suite includes
-both real Qt recovery and the 13-second lock counterexample.
+- Linux 38905426334 SUCCESS (48 scripts).
+- Modular gate 38905426542 SUCCESS.
+- Windows 38905426410 IN PROGRESS at last checked status. New EXE acceptance,
+  strict visual and artifact still pending. Do not claim overall Windows PASS.
 
-Diagnostics: private local_root/diagnostics/runtime-PID.jsonl, rotation 512 KiB
-plus 3 backups per process. Qt heartbeat 500 ms, GUI stall 5s, worker age 45s,
-resource sample 30s. Writes and stack capture off Qt; no data values/locals,
-exception contents or full paths. No automatic thread termination or DB changes.
-Full technical risk/correction report: RELIABILITY_REPORT_EL.md.
+## Measured soak
 
-First next action: inspect the candidate's actual CI and 600s soak outcomes;
-fix genuine failures before final acceptance. Preserve original failures/results.
-All main/v1.2.5/release/operational-data protections remain in force. Real SMB,
-actual Windows identity switching, power loss and 12/24-hour trials remain pending.
+600.023 seconds PASS: 17 injected disconnect/recovery cycles; 34 original
+operations, 17 sessions; 5 waves of 15 =75 separate simulated client processes.
+29,823 Qt ticks; max gap 0.128s; UI process CPU 2.03% of one core; warm RSS
+increase 2.195MiB, handles +1; observed queues network/state/position peak 2/1/1.
+No GUI/worker stall events. Raw report/samples/logs preserved in
+validation/reliability-20261016/soak-600s/.
+Soak ran from 5231b30. Provenance verifies identical src tree and tool blob in
+1554ded; no repeat needed for test/docs-only changes. Ten minutes is not 24h
+or real SMB certification. All datasets synthetic and isolated.
 
-Earlier checkpoint sections below are historical and superseded by this header.
+## Failure history retained, not waived
 
-## Reliability checkpoint: confirmed exit off the GUI thread
+5231b30 Linux 38904486037 and Windows 38904486330 FAILED in new test observer:
+live file rotation read race (FileNotFoundError/PermissionError). Build/EXE/visual
+did not execute. Gate 38904486493 SUCCESS. Full original CI logs committed.
+First split-observer repair failed a full local run because fixed 400ms did not
+ensure rotation; its 5 targeted passes were NOT treated as overall PASS.
+1554ded waits for 30 actual probes then closes the writer before checking every
+retained JSON record, actual rotation and unchanged bounds. No runtime change.
 
-Normal/remote exit no longer runs active scans, END, command ACK or heartbeat
-removal on Qt. A single guarded worker drains any preceding local enqueue,
-waits for already-started reconciliation (31-second future wait), refuses false
-success with pending local operations, and checks immutable START IDs. Duplicate
-exit requests do not spawn closures. Qt stays live; failures retain the app and
-unacknowledged command. Cleanup stops timers/executors idempotently without
-shared I/O. Abrupt application quit leaves heartbeat to normal expiry.
-Target tests (5) PASS; full portable suite **47 scripts PASS**. Before/after
-reports in `validation/reliability-20261016/`. An already-running blocking OS SMB
-call is NOT forcibly cancellable by thread shutdown; process exit during such a
-call remains a documented architectural/field risk. Next: safe local stall and
-resource diagnostics, then measured soak plus one final native CI candidate.
+Earlier modularized source 762c3a36: Windows 38874685744, Linux 38874685771,
+gate 38874685792, recovery 38874685760 (8/8) SUCCESS. Its accepted EXE hash/artifact
+are in MODULARIZATION_REPORT_EL.md; do not confuse with the pending hardened EXE.
 
-## Reliability checkpoint: stale shared observation
+## First next action and remaining risks
 
-Reproduced a delayed GUI remote read resurrecting a START in the shared machine
-cache after a second journal instance had replayed its END. Fixed with an atomic
-local observation revision comparison: no local DB lock spans network I/O and a
-changed observed row/latest operation rejects the stale response. GUI then uses
-the current durable state. Legacy remember callers remain compatible; no schema
-or event changes. Both delayed START and delayed empty-read cases PASS, full
-portable suite **46 scripts PASS**. Original failure and final outcomes preserved
-in `validation/reliability-20261016/`. Next: asynchronous confirmed exit.
+Inspect existing Windows 38905426410; fetch/fast-forward newer diagnostic commits.
+Verify regressions, frozen EXE functional provenance/IDs/timestamps, strict visual
+0/20 startup, 0/30 theme, 30 clicks and actual accepted artifact/EXE SHA256.
+If failed, diagnose preserved original error; no blind rerun or criteria changes.
+If passed, update final source/artifact/hash in reports and this checkpoint.
+Do not repeat completed modules or tests for unchanged code.
 
-## Reliability checkpoint: selection backpressure
+Read RELIABILITY_REPORT_EL.md and FIELD_ACCEPTANCE_EL.md. Remaining real tests:
+15 PCs/SMB/ACL, actual Windows identities/session/logoff/reboot, power loss,
+10:00 and 12/24h operation, printing/DPI/cache. Synchronous history/admin/map/
+message/roster/shift I/O paths remain potential stalls requiring controlled field
+fault reproduction and targeted follow-up. Python threads cannot forcibly bound
+an OS SMB call; true process termination under hung I/O remains uncertified.
+No unsafe thread kills or lost-queue shortcuts were added. Per-process diagnostic
+rotation is bounded; cross-session retention policy still needed before long use.
 
-Reproduced on source 762c3a36: 200 rapid selection changes while a remote read
-was blocked left 199 queued work items. Fixed by coalescing to one active read
-and the latest Qt selection, with existing 3-second local fallback and automatic
-refresh on recovery. No event format/storage changes. New real Qt regression
-PASS; full portable suite **46 scripts PASS**. Evidence in
-`validation/reliability-20261016/selection-before.txt` and
-`selection-after-regressions.json`. Native CI deferred to the final combined
-candidate to avoid repeated builds. Next: audit stale remote cache observations.
-
-# Resumed reliability hardening — 2026-10-16
-
-Explicit user resumption supersedes the paused instruction below.
-Starting checkpoint: `801f91db09b17e5cdf77a952f8c21326ce5513a7`.
-Remote HEAD matched this checkpoint; clean worktree. No setup repeated.
-Read current MODULARIZATION_REPORT_EL.md, FIELD_ACCEPTANCE_EL.md and preserved
-validation. GitHub public run pages verified SUCCESS for 38874685744 (Windows),
-38874685771 (Linux), 38874685792 (gate), 38874685760 (recovery 8/8).
-Source `762c3a369a199766ab629007b6b2a3c27885d5e1` is fully modularized and accepted.
-Its test EXE is uploaded; exact artifact and EXE hash in MODULARIZATION_REPORT_EL.md.
-No unchanged successful suite was repeated.
-
-Next work: reproduce bounded-worker backlog during rapid personnel selection,
-then audit synchronous GUI I/O/exit and safe local hang diagnostics. Keep changes
-small, target regression first, preserve event schemas/IDs/timestamps and journals.
-Existing field acceptance remains unexecuted. Branch restrictions unchanged.
-
-The remainder is historical checkpoint evidence, not current pending status.
-
-# Safe paused checkpoint — 2026-10-16
-
-PAUSED by explicit user instruction because of the remaining Codex quota.
-Do not resume development, tests, builds or Actions until the user resumes work.
-No new tests or Actions were started to create this checkpoint. The already
-running Windows Action may finish independently; it was not cancelled.
-
-## Exact saved state
-
-- Branch: `feature/v125-modularization-20261013` only.
-- Last application/test/workflow commit: `762c3a369a199766ab629007b6b2a3c27885d5e1`.
-- Last fetched diagnostics commit: `ee3e5e9ff90050249097ea7e94f8c73904605e93`;
-  fast-forwarded locally without discarding changes.
-- Application src tree: `efa779ebf0a24f02e72125dbc185d857e059493b`.
-- This documentation checkpoint's exact SHA is available with
-  `git log -1 --format=%H -- docs/CONTINUATION.md` after commit/push.
-- Structural modularization complete: 43 source files (entry plus 42 modules),
-  entry 88 lines, MainWindow 77, largest module 366. All 226 owned function/method
-  annotations resolve. Store/UI AST behavior audit retained in validation docs.
-- Latest local suite: **45 scripts PASS**, compileall src/tests/tools PASS,
-  diff check PASS. Native Windows-only cases are not certified by Linux runs.
-  Existing final local logs/results are preserved in
-  `docs/validation/local-20261016/recovery-contract-budget/`.
-
-## Last Actions for exact code commit 762c3a369a199766ab629007b6b2a3c27885d5e1
-
-- Linux **38874685771 PASS**; committed results:
-  `docs/validation/linux-38874685771-1/results.json`.
-- Modularization gate **38874685792 PASS**.
-- Windows Qt recovery diagnostic **38874685760 PASS, 8/8**; logs/provenance:
-  `docs/validation/ui-recovery-38874685760-1/`.
-- Full Windows **38874685744** was in progress at last observed Actions status.
-  During checkpoint push, CI committed its diagnostics in `ee3e5e9ff90050249097ea7e94f8c73904605e93`;
-  these were integrated without overwriting changes. Preserved visual report:
-  startup endpoint anomalies **0/20**, initial exact desktop loading **20/20**,
-  theme endpoint anomalies **0/30**, confirmed clicks **30/30**.
-  External frozen EXE functional report **PASS**: four operations, two completed
-  sessions, original IDs/timestamps preserved, temporary data only.
-  EXE SHA256: `beb836483229f3656e959c0891a7bd27cb7f58a0813b2bfa1015dabbf27699f7`.
-  Evidence: `docs/validation/windows-visual-38874685744-1/`.
-  Overall final Actions status and accepted artifact upload remain unverified;
-  do not claim overall PASS or availability until checked on resumption.
-  No waiting or new run was initiated for this checkpoint.
-
-## Last known failure and completed correction
-
-Windows **38872859841**, commit
-`f4af1bddfbc628d6ad3926b50fb6940c33a0bcf6`, passed 44 regressions, build/smoke
-and the external frozen EXE data workflow: four receipts, two sessions, original
-IDs/timestamps preserved. Overall Action still FAILED after the successful
-functional JSON report: its Greek console JSON was incompatible with the
-Windows command pipe encoding. ASCII-safe console output now retains UTF-8
-report files, with a real cp1252 regression. That earlier run did not execute
-visual acceptance; its functional PASS is not an overall PASS.
-
-An earlier Qt recovery timeout (38870905825) had insufficient diagnostic state;
-its exact historical host delay cannot be established retrospectively. The old
-12-second test deadline was shorter than the existing backend lock contract
-(10-second schema lock + 15-second handoff lock + polling). The recovery-only
-budget now derives from those limits (31 seconds). A controlled real 13-second
-OS lock reproduced recovery beyond the old deadline: 14.854 seconds with 297
-responsive Qt heartbeats, four receipts/two sessions and unchanged data checks.
-Eight latest Windows diagnostic repetitions passed. Visual criteria and ordinary
-input deadlines were not relaxed. Preserve all original failed reports.
-
-## First action on explicit resumption
-
-Read this checkpoint, then inspect the existing Windows run **38874685744** and
-newer remote diagnostic commits. Fetch/fast-forward without losing changes.
-Verify exact source provenance, functional report, all regressions, strict
-20-start/30-theme metrics, EXE SHA256 and actual accepted artifact upload.
-Expected artifact name, only if genuinely uploaded after acceptance:
-`POSITION_TRACKING_WINDOWS_TEST-762c3a369a199766ab629007b6b2a3c27885d5e1-38874685744`.
-Do not repeat completed modules or successful checks for unchanged code.
-If that run failed, diagnose its preserved error before deciding on a small fix.
-
-Remaining: finish native acceptance of the complete modularized candidate;
-update final technical report and artifact/hash references with actual results.
-`MODULARIZATION_REPORT_EL.md` and older audit/plan status lines predate the latest
-candidate; this checkpoint takes precedence for current verification status.
-Real multi-computer SMB/Windows-user/offline/service-data acceptance remains
-UNEXECUTED; follow `docs/FIELD_ACCEPTANCE_EL.md` using isolated test data first.
-No main/stable v1.2.5/release/real service data changes or production deployment.
-
-Historical evidence below is retained; historical pending statuses are superseded
-by this paused checkpoint and are not current certification claims.
-
-## Already certified presentation correction
-
-Last complete native SUCCESS:
-`b943a8693a3eed2329dc8b1fc4601afe4e0990a3`.
-Windows **38865827943**, Linux **38865827783**, gate **38865827824** all PASS.
-Windows: 41 regressions, EXE build/smoke, strict startup **0/20**, theme **0/30**,
-actual clicks **30/30**, successful artifact upload (60.5 MB test EXE).
-That revision precedes the final controller extractions/new external EXE test;
-do not transfer its whole-build certification to d128e6d.
-
-Artifact:
-`POSITION_TRACKING_WINDOWS_TEST-b943a8693a3eed2329dc8b1fc4601afe4e0990a3-38865827943`.
-Run: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/38865827943
-
-Actual cause/evidence: initial desktop mismatch consisted of 1,043 console-border
-focus pixels; other frames were genuine completely white native surfaces before
-first Qt paint. Owned CI background now has its own Win32 message thread and is
-activated before each reference. Native initial presentation now waits, DWM-
-cloaked, for the real complete Qt backing-store draw and releases once afterward.
-This is never used during later theme transitions. No screenshot overlays,
-nested event-loop processing or timed exposure delay. All raw frames/distances
-retained, original .08 threshold unchanged; only byte-identical INITIAL desktop
-may be loading. White/partial/black UI, desktop returning after UI and desktop-only
-or zero-frame captures remain failures. All 20 successful starts retained their
-exact initial desktop sequence; no failing application frame was excused.
-
-## Exact failures, corrected prerequisites and evidence
-
-- 38806871707 / 22bc3bd: 12/20 startup failures (yesterday's checkpoint).
-- 38861912057 / 0f6fee5: 36 regressions/build/smoke PASS, visual FAIL 14 startup,
-  1 theme. Application src/ tree exactly matched theme extraction ec80b132.
-- 38862995734 / f31fe5c: settings test failed Windows 8.3 versus canonical path;
-  corrected expected base.resolve(), preserving actual original path semantics.
-  Build/visual did not execute.
-- 38863724150 / da9b4d1: 40 regressions/build/smoke PASS, visual FAIL 17 startup,
-  zero theme. Ineffective WA_NoSystemBackground was subsequently removed.
-- 38865045894 Windows and 38865045885 Linux / 7444dc9: rendering test failed
-  because its constructor-scheduled 100ms timer ran at iteration=0, exposed=False.
-  Now waits for actual initial root Paint with hard timeout; all 60 synchronous
-  per-child paint/config assertions retained. Native visual did not execute.
-- Gate 38865045892: backend source inspection accidentally imported Qt. Now AST-
-  inspects actual linked controllers without importing UI; python -S handoff
-  replay test and full gate pass, with all original ID/order scenarios retained.
-- Local static handoff ownership and button quote/whitespace guards were adapted
-  to actual inherited method/helper identity and AST Qt constructors; no scenario
-  removed. Initial failures and successful reruns remain in local evidence index.
-
-All diagnostic evidence remains under docs/validation/windows-visual-<run>-1 and
-linux-<run>-1. Local stage results/failure logs: docs/validation/local-20261016/.
-Architecture audit verifies all 66 store methods and 50 effective UI methods versus
-0f6fee5 (normalizing only explicit path providers); constructor tested through GUI.
-See docs/validation/structure-20261016/{ast-audit,modules,commits}.json.
-
-## Architecture and preserved correctness
-
-Read MODULARIZATION_REPORT_EL.md for all 43 file responsibilities and test matrix.
-No module imports entry; graph is acyclic; backend/report modules import without
-entry/Qt/optional document libraries. Entry preserves legacy exports and config
-path overrides. Store/UI capability mixins compose into small facades, with
-WindowServices supplying runtime providers. JSON/SQLite/receipts/timestamps,
-START/END link identity, filenames, report contents, theme data and assets remain
-compatible. Earlier durable START ACK-loss and atomic APPLIED/cache fixes remain
-and pass their fault/retry contracts. No new module work is pending.
-
-Actual Qt workflow passes offline EXIT 14 START/END, close/reopen, original-ID/time
-replay, online ENTRY 1 START/END, two history sessions, archive/map dialogs and
-wrong-PIN rejection. New EXE workflow must prove these with native mouse/keyboard
-against the frozen binary and temporary data before packaging.
-
-## CI and artifact access
-
-Git HTTPS works. GitHub API/artifact-download tunnel is blocked; public Actions
-pages show actual status/artifact names. CI safely appends diagnostics to this
-same branch only if source/tests/tools/workflows still match its tested commit;
-docs-only parallel progress is allowed. Fetch and preserve bot commits; rebase
-only unpublished commits, never force-push. Do not ask the user to retrieve logs
-while this supported Git evidence route works.
-
-Accepted EXE packages require all regressions, strict visuals AND functional
-report with the same source SHA/EXE SHA256. Upload failure is not ignored. They
-contain EXE, SHA256SUMS, manifest and regression/visual/functional reports;
-retention 7 days, no release/tag. Failure reports and screenshots are retained
-also for failed native functional workflow.
-
-## Remaining real acceptance and protection
-
-Real multi-PC SMB/NTFS ACL, power loss, Windows account/session/logoff/reboot,
-10:00 boundary, extended responsiveness/shutdown during blocked SMB, cached cold
-launch, high-DPI/small displays and actual printing remain FIELD acceptance.
-Simulations do not certify those. Use test data; no operational dataset authorized.
-
-Main remains `3c7a785a4008caa7b4fc1c7fd8d240cb8653ff99`.
-v1.2.5 tag remains `33ea13ca2133ddbfb93b1d051d4b25dc35bd954f`.
-release/, VERSION.txt and production release workflow unchanged from 129e8cb.
-No main/production binary/tag/release/data changes or merge performed.
-
-Do not rerun passed checks for identical code without a new change/failure.
-If a source correction is necessary, run its focused repro plus full suite:
-`XDG_CACHE_HOME=/tmp/tde-cache .venv/bin/python tools/run_regressions.py --out /tmp/tde-next`;
-then compileall/diff check and new native CI, retaining failures/provenance.
-
-## Driver fixture and interface corrections already saved
-
-d128e6d/Windows 38868081099: 43 regressions/build/smoke PASS, external driver FAIL.
-Two real offline EXIT 14 operations were durable. Its unclosed read-only SQLite
-connections caused WinError32 during cleanup and hid the original workflow error.
-Both readers now close explicitly; exception/screenshots survive cleanup.
-
-f44331e/Windows 38869909515: 44 regressions/build/smoke PASS; original error now
-visible: cannot activate owned test background after native keyboard input. No
-second EXE was launched, no central data existed and pending IDs/times were intact.
-Corrected cross-thread WM_NULL acknowledgement and checked temporary input-queue
-attachment/detach are in e243e53. Linux 38869909478 and gate 38869909506 PASS.
-
-Type-contract audit restored SharedEventStore, dtime/date and Path imports in
-three extracted modules. All 226 annotations resolve. Full local 44-script suites
-for reader, type and foreground fixes PASS; see saved local stage evidence.
-These were small verified corrections, not another module cycle. Final native
-result is still required. Full isolated field protocol: FIELD_ACCEPTANCE_EL.md.
-
-## Latest unreproduced Windows Qt recovery failure — do not waive
-
-Windows 38870905825/e243e53 failed before build/EXE in ui_workflow_regression.py:
-the second-window store/pending replay condition did not finish within the
-unchanged 12s deadline. No diagnostic state was previously printed. Other
-regressions, Linux 38870905814 and gate 38870905823 PASS. Current native foreground
-fix has NOT yet reached the external EXE step, so it is not certified.
-
-Added timeout diagnostics: info/status, handoff error, pending/conflict/applied
-rows, actual timer state and future outcome. Eight controlled fresh-process
-Linux repetitions PASS (/tmp/tde-ui-recovery-repro.json), plus full 44-script suite
-PASS (/tmp/tde-recovery-diagnostics-20261016), compileall/diff PASS. No timeout,
-assertion, scenario or failure criterion relaxed. A separate bounded Windows
-recovery diagnostic workflow now executes up to eight trials, stops at first
-failure and preserves exact logs/provenance through Git. This is diagnostic work,
-not a replacement for the full native EXE/visual acceptance pipeline.
-First action: recover that Windows diagnostic state and fix its evidenced cause.
-
-f4af1bd: bounded Windows recovery diagnostic 38872859978 PASS all eight attempts;
-Linux 38872859829 and gate 38872859906 PASS. Windows 38872859841 ran 44 regressions,
-build/smoke and the ACTUAL frozen EXE offline/restart/online data scenario PASS:
-four original receipts, two sessions, IDs/timestamps preserved, binary SHA256
-243b70a56332067da0f06df1bd24ccaa074d5cb11ef4de3101ce6ac14d873c85.
-Workflow nevertheless FAILED after its successful functional report was written;
-visual did not run. Sole remaining CLI operation was printing unescaped Greek
-JSON to a Windows command pipe. New portable regression reproduces cp1252 console
-encoding and verifies ASCII-safe JSON output plus unchanged UTF-8 evidence file.
-44 local scripts PASS (/tmp/tde-exe-console-encoding-20261016), compileall/diff PASS.
-This is a driver reporting correction, not a waiver of its nonzero exit status.
-
-Recovery timing contract correction is evidenced, not an arbitrary timeout
-relaxation: production permits 10s schema-lock + 15s handoff-lock waits, with 3s
-poll delivery. The new test's old 12s end-to-end assumption was invalid. Recovery
-budget now derives from those bounds (10+15+2*3 = 31s), while all ordinary input
-waits stay 12s and every receipt/ID/time/assertion remains. A NEW real OS-held
-handoff lock lasting 13s proved the counterexample: recovery 14.854s with 297 Qt
-heartbeats, four preserved receipts/two sessions, no UI freeze or data loss.
-The original intermittent Windows timeout had no historical state diagnostics;
-no claim is made that its exact old host delay was recovered retroactively.
-All subsequent timeouts retain the full state; all eight bounded Windows trials
-on f4af1bd passed even before this budget correction.
-
-Full **45 scripts PASS** (/tmp/tde-recovery-contract-budget-20261016), compileall
-src/tests/tools and diff PASS. Strict visual .08/20 starts/30 toggles unchanged.
-Application src/ tree still efa779ebf0a24f02e72125dbc185d857e059493b. Await final
-native validation of these TEST/DRIVER corrections; do not declare completion yet.
+Historical checkpoint text: validation/continuation-history-20261016.md.
