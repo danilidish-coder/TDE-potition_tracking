@@ -1,6 +1,6 @@
 """Stage 3a: extracted handoff module MUST preserve all prior behavior."""
 from __future__ import annotations
-import ast, importlib.util, sys, tempfile
+import ast, importlib.util, sys, tempfile, inspect, textwrap
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -14,8 +14,12 @@ sys.modules[spec.name]=module
 spec.loader.exec_module(module)
 tree=ast.parse((ROOT/"src"/"position_tracking.py").read_text(encoding="utf-8"))
 assert any(isinstance(n,ast.ImportFrom) and n.module=="position_tracking_handoff" for n in tree.body)
-cls=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=="SharedEventStore")
-method=next(n for n in cls.body if isinstance(n,ast.FunctionDef) and n.name=="close_previous_windows_user_positions")
+# Resolve the actual inherited method rather than requiring its implementation
+# to remain in the entry-point class. Keep the thin-wrapper and helper identity
+# requirements, followed by all real protected-ID/idempotence scenarios below.
+implementation=module.SharedEventStore.close_previous_windows_user_positions
+method=ast.parse(textwrap.dedent(inspect.getsource(implementation))).body[0]
+assert implementation.__globals__["close_previous_windows_user_positions"] is close_previous_windows_user_positions
 assert len(method.body)==1 and isinstance(method.body[0],ast.Return), "Handoff code must reside in its own module"
 
 def person(n):

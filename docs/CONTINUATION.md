@@ -202,3 +202,11 @@ widgets to avoid a separate native background erase before complete backing-stor
 content. No exposure delay, event pumping, screenshot overlay or test relaxation.
 39 local scripts PASS (/tmp/tde-first-paint-20261016), compileall/diff PASS. This
 is only a candidate until the next native startup/theme evidence demonstrates it.
+
+START/END position service: ten AST-identical methods extracted. Initial full
+suite failed ONLY the handoff test's requirement that its thin wrapper reside in
+the entry file (StopIteration). Test now resolves the actual inherited method and
+still asserts one return statement, identical standalone helper identity and all
+real protected-ID/replay cases. Full rerun 39 scripts PASS
+(/tmp/tde-positions-verified-20261016); initial failure retained at
+/tmp/tde-positions-20261016. Compileall/diff PASS. No event logic changed.

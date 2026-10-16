@@ -9,7 +9,7 @@ sys.path.insert(0,str(ROOT/'src'))
 
 class IndependentServices(unittest.TestCase):
     def test_standalone_services_do_not_import_entry_or_qt_eagerly(self):
-        modules=['position_tracking_settings','position_tracking_personnel','position_tracking_theme','position_tracking_report_text','position_tracking_pdf','position_tracking_documents','position_tracking_statistics','position_tracking_store_io','position_tracking_communication','position_tracking_session_index','position_tracking_shift_index']
+        modules=['position_tracking_settings','position_tracking_personnel','position_tracking_theme','position_tracking_report_text','position_tracking_pdf','position_tracking_documents','position_tracking_statistics','position_tracking_store_io','position_tracking_communication','position_tracking_session_index','position_tracking_shift_index','position_tracking_positions']
         code="import sys,importlib;sys.modules['position_tracking']=None;sys.modules['PySide6']=None;"+repr(modules)+";[importlib.import_module(m) for m in "+repr(modules)+"]"
         result=subprocess.run([sys.executable,'-c',code],env=dict(os.environ,PYTHONPATH=str(ROOT/'src')),capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
