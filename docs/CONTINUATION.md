@@ -338,3 +338,11 @@ its literal assignment to remain in entry. 41 scripts PASS
 Officer admin/audit/backup/navigation controller: six AST-identical effective
 methods, retaining last _live_map implementation and removing its dead shadowed
 predecessor. 41 scripts PASS (/tmp/tde-ui-admin-20261016), compileall/diff PASS.
+
+Structural extraction complete: entry is 88 lines of compatibility exports/path
+adapters and launch composition; MainWindow is 77 lines initializing explicit
+WindowServices and composing controller/view capabilities. Qt lifetime is in
+position_tracking_ui_application.py. No service/UI module imports entry. Full
+41 scripts PASS (/tmp/tde-entry-composition-20261016), compileall/diff PASS.
+This is structural/local completion only; final native acceptance and EXE
+functional coverage remain pending. No production readiness is claimed.
