@@ -267,3 +267,16 @@ real users; backend communication tests remain isolated filesystem simulations.
 
 UI personnel selection/active-state polling: six AST-identical methods,
 40 scripts PASS (/tmp/tde-ui-selection-20261016), compileall/diff PASS.
+
+UI position/offline controller: five methods, with only local-root lookup injected
+through the same WindowServices callback. Handoff test inspects actual extracted
+worker; 40 scripts PASS (/tmp/tde-ui-positions-20261016), compileall/diff PASS.
+
+Native da9b4d1 run 38863724150: 40 regressions/build/smoke PASS, visual FAIL with
+17/20 startup anomalies, zero theme anomalies, 30 clicks. No EXE artifact accepted.
+WA_NoSystemBackground was ineffective: solid white startup frames remain. Owned
+background needs its own Win32 message loop (currently unpumped while EXEs launch,
+allowing stale/ghosted desktop pixels). Fix fixture separately. Then replace the
+ineffective erase flag with a first-presentation readiness barrier: do not expose
+an unpainted native surface; release after the complete initial Qt paint. Retain
+all screenshot frames; no change to visual thresholds or theme transition checks.

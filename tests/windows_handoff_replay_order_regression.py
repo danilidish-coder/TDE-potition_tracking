@@ -41,7 +41,8 @@ main=(ROOT/"src"/"position_tracking.py").read_text(encoding="utf-8")
 import inspect
 from position_tracking_ui_communication import CommunicationMixin
 communication=inspect.getsource(CommunicationMixin._communication_io)
-worker=main.split("def _offline_tick(",1)[1].split("def _position_action(",1)[0]
+from position_tracking_ui_positions import PositionActionsMixin
+worker=inspect.getsource(PositionActionsMixin._offline_tick)
 assert "close_previous_windows_user_positions(" not in communication, "Independent heartbeat must never overtake original offline END"
 assert "reconcile_handoff_before_replay(" in worker, "Worker must resolve central handoff BEFORE replaying offline"
 assert "report = self.offline.sync(store" not in worker, "Old sync-before-handoff regression"
