@@ -161,3 +161,7 @@ service import and missing-Qt failure contracts added; Windows still pending.
 
 Word document/archive naming module: 39 local scripts PASS, including an actual
 DOCX create/read round-trip; /tmp/tde-documents-20261016. Compileall/diff PASS.
+
+Statistics workbook/charts module: 39 local scripts PASS, including existing
+real workbook/archive regression; /tmp/tde-statistics-20261016. Compileall/diff
+PASS. No report function behavior was changed.
