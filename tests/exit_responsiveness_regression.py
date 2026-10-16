@@ -19,7 +19,7 @@ from position_tracking_personnel import PersonnelRecord
 from position_tracking_store import SharedEventStore
 
 class ExitResponsiveness(unittest.TestCase):
-    def exercise(self, failure=False, pending=False, remote=False):
+    def exercise(self, failure=False, pending=False, remote=False, map_pending=False):
         app = QApplication.instance() or QApplication([])
         release = threading.Event(); entered = threading.Event(); calls = []; ack = []; ticks = []
         class Window(WindowLifecycleMixin, QWidget):
@@ -46,6 +46,10 @@ class ExitResponsiveness(unittest.TestCase):
             if pending: w.offline.enqueue('START', PersonnelRecord('2', 'TEST', 'SYNTHETIC', 'ONLY'), '1', 'ΕΙΣΟΔΟΣ')
             heartbeat = QTimer(w); heartbeat.timeout.connect(lambda: ticks.append(time.monotonic())); heartbeat.start(20)
             timer = threading.Timer(.8, release.set); timer.start()
+            if map_pending:
+                from concurrent.futures import Future
+                w._map_mutation_future = Future()
+                QTimer.singleShot(300, lambda:w._map_mutation_future.set_result("confirmed"))
             try:
                 with patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes), patch.object(QMessageBox, 'critical') as errors, patch.object(QApplication, 'quit') as quit_app:
                     begin = time.monotonic()
@@ -54,7 +58,10 @@ class ExitResponsiveness(unittest.TestCase):
                     elapsed = time.monotonic() - begin
                     self.assertLess(elapsed, .25, 'Confirmed exit blocked the Qt thread on shared I/O')
                     if not pending:
-                        self.assertTrue(entered.wait(2))
+                        deadline = time.monotonic() + 2
+                        while not entered.is_set() and time.monotonic() < deadline: QTest.qWait(10)
+                        self.assertTrue(entered.is_set())
+                        if map_pending:self.assertTrue(w._map_mutation_future.done(), 'Exit overtook an in-flight map END')
                         w._start_confirmed_exit('duplicate-command')
                     deadline = time.monotonic() + 4
                     while time.monotonic() < deadline and not quit_app.called and not errors.called: QTest.qWait(20)
@@ -81,5 +88,6 @@ class ExitResponsiveness(unittest.TestCase):
     def test_pending_local_operation_prevents_false_success(self): self.exercise(pending=True)
     def test_remote_ack_follows_confirmed_end_off_gui(self): self.exercise(remote=True)
     def test_remote_failed_exit_is_not_acknowledged(self): self.exercise(failure=True, remote=True)
+    def test_remote_exit_waits_for_inflight_map_mutation(self): self.exercise(remote=True,map_pending=True)
 
 if __name__ == '__main__': unittest.main()

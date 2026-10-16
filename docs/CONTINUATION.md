@@ -1,3 +1,30 @@
+# Current checkpoint: map END and offline idle exit — 2026-10-16
+
+Idle-exit correction c7cdfd5: real empty/offline application can close without
+inventing END or waiving pending/active/unknown journal state. 10 real-process
+Qt cases and full 49-script suite PASS. Earlier accepted 1554ded has the reported
+idle-exit bug; do not confuse old artifact with a new fixed candidate.
+
+Next confirmed defects: map selected read blocked Qt for 0.800s; map END closed a
+replacement START created during its confirmation. Both before failures retained
+in validation/live-map-end-20261016/before.txt. Corrected selected-read and END/
+audit I/O on the existing single map executor, exact expected START identity,
+one-operation guard, no late END after closing a read, and no closing while END
+awaits acknowledgement. Owner tracks pending map mutation; normal/remote app exit
+drains it before confirming closure. Watchdog now samples that future's age.
+
+5 map tests, 6 exit tests and full **50 portable scripts PASS**; no schema/event
+ID/timestamp changes. Remaining map correction-time action still synchronous and
+is not claimed fixed. No repeat of previous 600s soak (different earlier source).
+
+Next: extend real frozen EXE driver with a separate empty-profile/no-roster/
+no-central launch and actual native Exit confirmation/process termination;
+require that evidence before artifact acceptance. Then one combined native
+Windows/Linux/gate cycle for the completed candidate, with targeted local tool
+checks first. Preserve all logs. No main/stable/release/operational-data changes.
+
+Previous checkpoint below retained as history.
+
 # Resumed: reported idle/offline exit — 2026-10-16
 
 Starting checkpoint 278307b6ff46223db0685bcc867f9229b7e1554b; remote matched.

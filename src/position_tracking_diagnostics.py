@@ -134,7 +134,7 @@ def start_runtime_diagnostics(app, window, local_directory: Path):
         current = reference()
         if current is None: return
         workers = {}
-        for name in ("offline", "communication", "shift", "shift_status", "agms", "position_operation", "exit"):
+        for name in ("offline", "communication", "shift", "shift_status", "agms", "position_operation", "map_mutation", "exit"):
             future = getattr(current, f"_{name}_future", None)
             if future is not None and not future.done(): workers[name] = id(future)
         queues = {}

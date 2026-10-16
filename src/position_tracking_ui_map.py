@@ -126,6 +126,9 @@ class LiveMapDialog(QDialog):
         self.officer_getter = officer_getter
         self._live_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix='TDE-live-map')
         self._live_future = None
+        self._map_operation_future = None
+        self._map_operation_write = False
+        self._map_closing = False
         self.setWindowTitle('ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ - Ζωντανή εικόνα θέσεων')
         self.resize(1100, 820)
         self.setStyleSheet('\n                QDialog{background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #eef5f9,stop:1 #dfeaf1);}\n                QLabel{color:#193b50;}\n            ')
@@ -208,7 +211,13 @@ class LiveMapDialog(QDialog):
         if not officer:
             QMessageBox.warning(self, 'Αξιωματικός Υπηρεσίας', 'Πληκτρολογήστε πρώτα έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας στο κύριο παράθυρο.')
             return
-        active = self._selected_active()
+        agms = _clean(self.active_person.currentData())
+        if not agms:
+            return
+        self._map_io(lambda: self.store.get_active(agms),
+                     lambda active: self._confirm_selected_end(officer, active))
+
+    def _confirm_selected_end(self, officer, active):
         if not active:
             QMessageBox.information(self, 'Λήξη ενεργής θέσης', 'Η επιλεγμένη καταγραφή δεν είναι πλέον ενεργή.')
             self.refresh()
@@ -224,20 +233,73 @@ class LiveMapDialog(QDialog):
         confirm = QMessageBox.question(self, 'Επιβεβαίωση λήξης ενεργής θέσης', f'{name}\nΘέση {pos} — {direction}\nΈναρξη: {started}\n\nΝα καταχωριστεί ΛΗΞΗ από τον Αξιωματικό Υπηρεσίας;', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if confirm != QMessageBox.Yes:
             return
-        try:
-            event = self.store.end(person)
+        start_id = _clean(active.get('event_id'))
+        if not start_id:
+            QMessageBox.critical(self, 'Μη ασφαλής εγγραφή', 'Λείπει το αρχικό αναγνωριστικό START. Δεν καταχωρίστηκε ΛΗΞΗ.')
+            return
+        def work():
+            event = self.store.end(person, expected_start_event_id=start_id)
             self.store.log_admin_action('ACTIVE_POSITION_ENDED_BY_OFFICER', {'officer_agms': officer.agms, 'officer_name': officer.full_name, 'target_agms': agms, 'target_name': person.full_name, 'position': pos, 'direction': direction, 'start_at': _clean(active.get('timestamp')), 'end_at': _clean(event.get('timestamp'))})
+            return event
+        def confirmed(event):
             QMessageBox.information(self, 'Λήξη ενεργής θέσης', f"Η θέση του {name} έκλεισε στις {_clean(event.get('timestamp')).replace('T', ' ')}.")
-            self.refresh()
-        except Exception as exc:
-            QMessageBox.critical(self, 'Δεν καταχωρίστηκε', str(exc))
+        self._map_io(work, confirmed, is_write=True)
+
+    def _map_io(self, work, confirmed, *, is_write=False):
+        if self._map_closing or self._map_operation_future is not None:
+            return
+        self._live_future = None  # discard a snapshot predating the operation
+        self.end_active_btn.setEnabled(False)
+        self.edit_start_btn.setEnabled(False)
+        self.updated.setText('ΕΚΚΡΕΜΕΙ ΕΛΕΓΧΟΣ / ΚΑΤΑΧΩΡΙΣΗ — αναμονή κεντρικού')
+        future = self._live_pool.submit(work)
+        self._map_operation_future = future
+        self._map_operation_write = is_write
+        owner = self.parent()
+        if is_write and owner is not None:
+            owner._map_mutation_future = future
+            owner._position_activity_attempted = True
+        def poll():
+            if self._map_closing:
+                return
+            if not future.done():
+                QTimer.singleShot(100, poll)
+                return
+            self._map_operation_future = None
+            try:
+                result = future.result()
+            except Exception as exc:
+                QMessageBox.critical(self, 'Δεν επιβεβαιώθηκε η ενέργεια',
+                                     str(exc) + '\nΕλέγξτε την τρέχουσα κατάσταση πριν επαναλάβετε.')
+            else:
+                confirmed(result)
+            if not self._map_closing and self._map_operation_future is None:
+                self.refresh()
+        QTimer.singleShot(100, poll)
+
+    def _stop_map(self):
+        if self._map_operation_future is not None and self._map_operation_write:
+            self.updated.setText('ΕΚΚΡΕΜΕΙ ΛΗΞΗ — περιμένετε την επιβεβαίωση πριν κλείσετε τον χάρτη')
+            return False
+        if not self._map_closing:
+            self._map_closing = True
+            self.timer.stop()
+            self._live_pool.shutdown(wait=False, cancel_futures=True)
+        return True
+
+    def reject(self):
+        if self._stop_map():
+            super().reject()
 
     def closeEvent(self, event):
-        self.timer.stop()
-        self._live_pool.shutdown(wait=False, cancel_futures=True)
+        if not self._stop_map():
+            event.ignore()
+            return
         super().closeEvent(event)
 
     def refresh(self):
+        if self._map_closing or self._map_operation_future is not None:
+            return
         future = self._live_future
         if future is None:
             self._live_future = self._live_pool.submit(self.store.active_all)

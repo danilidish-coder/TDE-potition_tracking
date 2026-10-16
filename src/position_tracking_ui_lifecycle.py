@@ -81,6 +81,7 @@ class WindowLifecycleMixin:
         self.info.setText("ΕΛΕΓΧΟΣ ΑΣΦΑΛΟΥΣ ΕΞΟΔΟΥ — η εφαρμογή παραμένει ανοικτή.")
         offline_future = self._offline_future
         local_future = self._position_operation_future
+        map_future = getattr(self, "_map_mutation_future", None)
         store = self.store
 
         def work():
@@ -90,6 +91,8 @@ class WindowLifecycleMixin:
             # a separate worker; wait without blocking Qt or overtaking its END.
             if local_future is not None:
                 local_future.result(timeout=0)
+            if map_future is not None and not map_future.done():
+                map_future.result(timeout=31)
             background_settled = all(
                 future is None or future.done() for future in (
                     offline_future, getattr(self, "_communication_future", None),
