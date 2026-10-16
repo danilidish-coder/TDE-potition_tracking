@@ -296,3 +296,6 @@ on theme updates, refusal after show, and offscreen/non-Windows compatibility.
 41 local scripts PASS (/tmp/tde-first-presentation-20261016), compileall/diff PASS.
 Native verification remains mandatory; this does not certify the pending visual
 issue. All captured desktop/application frames still use unchanged criteria.
+
+UI safe-exit/lifecycle controller: four AST-identical methods, 41 scripts PASS
+(/tmp/tde-ui-lifecycle-20261016), compileall/diff PASS.
