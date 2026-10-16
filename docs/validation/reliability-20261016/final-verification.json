@@ -1,0 +1,42 @@
+{
+  "source_commit": "1554dedb68afecc3c39fe6cfdeb275ad7263aa8e",
+  "application_src_tree": "b64def01b4762ce123711e9eec0fe5debae1da5c",
+  "latest_ci_evidence_commit": "4e7b238115473049be065cce603003db2449baca",
+  "observed_date_athens": "2026-10-16",
+  "runs": {
+    "windows": {
+      "id": "38905426410",
+      "status": "SUCCESS",
+      "scripts": 48,
+      "startup_endpoint_anomalies": 0,
+      "startup_trials": 20,
+      "theme_endpoint_anomalies": 0,
+      "theme_trials": 30,
+      "confirmed_theme_clicks": 30,
+      "functional_operations": 4,
+      "functional_sessions": 2
+    },
+    "linux": {
+      "id": "38905426334",
+      "status": "SUCCESS",
+      "scripts": 48
+    },
+    "module_gate": {
+      "id": "38905426542",
+      "status": "SUCCESS"
+    }
+  },
+  "artifact": {
+    "name": "POSITION_TRACKING_WINDOWS_TEST-1554dedb68afecc3c39fe6cfdeb275ad7263aa8e-38905426410",
+    "url": "https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/38905426410",
+    "size": "60.6 MB",
+    "archive_sha256": "15bb0713ad87d397e0adb28dbe2b287ee64d63e4cd281b8970af3522e05a13ab",
+    "exe_sha256": "0ba9f89e4fafde54ad5c53489af320178e4fc61ac4a28dca85f98367933db3d6",
+    "retention_days": 7,
+    "availability_verified_via": "GitHub completed-run artifacts list",
+    "exe_checksum_evidence": "Native functional report and accepted package gate; archive not downloaded in this environment"
+  },
+  "soak_report": "soak-600s/report.json",
+  "field_acceptance": "NOT EXECUTED; see docs/FIELD_ACCEPTANCE_EL.md",
+  "production_release": false
+}

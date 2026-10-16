@@ -1,5 +1,18 @@
 # Τεχνική αναφορά modular development — 16/10/2026
 
+## Νεότερη θωράκιση και δοκιμαστικό EXE
+
+Η μεταγενέστερη έκδοση `1554dedb68afecc3c39fe6cfdeb275ad7263aa8e` πέρασε Windows
+38905426410, Linux 38905426334 και gate 38905426542: SUCCESS, 48 scripts,
+πραγματικό EXE workflow και strict visual 0/20 και 0/30. Soak 600s PASS.
+[Τελικό test EXE artifact](https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/38905426410):
+`POSITION_TRACKING_WINDOWS_TEST-1554dedb68afecc3c39fe6cfdeb275ad7263aa8e-38905426410`.
+EXE SHA256: `0ba9f89e4fafde54ad5c53489af320178e4fc61ac4a28dca85f98367933db3d6`.
+Αναλυτικές διορθώσεις, μετρήσεις και εναπομείναντες κίνδυνοι στο
+[RELIABILITY_REPORT_EL.md](RELIABILITY_REPORT_EL.md).
+Η παρακάτω τεχνική αποτύπωση αφορά τη δομική ολοκλήρωση 762c3a36 και διατηρείται
+ως ιστορικό αρχιτεκτονικό τεκμήριο· δεν αποτελεί ισχυρισμό παραγωγικής αποδοχής.
+
 ## Κατάσταση πιστοποίησης
 
 Η δομική διάσπαση ολοκληρώθηκε: **43 αρχεία Python συνολικά**, κύριο αρχείο

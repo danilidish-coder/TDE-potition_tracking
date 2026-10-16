@@ -94,3 +94,12 @@ No operational data or production deployment is authorized by this work.
 All 226 owned function/method annotations now resolve; four extraction import
 omissions were restored without algorithm changes. The external EXE driver
 reader/focus-fixture failures and their corrections are retained in CONTINUATION.md.
+
+## Latest reliability acceptance
+
+1554dedb68afecc3c39fe6cfdeb275ad7263aa8e: Windows 38905426410,
+Linux 38905426334 and gate 38905426542 SUCCESS; 48 scripts, frozen EXE workflow,
+strict native visual 0/20 startup and 0/30 theme, accepted test artifact.
+600-second real Qt synthetic soak PASS for the identical application source tree.
+Intentional reliability fixes and unresolved synchronous-I/O/OS cancellation
+risks are documented in RELIABILITY_REPORT_EL.md. Field acceptance remains open.

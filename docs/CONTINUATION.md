@@ -28,8 +28,15 @@ This documentation commit is identifiable by git log -1 -- docs/CONTINUATION.md.
 
 - Linux 38905426334 SUCCESS (48 scripts).
 - Modular gate 38905426542 SUCCESS.
-- Windows 38905426410 IN PROGRESS at last checked status. New EXE acceptance,
-  strict visual and artifact still pending. Do not claim overall Windows PASS.
+- Windows 38905426410 SUCCESS: 48 scripts, build/smoke, frozen EXE workflow
+  (4 operations, 2 sessions, original IDs/timestamps), strict visual 0/20 startup,
+  0/30 theme, 30/30 confirmed clicks and accepted test EXE upload.
+- Native evidence commit: 4e7b238115473049be065cce603003db2449baca.
+- Artifact: POSITION_TRACKING_WINDOWS_TEST-1554dedb68afecc3c39fe6cfdeb275ad7263aa8e-38905426410.
+- EXE SHA256: 0ba9f89e4fafde54ad5c53489af320178e4fc61ac4a28dca85f98367933db3d6.
+- Artifact URL: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/38905426410.
+- Final exact metadata: validation/reliability-20261016/final-verification.json.
+  Artifact retention 7 days; no release/tag or production deployment.
 
 ## Measured soak
 
@@ -55,16 +62,18 @@ retained JSON record, actual rotation and unchanged bounds. No runtime change.
 
 Earlier modularized source 762c3a36: Windows 38874685744, Linux 38874685771,
 gate 38874685792, recovery 38874685760 (8/8) SUCCESS. Its accepted EXE hash/artifact
-are in MODULARIZATION_REPORT_EL.md; do not confuse with the pending hardened EXE.
+are in MODULARIZATION_REPORT_EL.md; superseded for current testing by the accepted hardened EXE above.
 
 ## First next action and remaining risks
 
-Inspect existing Windows 38905426410; fetch/fast-forward newer diagnostic commits.
-Verify regressions, frozen EXE functional provenance/IDs/timestamps, strict visual
-0/20 startup, 0/30 theme, 30 clicks and actual accepted artifact/EXE SHA256.
-If failed, diagnose preserved original error; no blind rerun or criteria changes.
-If passed, update final source/artifact/hash in reports and this checkpoint.
-Do not repeat completed modules or tests for unchanged code.
+All feasible checks in this implementation cycle completed. On resumption read
+this checkpoint, the two reports below, remote HEAD and any newer Actions. Do not
+repeat modularization or accepted tests for identical source. First outstanding
+action: controlled isolated Windows/SMB field fault reproduction of the remaining
+synchronous GUI I/O paths while collecting the new watchdog logs; then perform
+targeted fixes only for demonstrated failures. Complete the real 15-client,
+Windows-account and 12/24-hour acceptance protocol before production approval.
+The automated passes do not certify kernel-I/O cancellation or field reliability.
 
 Read RELIABILITY_REPORT_EL.md and FIELD_ACCEPTANCE_EL.md. Remaining real tests:
 15 PCs/SMB/ACL, actual Windows identities/session/logoff/reboot, power loss,

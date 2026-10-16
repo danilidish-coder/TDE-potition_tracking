@@ -1,5 +1,39 @@
 # Επαγγελματική θωράκιση — 16/10/2026
 
+## Τελική αυτοματοποιημένη αποδοχή
+
+**Source SHA:** `1554dedb68afecc3c39fe6cfdeb275ad7263aa8e`.
+Application src tree: `b64def01b4762ce123711e9eec0fe5debae1da5c`.
+
+| Πύλη | Run / πραγματικό αποτέλεσμα |
+|---|---|
+| Windows | **38905426410 SUCCESS**: 48 scripts, build/smoke, πραγματικό EXE workflow PASS |
+| Linux | **38905426334 SUCCESS**: 48 scripts (native Windows-only cases δεν εκτελούνται σε Linux) |
+| Module gate | **38905426542 SUCCESS**: Windows/Linux contracts |
+| Strict native visual | **0/20** startup anomalies, **0/30** theme anomalies, **30/30** clicks |
+| Πραγματικό EXE data flow | 4 πράξεις / 2 sessions, ίδια αρχικά IDs/timestamps/END links, αποκλειστικά temp data |
+| Μετρημένο synthetic Qt soak | **600.023s PASS**, 17 recoveries, 34 εγγραφές, 75 client διεργασίες |
+
+**Δοκιμαστικό EXE artifact (60.6 MB, διατήρηση 7 ημερών):**
+`POSITION_TRACKING_WINDOWS_TEST-1554dedb68afecc3c39fe6cfdeb275ad7263aa8e-38905426410`.
+[Λήψη από τα Artifacts του επιτυχημένου Windows run](https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/38905426410).
+
+**EXE SHA256:** `0ba9f89e4fafde54ad5c53489af320178e4fc61ac4a28dca85f98367933db3d6`.
+Archive SHA256 (διαφορετικό από του EXE): `15bb0713ad87d397e0adb28dbe2b287ee64d63e4cd281b8970af3522e05a13ab`.
+Η διαθεσιμότητα επιβεβαιώθηκε στη σελίδα του completed run. Το EXE hash
+προέρχεται από το πραγματικό native functional report/accepted packaging gate·
+το archive δεν κατέβηκε στο cloud περιβάλλον. Στο πακέτο υπάρχουν EXE,
+SHA256SUMS, manifest και regression/visual/functional reports.
+
+Τα τελικά reports/screenshots αποθηκεύτηκαν στο
+`validation/windows-visual-38905426410-1/`, Linux αποτελέσματα στο
+`validation/linux-38905426334-1/`, ακριβή commits/status/hash στο
+`validation/reliability-20261016/final-verification.json` και `commit-ledger.json`.
+Αυτή η αποδοχή αφορά τις συγκεκριμένες αυτοματοποιημένες πύλες. Οι τεχνικοί
+κίνδυνοι και οι ανεκτέλεστες πραγματικές δοκιμές παρακάτω παραμένουν ρητές
+εκκρεμότητες· δεν δίνεται υπηρεσιακή/παραγωγική πιστοποίηση.
+
+
 ## Επαληθευμένη αφετηρία
 
 Η modularization ολοκληρώθηκε στο source
@@ -42,7 +76,8 @@ cache transaction rollback, account handoff order και όριο 10:00/12/24ω�
 περιοδικά offline START/END στη θέση 14 ΕΞΟΔΟΣ, επαναφορά και ακριβή έλεγχο IDs,
 timestamps και END links, bursts 100 εισόδων και κύματα 15 ανεξάρτητων clients.
 Η αποσύνδεση γίνεται με ελεγχόμενη fault injection, όχι πραγματικό SMB power-off.
-Καταγράφει κάθε δευτερόλεπτο RSS, CPU, threads/handles και ουρές ανά 20ms περίπου.
+Καταγράφει RSS/CPU/threads/handles περίπου ανά δευτερόλεπτο εκτός driver actions
+(499 δείγματα), runtime metrics ανά 30s και ουρές ανά 20ms περίπου.
 Πύλες: GUI gap <1s, RSS αύξηση μετά warmup <32MiB, handles αύξηση <=16,
 CPU <25% ενός core κατά μέσο όρο, bounded queue sizes, ακριβής συμφωνία receipts.
 Αυτά είναι όρια της δοκιμής, όχι εγγύηση μηδενικής διαρροής ή υπηρεσιακό SLA.
@@ -56,8 +91,8 @@ CPU <25% ενός core κατά μέσο όρο, bounded queue sizes, ακριβ
 Evidence, raw samples, logs και source-tree equivalence:
 `validation/reliability-20261016/soak-600s/`. Soak commit 5231b30 και native
 candidate 1554ded έχουν ακριβώς ίδιο src tree και ίδιο soak tool blob.
-Linux 38905426334 και gate 38905426542 SUCCESS για 1554ded· Windows
-38905426410 εκκρεμεί μέχρι την πραγματική τελική κατάσταση/artifact.
+Linux 38905426334, gate 38905426542 και Windows 38905426410 SUCCESS για
+1554ded. Το τελικό hardened test artifact είναι διαθέσιμο όπως τεκμηριώνεται παραπάνω.
 
 ## Διαγνωστικά στην υπηρεσιακή δοκιμή
 
