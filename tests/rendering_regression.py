@@ -43,17 +43,18 @@ def application_check():
             def exercise():
                 try:
                     window = next(w for w in app.topLevelWidgets() if type(w).__name__ == "MainWindow")
+                    assert window.windowHandle().isExposed(), "Theme interaction requires an exposed window"
                     observer = PaintObserver(window)
                     buttons = [b for b in window.findChildren(QPushButton) if b.isVisible()]
                     assert len(buttons) >= 10
                     for button in buttons:
                         button.installEventFilter(observer)
-                    for _ in range(60):
+                    for iteration in range(60):
                         before = window.config.theme
                         observer.painted.clear()
                         window.theme_btn.click()
                         assert window.config.theme != before
-                        assert all(b in observer.painted for b in buttons), "A child missed the synchronous theme paint"
+                        assert all(b in observer.painted for b in buttons), f"A child missed the synchronous theme paint iteration={iteration} exposed={window.windowHandle().isExposed()}: " + repr([(b.text(), b.geometry().getRect(), b.visibleRegion().boundingRect().getRect(), window.updatesEnabled()) for b in buttons if b not in observer.painted])
                         assert application.AppConfig.load().theme == window.config.theme
                     assert not window.agms_input.text()
                     assert window.store is None
@@ -65,7 +66,24 @@ def application_check():
                     # requests to avoid losing an operator's active position.
                     app.exit(0)
 
-            QTimer.singleShot(100, exercise)
+            class FirstPaintGate(QObject):
+                started = False
+
+                def eventFilter(self, obj, event):
+                    if (event.type() == QEvent.Paint and isinstance(obj, QWidget)
+                            and obj.objectName() == "rootPanel" and not self.started):
+                        self.started = True
+                        QTimer.singleShot(0, exercise)
+                    return False
+
+            gate = FirstPaintGate(app)
+            app.installEventFilter(gate)
+
+            def no_paint_timeout():
+                if not gate.started:
+                    errors.append(AssertionError("Application never delivered its initial root paint"))
+                    app.exit(0)
+            QTimer.singleShot(5000, no_paint_timeout)
 
         QApplication.__init__ = initialize
         assert application.run(["theme-integration"]) == 0

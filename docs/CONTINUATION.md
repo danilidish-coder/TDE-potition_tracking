@@ -299,3 +299,12 @@ issue. All captured desktop/application frames still use unchanged criteria.
 
 UI safe-exit/lifecycle controller: four AST-identical methods, 41 scripts PASS
 (/tmp/tde-ui-lifecycle-20261016), compileall/diff PASS.
+
+Rendering prerequisite failure diagnosed, not bypassed: old test began theme
+interaction from a 100ms timer scheduled inside QApplication construction. Failure
+was reproduced at iteration=0, exposed=False, with ALL buttons missing paint.
+The test now waits for the real initial root Paint (then queued exercise), has a
+hard no-paint timeout and retains all 60 synchronous child-paint/persistence
+assertions. Full 41-script suite PASS (/tmp/tde-render-readiness-20261016).
+Initial failure logs: /tmp/tde-ui-shift-end-20261016; CI Linux 38865045885 and
+Windows 38865045894 failed this same prerequisite before native build/visual.
