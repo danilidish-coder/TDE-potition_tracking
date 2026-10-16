@@ -165,3 +165,8 @@ DOCX create/read round-trip; /tmp/tde-documents-20261016. Compileall/diff PASS.
 Statistics workbook/charts module: 39 local scripts PASS, including existing
 real workbook/archive regression; /tmp/tde-statistics-20261016. Compileall/diff
 PASS. No report function behavior was changed.
+
+Store I/O/locks/SQLite primitives: seven AST-identical methods extracted into
+`position_tracking_store_io.py`, preserving BusyError identity via legacy export.
+39 scripts PASS, including 72-way locks, marker acknowledgement and replay cases;
+/tmp/tde-store-io-20261016. Compileall/diff PASS. Native CI pending.
