@@ -35,7 +35,7 @@ class PositionStoreMixin:
         return result
 
 
-    def correct_active_start(self, agms: str, new_when: datetime, officer: PersonnelRecord, reason: str) -> dict:
+    def correct_active_start(self, agms: str, new_when: datetime, officer: PersonnelRecord, reason: str, expected_start_event_id: str = "") -> dict:
         """Audited logical correction; immutable raw START event remains intact."""
         reason = _clean(reason)
         if len(reason) < 5:
@@ -46,6 +46,8 @@ class PositionStoreMixin:
             active = self.get_active(agms)
             if not active:
                 raise ValueError("Η θέση έχει ήδη κλείσει ή δεν υπάρχει.")
+            if expected_start_event_id and _clean(active.get("event_id")) != expected_start_event_id:
+                raise BusyError("Η ενεργή θέση άλλαξε. Ελέγξτε ξανά πριν από διόρθωση ώρας.")
             old_when = datetime.fromisoformat(active["timestamp"])
             if new_when.date() != old_when.date():
                 raise ValueError("Για ασφάλεια, η διόρθωση περιορίζεται στην ίδια ημερομηνία.")

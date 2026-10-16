@@ -100,7 +100,7 @@ class WindowLifecycleMixin:
                     getattr(self, "_agms_future", None), getattr(self, "_shift_status_future", None),
                 )
             )
-            if (not command_id and not getattr(self, "_position_activity_attempted", True)
+            if (not command_id and getattr(self, "_position_activity_attempted", None) is False
                     and not getattr(self, "_handoff_initial_error", "") and background_settled
                     and self.offline.proves_no_position_obligations()):
                 # This instance never issued START/END. This is application
@@ -126,14 +126,14 @@ class WindowLifecycleMixin:
         def poll():
             if not future.done():
                 if time.monotonic() - started > 10:
-                    self.info.setText("ΑΝΑΜΟΝΗ ΚΕΝΤΡΙΚΟΥ ΓΙΑ ΛΗΞΗ — δεν επιβεβαιώθηκε έξοδος. Μην επαναλάβετε την εντολή.")
+                    self.info.setText("ΑΝΑΜΟΝΗ ΚΕΝΤΡΙΚΟΥ ΓΙΑ ΑΣΦΑΛΗ ΕΞΟΔΟ — δεν επιβεβαιώθηκε τερματισμός. Μην επαναλάβετε την εντολή.")
                 QTimer.singleShot(100, poll)
                 return
             try:
                 self._exit_mode = future.result()
             except Exception as exc:
                 self._exit_in_progress = False
-                self.info.setText("Η ΛΗΞΗ ΔΕΝ ΕΠΙΒΕΒΑΙΩΘΗΚΕ — η εφαρμογή παραμένει ανοικτή.")
+                self.info.setText("Η ΕΞΟΔΟΣ ΔΕΝ ΕΠΙΒΕΒΑΙΩΘΗΚΕ — η εφαρμογή παραμένει ανοικτή.")
                 self._agms_changed()
                 QMessageBox.critical(
                     self, "Η έξοδος δεν ολοκληρώθηκε",

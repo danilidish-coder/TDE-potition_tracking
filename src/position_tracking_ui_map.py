@@ -181,7 +181,13 @@ class LiveMapDialog(QDialog):
         if not officer:
             QMessageBox.warning(self, 'ΑΞΥΠ', 'Εισαγάγετε έγκυρο Α.Γ.Μ.Σ. ΑΞΥΠ.')
             return
-        active = self._selected_active()
+        agms = _clean(self.active_person.currentData())
+        if not agms:
+            return
+        self._map_io(lambda: self.store.get_active(agms),
+                     lambda active: self._confirm_start_correction(officer, active))
+
+    def _confirm_start_correction(self, officer, active):
         if not active:
             QMessageBox.warning(self, 'Διόρθωση', 'Επιλέξτε ενεργό αστυνομικό.')
             return
@@ -199,12 +205,16 @@ class LiveMapDialog(QDialog):
             return
         if QMessageBox.question(self, 'Επιβεβαίωση', f"ΑΓΜΣ: {active.get('agms')}\nΠροηγούμενη: {started:%d/%m/%Y %H:%M}\nΝέα: {revised:%d/%m/%Y %H:%M}\nΑιτία: {_clean(reason)}\n\nΝα αποθηκευτεί η διόρθωση;", QMessageBox.Yes | QMessageBox.No, QMessageBox.No) != QMessageBox.Yes:
             return
-        try:
-            self.store.correct_active_start(_clean(active.get('agms')), revised, officer, reason)
-            self.refresh()
+        start_id = _clean(active.get('event_id'))
+        if not start_id:
+            QMessageBox.critical(self, 'Μη ασφαλής εγγραφή', 'Λείπει το αρχικό αναγνωριστικό START. Δεν αποθηκεύτηκε διόρθωση.')
+            return
+        def work():
+            return self.store.correct_active_start(_clean(active.get('agms')), revised, officer, reason,
+                                                   expected_start_event_id=start_id)
+        def confirmed(result):
             QMessageBox.information(self, 'Διόρθωση', 'Η νέα ώρα καταγράφηκε με ιστορικό αλλαγής.')
-        except Exception as exc:
-            QMessageBox.critical(self, 'Διόρθωση', str(exc))
+        self._map_io(work, confirmed, is_write=True)
 
     def _end_selected_active(self):
         officer = self.officer_getter() if callable(self.officer_getter) else None
@@ -279,7 +289,7 @@ class LiveMapDialog(QDialog):
 
     def _stop_map(self):
         if self._map_operation_future is not None and self._map_operation_write:
-            self.updated.setText('ΕΚΚΡΕΜΕΙ ΛΗΞΗ — περιμένετε την επιβεβαίωση πριν κλείσετε τον χάρτη')
+            self.updated.setText('ΕΚΚΡΕΜΕΙ ΚΑΤΑΧΩΡΙΣΗ — περιμένετε την επιβεβαίωση πριν κλείσετε τον χάρτη')
             return False
         if not self._map_closing:
             self._map_closing = True

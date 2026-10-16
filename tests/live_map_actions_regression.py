@@ -2,11 +2,11 @@
 import os
 os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
 from pathlib import Path
-import sys,tempfile,threading,time,unittest
+import sys,tempfile,threading,time,unittest,json
 from unittest.mock import patch
 from PySide6.QtCore import QTimer,Qt
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication,QMessageBox
+from PySide6.QtWidgets import QApplication,QMessageBox,QInputDialog
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'src'))
 from position_tracking_ui_map import LiveMapDialog
 from position_tracking_store import SharedEventStore
@@ -128,6 +128,61 @@ class LiveMapActions(unittest.TestCase):
                     self.assertFalse(end.called)
                 self.assertEqual(store.get_active('1')['event_id'],started['event_id'])
                 self.assertEqual(len(store.iter_all_events()),1)
+            finally:self.cleanup(app,dialog)
+
+    def test_correction_read_does_not_block_qt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            app,store,person,started,dialog=self.fixture(directory)
+            release=threading.Event();ticks=[];original=store.get_active
+            def delayed(agms):
+                if not release.wait(4):raise RuntimeError('fixture deadline')
+                return original(agms)
+            heartbeat=QTimer(dialog);heartbeat.timeout.connect(lambda:ticks.append(time.monotonic()));heartbeat.start(20)
+            timer=threading.Timer(.8,release.set);timer.start()
+            try:
+                with patch.object(store,'get_active',side_effect=delayed),patch.object(QInputDialog,'getText',return_value=('',False)) as prompt:
+                    begin=time.monotonic();QTest.mouseClick(dialog.edit_start_btn,Qt.LeftButton)
+                    self.assertLess(time.monotonic()-begin,.25,'Correction read blocked Qt on shared I/O')
+                    self.wait(lambda:prompt.called);self.assertGreater(len(ticks),10)
+                self.assertFalse(list(store.corrections.glob('*.json')))
+            finally:release.set();timer.cancel();heartbeat.stop();self.cleanup(app,dialog)
+
+    def test_correction_cannot_modify_replacement_start_after_confirmation(self):
+        from datetime import datetime
+        with tempfile.TemporaryDirectory() as directory:
+            app,store,person,started,dialog=self.fixture(directory);replacement=[]
+            revised=datetime.fromisoformat(started['timestamp']).replace(hour=0,minute=0,second=0)
+            def confirm(*args):
+                store.end(person,expected_start_event_id=started['event_id'])
+                replacement.append(store.start(person,'14','ΕΞΟΔΟΣ',client_id='replacement-owner'))
+                return QMessageBox.Yes
+            try:
+                with patch.object(QInputDialog,'getText',side_effect=[(revised.strftime('%d/%m/%Y %H:%M'),True),('SYNTHETIC REASON',True)]),patch.object(QMessageBox,'question',side_effect=confirm),patch.object(QMessageBox,'critical') as errors,patch.object(QMessageBox,'information') as info:
+                    QTest.mouseClick(dialog.edit_start_btn,Qt.LeftButton)
+                    self.wait(lambda:errors.called or info.called)
+                    self.assertTrue(errors.called);self.assertFalse(info.called)
+                    active=store.get_active('1')
+                    self.assertEqual(active['event_id'],replacement[0]['event_id'])
+                    self.assertEqual(active['timestamp'],replacement[0]['timestamp'])
+                    self.assertFalse(list(store.corrections.glob('*.json')),'Stale correction changed a replacement START')
+                    self.assertEqual(len(store.iter_all_events()),3)
+            finally:self.cleanup(app,dialog)
+
+    def test_confirmed_correction_preserves_raw_start_and_identity(self):
+        from datetime import datetime
+        with tempfile.TemporaryDirectory() as directory:
+            app,store,person,started,dialog=self.fixture(directory)
+            revised=datetime.fromisoformat(started['timestamp']).replace(hour=0,minute=0,second=0)
+            try:
+                with patch.object(QInputDialog,'getText',side_effect=[(revised.strftime('%d/%m/%Y %H:%M'),True),('SYNTHETIC REASON',True)]),patch.object(QMessageBox,'question',return_value=QMessageBox.Yes),patch.object(QMessageBox,'critical') as errors,patch.object(QMessageBox,'information') as info:
+                    QTest.mouseClick(dialog.edit_start_btn,Qt.LeftButton);self.wait(lambda:info.called or errors.called)
+                    self.assertFalse(errors.called);self.assertTrue(info.called)
+                    active=store.get_active('1')
+                    self.assertEqual(active['event_id'],started['event_id'])
+                    self.assertEqual(active['timestamp'],revised.isoformat(timespec='seconds'))
+                    raw=[json.loads(p.read_text(encoding='utf-8')) for p in store.events.rglob('*.json')]
+                    self.assertEqual(len(raw),1);self.assertEqual(raw[0]['timestamp'],started['timestamp'])
+                    self.assertEqual(len(list(store.corrections.glob('*.json'))),1)
             finally:self.cleanup(app,dialog)
 
 if __name__=='__main__':unittest.main()
