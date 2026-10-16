@@ -38,7 +38,9 @@ def all_ends(store,agms):
     return [x for x in store.iter_all_events() if x.get("kind")=="END" and x.get("agms")==agms]
 
 main=(ROOT/"src"/"position_tracking.py").read_text(encoding="utf-8")
-communication=main.split("def _communication_io(",1)[1].split("def _communication_tick(",1)[0]
+import inspect
+from position_tracking_ui_communication import CommunicationMixin
+communication=inspect.getsource(CommunicationMixin._communication_io)
 worker=main.split("def _offline_tick(",1)[1].split("def _position_action(",1)[0]
 assert "close_previous_windows_user_positions(" not in communication, "Independent heartbeat must never overtake original offline END"
 assert "reconcile_handoff_before_replay(" in worker, "Worker must resolve central handoff BEFORE replaying offline"
