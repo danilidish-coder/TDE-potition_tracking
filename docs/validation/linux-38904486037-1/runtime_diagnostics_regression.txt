@@ -1,0 +1,23 @@
+...E
+======================================================================
+ERROR: test_worker_age_is_not_reset_by_gui_heartbeat_and_rotation_is_bounded (__main__.RuntimeDiagnosticsRegression.test_worker_age_is_not_reset_by_gui_heartbeat_and_rotation_is_bounded)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/work/TDE-potition_tracking/TDE-potition_tracking/tests/runtime_diagnostics_regression.py", line 57, in test_worker_age_is_not_reset_by_gui_heartbeat_and_rotation_is_bounded
+    observed |= any('worker_stall' in p.read_text() for p in Path(directory).glob('*'))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/TDE-potition_tracking/TDE-potition_tracking/tests/runtime_diagnostics_regression.py", line 57, in <genexpr>
+    observed |= any('worker_stall' in p.read_text() for p in Path(directory).glob('*'))
+                                      ^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmph9t1njpo/runtime-2905.jsonl.1'
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.634s
+
+FAILED (errors=1)
