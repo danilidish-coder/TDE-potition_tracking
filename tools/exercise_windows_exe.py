@@ -1,6 +1,7 @@
 """External keyboard/mouse acceptance of the frozen EXE using disposable data."""
 import argparse
 import ctypes
+from contextlib import closing
 from ctypes import wintypes
 import hashlib
 import json
@@ -63,7 +64,7 @@ def wait(condition, process, seconds=20):
 
 def operations(path):
     if not path.exists():return []
-    with sqlite3.connect(path.as_uri()+'?mode=ro',uri=True) as db:
+    with closing(sqlite3.connect(path.as_uri()+'?mode=ro',uri=True)) as db:
         db.row_factory=sqlite3.Row
         return [dict(row) for row in db.execute('SELECT id,kind,position,direction,created_at,start_id,status FROM operations ORDER BY rowid')]
 
@@ -114,7 +115,9 @@ def exercise(exe, out, report):
                 click(hwnd,350,230);user32.keybd_event(17,0,0,0);key(65);user32.keybd_event(17,0,2,0)
                 for digit in '910001':key(ord(digit))
                 return p,hwnd
-            except BaseException:
+            except BaseException as exc:
+                report['launch_error']={'type':type(exc).__name__,'message':str(exc)}
+                ImageGrab.grab(all_screens=True).save(out/'failure-launch.png')
                 stop_process_tree(p);raise
         p=None
         try:
@@ -144,12 +147,15 @@ def exercise(exe, out, report):
             assert rows[2]['position']=='1' and rows[2]['direction']=='ΕΙΣΟΔΟΣ'
             assert final[rows[3]['id']]['start_event_id']==rows[2]['id']
             assert not list((central/'TDE_DATA'/'active').glob('*.json'))
-            with sqlite3.connect((central/'TDE_DATA'/'shift_reports.sqlite3').as_uri()+'?mode=ro',uri=True) as db:
+            with closing(sqlite3.connect((central/'TDE_DATA'/'shift_reports.sqlite3').as_uri()+'?mode=ro',uri=True)) as db:
                 session_count=db.execute('SELECT COUNT(*) FROM personnel_sessions').fetchone()[0]
             assert session_count==2
             report.update(status='PASS',operations=4,original_ids_preserved=True,original_timestamps_preserved=True,
                           completed_sessions=2,final_operations=rows,events=list(final.values()))
-        except BaseException:
+        except BaseException as exc:
+            report['workflow_error']={'type':type(exc).__name__,'message':str(exc)}
+            report['observed_operations']=operations(journal)
+            report['observed_events']=list(events(central).values())
             if p is not None:
                 try:ImageGrab.grab(all_screens=True).save(out/'failure-desktop.png')
                 except Exception:pass

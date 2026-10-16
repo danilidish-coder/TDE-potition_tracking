@@ -133,3 +133,22 @@ Do not rerun passed checks for identical code without a new change/failure.
 If a source correction is necessary, run its focused repro plus full suite:
 `XDG_CACHE_HOME=/tmp/tde-cache .venv/bin/python tools/run_regressions.py --out /tmp/tde-next`;
 then compileall/diff check and new native CI, retaining failures/provenance.
+
+## Latest native failure and corrective fixture checkpoint
+
+Windows 38868081099/d128e6d completed FAIL after 43 regressions/build/smoke PASS.
+External EXE correctly recorded offline START/END on EXIT 14 with original END
+link, then failed during restart/cleanup. Its driver left read-only sqlite3
+connections open (`with Connection` does not close it), causing Windows WinError32
+and potentially masking the original workflow exception. No final visual or
+accepted EXE package was produced for this run. Evidence retained at
+validation/windows-visual-38868081099-1/functional-report.json and screenshots.
+
+Corrective change is TEST DRIVER ONLY: explicitly close both readers, preserve
+original workflow/launch exception and screenshot before temporary cleanup.
+New portable fixture contract checks actual close and unchanged row identity.
+Full **44 scripts PASS** (/tmp/tde-exe-reader-close-20261016), compileall/diff PASS.
+Application src/ tree remains da3f565224a4b973c2b702c462402447fc5f1f1b.
+First action is now inspect the corrective run, not repeat modules. Diagnose any
+remaining ORIGINAL error rather than treating a cleanup failure as application
+corruption or claiming the frozen workflow passed.
