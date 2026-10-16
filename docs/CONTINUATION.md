@@ -210,3 +210,7 @@ still asserts one return statement, identical standalone helper identity and all
 real protected-ID/replay cases. Full rerun 39 scripts PASS
 (/tmp/tde-positions-verified-20261016); initial failure retained at
 /tmp/tde-positions-20261016. Compileall/diff PASS. No event logic changed.
+
+Shift lifecycle/membership boundary: eleven AST-identical methods, including
+pending/approved/excluded reversal and guarded END handling. 39 scripts PASS
+(/tmp/tde-shifts-20261016), compileall/diff PASS.
