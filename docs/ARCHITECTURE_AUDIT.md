@@ -131,3 +131,13 @@ Three contracts test independent import, normalization/fallback and actual Qt ro
 background pixels through light/dark/light; existing application tests exercise 60
 whole-window changes. `position_tracking_rendering.py` separately owns coherent paint
 transactions, so style data does not depend on presentation or application services.
+
+## Settings boundary extracted, 2026-10-16
+
+`position_tracking_settings.py` owns config dataclass/persistence, migration and
+runtime path policy. Direct callers can inject paths; entry compatibility wrappers
+preserve overridable `_local_root`/`_app_dir` and return the legacy dataclass type.
+No entry, Qt or store import. Six contracts cover migration without shared-file
+mutation, existing-local precedence, failed replace preserving committed settings,
+corrupt/missing input, frozen EXE paths and isolated imports. No persistence format
+or fallback policy changed.

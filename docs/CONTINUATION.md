@@ -145,3 +145,8 @@ failed-startup PNGs, with no acceptance change. Full local 36-script suite PASS
 (/tmp/tde-diagnostic-20261016), compileall and diff check PASS. Push triggers the
 three existing feature workflows, independently validating the saved theme source.
 Await exact run IDs/results; no Windows PASS is claimed in advance.
+
+Independent settings unit: `position_tracking_settings.py` plus compatibility
+facade, six new contracts; 37 local scripts PASS, compileall/diff PASS. Exact logs
+/tmp/tde-settings-20261016. Kept local while 0f6fee5 Windows evidence is pending;
+Linux 38861912055 and module gate 38861912054 already PASS for 0f6fee5.
