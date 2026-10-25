@@ -56,13 +56,16 @@ class OfflineFreezeScenarios(unittest.TestCase):
         result = self.j.sync(self.store, SimpleNamespace)
         self.assertEqual(len(result["conflicts"]), 1)
         self.assertEqual(result["pending"], 1)
-        # Even a DIFFERENT officer and DIFFERENT booth now cannot enqueue.
+        # The affected officer/booth is guarded, but other officers can work.
         with self.assertRaises(OfflineConflict):
-            self.j.enqueue("START", officer("222"), "6", "ΕΞΟΔΟΣ")
-        # Repeating sync cannot repair or retry a conflict.
-        before = self.store.counter
-        self.j.sync(self.store, SimpleNamespace)
-        self.assertEqual(self.store.counter, before)
+            self.j.enqueue("START", officer("111"), "6", "ΕΞΟΔΟΣ")
+        with self.assertRaises(OfflineConflict):
+            self.j.enqueue("START", officer("222"), "5", "ΕΞΟΔΟΣ")
+        other = self.j.enqueue("START", officer("222"), "6", "ΕΞΟΔΟΣ")
+        result = self.j.sync(self.store, SimpleNamespace)
+        self.assertIn(other["operation_id"], result["applied"])
+        self.assertIn("222", self.store.active)
+        self.assertEqual(len(result["conflicts"]), 1)
 
     def test_rejection_can_expose_next_conflict_and_refreeze(self):
         for agms, position in (("111", "5"), ("222", "6")):
@@ -73,7 +76,7 @@ class OfflineFreezeScenarios(unittest.TestCase):
         self.assertEqual(len(self.j.sync(self.store, SimpleNamespace)["conflicts"]), 1)
         first = self.j.conflicts()[0]["id"]
         self.j.resolve_conflict(first, "999", "Επιβεβαιώθηκε στο κέντρο")
-        # A new conflict arises from the NEXT pending record, even after prior rejection.
+        # An unrelated pending conflict can be found and retained independently.
         self.assertEqual(len(self.j.sync(self.store, SimpleNamespace)["conflicts"]), 1)
         self.assertNotEqual(self.j.conflicts()[0]["id"], first)
 
