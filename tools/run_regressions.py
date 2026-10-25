@@ -29,7 +29,13 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     environment = regression_environment()
     results = []
-    for test in sorted((root / "tests").glob("*.py")):
+    # Fast feedback for the exact Windows regressions that failed previously.
+    # Full coverage still runs afterward, including all other test scripts.
+    priority = ("test_offline_freeze_scenarios.py", "offline_durability_stage4_regression.py",
+                "exit_responsiveness_regression.py")
+    tests = sorted((root / "tests").glob("*.py"),
+                   key=lambda test: (priority.index(test.name) if test.name in priority else len(priority), test.name))
+    for test in tests:
         if test.name == "visual_flicker_windows.py":
             # This is a separate, mandatory Windows EXE/desktop CI step.
             continue
