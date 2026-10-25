@@ -1,5 +1,8 @@
 """Confirmed exit must remain responsive, never acknowledge an unconfirmed END."""
 import os
+import faulthandler
+faulthandler.enable()
+faulthandler.dump_traceback_later(30, repeat=True)
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
