@@ -185,8 +185,11 @@ class OfflineJournal:
         with self._db() as db:
             db.execute("BEGIN IMMEDIATE")
             pending = self._rows_db(db)
-            if any(x["status"] == "CONFLICT" for x in pending):
-                raise OfflineConflict("Υπάρχει ΑΣΥΜΦΩΝΙΑ συγχρονισμού. Απαιτείται έλεγχος ΑΞΥΠ πριν από νέες ενέργειες.")
+            conflicts = [x for x in pending if x["status"] == "CONFLICT"]
+            if any(x["agms"] == person.agms for x in conflicts) or (
+                kind == "START" and any(x["kind"] == "START" and x["position"] == position for x in conflicts)
+            ):
+                raise OfflineConflict("Υπάρχει ΑΣΥΜΦΩΝΙΑ για τον αστυνομικό ή τη θέση. Απαιτείται έλεγχος ΑΞΥΠ.")
             if kind == "START":
                 if self._local_active_db(db, person.agms, pending):
                     raise ValueError("Ο αστυνομικός έχει ήδη ανοικτή θέση.")
@@ -223,9 +226,12 @@ class OfflineJournal:
         operations remain durable and retryable across process termination.
         """
         applied = []
-        if self.conflicts():
-            return {"applied": [], "pending": self.pending_count(), "conflicts": self.conflicts()}
+        blocked = self.conflicts()
+        blocked_agms = {x["agms"] for x in blocked}
+        blocked_positions = {x["position"] for x in blocked if x["kind"] == "START"}
         for op in self._rows(("PENDING",)):
+            if op["agms"] in blocked_agms or (op["kind"] == "START" and op["position"] in blocked_positions):
+                continue
             p = json.loads(op["payload"])
             person = person_type(agms=p["agms"], rank=p["rank"], surname=p["surname"], given_name=p["given_name"])
             try:
@@ -241,12 +247,19 @@ class OfflineJournal:
                                       origin_computer=p["computer"], origin_user=p["windows_user"])
             except ValueError as exc:
                 self._mark(op["id"], "CONFLICT", str(exc))
-                break
+                blocked_agms.add(op["agms"])
+                if op["kind"] == "START":
+                    blocked_positions.add(op["position"])
+                continue
             except Exception as exc:
                 # Network outage, corrupt file or lock contention: never
                 # discard an operation or claim that it was applied.
                 if "άλλαξε" in str(exc) or "changed" in str(exc).lower():
                     self._mark(op["id"], "CONFLICT", str(exc))
+                    blocked_agms.add(op["agms"])
+                    if op["kind"] == "START":
+                        blocked_positions.add(op["position"])
+                    continue
                 break
             if self._record_applied(op, event):
                 applied.append(op["id"])
