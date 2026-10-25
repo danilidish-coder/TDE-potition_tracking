@@ -173,8 +173,15 @@ class OfflineDurabilityStage4(unittest.TestCase):
             restarted = OfflineJournal(folder)
             self.assertEqual(restarted.pending_count(), 1)
             self.assertEqual(restarted.conflicts()[0]["id"], op["operation_id"])
+            # An unrelated officer and booth must remain usable, while the
+            # original conflict survives for supervisor review.
+            other = restarted.enqueue("START", Person("902"), "ΓΚΙΣΕ 3", "ΕΞΟΔΟΣ")
+            self.assertTrue(other["pending_sync"])
+            self.assertEqual(restarted.conflicts()[0]["id"], op["operation_id"])
             with self.assertRaises(Exception):
-                restarted.enqueue("START", Person("902"), "ΓΚΙΣΕ 3", "ΕΞΟΔΟΣ")
+                restarted.enqueue("START", Person("901"), "ΓΚΙΣΕ 3", "ΕΞΟΔΟΣ")
+            with self.assertRaises(Exception):
+                restarted.enqueue("START", Person("903"), "ΓΚΙΣΕ 2", "ΕΞΟΔΟΣ")
 
 
 if __name__ == "__main__":
