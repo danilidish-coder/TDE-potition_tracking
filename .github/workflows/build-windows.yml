@@ -117,6 +117,15 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: Upload isolated validated Windows EXE
+        if: ${{ success() && github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/isolated-offline-conflicts-20261025' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: POSITION_TRACKING_VALIDATED_EXE-${{ github.event.pull_request.head.sha }}
+          path: dist/TDE_Katagrafi_Theseon.exe
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Visual flicker test
         id: visual
         shell: powershell
