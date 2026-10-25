@@ -73,12 +73,15 @@ class OfflineFreezeScenarios(unittest.TestCase):
                              event_id="central-"+agms,
                              when=__import__("datetime").datetime.now())
             self.j.enqueue("START", officer(agms), position, "ΕΙΣΟΔΟΣ")
-        self.assertEqual(len(self.j.sync(self.store, SimpleNamespace)["conflicts"]), 1)
-        first = self.j.conflicts()[0]["id"]
+        # Both conflicts are reported immediately; neither blocks the other.
+        initial = self.j.sync(self.store, SimpleNamespace)
+        self.assertEqual(len(initial["conflicts"]), 2)
+        first = initial["conflicts"][0]["id"]
+        second = initial["conflicts"][1]["id"]
         self.j.resolve_conflict(first, "999", "Επιβεβαιώθηκε στο κέντρο")
-        # An unrelated pending conflict can be found and retained independently.
-        self.assertEqual(len(self.j.sync(self.store, SimpleNamespace)["conflicts"]), 1)
-        self.assertNotEqual(self.j.conflicts()[0]["id"], first)
+        remaining = self.j.sync(self.store, SimpleNamespace)
+        self.assertEqual(len(remaining["conflicts"]), 1)
+        self.assertEqual(remaining["conflicts"][0]["id"], second)
 
     def test_network_error_stays_pending_not_false_success(self):
         self.j.enqueue("START", officer("333"), "5", "ΕΙΣΟΔΟΣ")
