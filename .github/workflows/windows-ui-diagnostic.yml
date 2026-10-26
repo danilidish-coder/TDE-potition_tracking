@@ -1,0 +1,49 @@
+name: Windows Qt recovery diagnostic
+on:
+  push:
+    branches: [feature/v125-modularization-20261013]
+    paths:
+      - tests/ui_workflow_regression.py
+      - tools/repeat_ui_workflow.py
+      - .github/workflows/windows-ui-diagnostic.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  recovery-repro:
+    runs-on: windows-2022
+    timeout-minutes: 12
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install the same test dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Eight fail-fast real Qt recovery trials
+        run: python tools/repeat_ui_workflow.py --runs 8 --out artifact/ui-recovery
+      - name: Preserve exact diagnostic outcomes on development branch
+        if: ${{ always() && github.ref == 'refs/heads/feature/v125-modularization-20261013' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = "docs/validation/ui-recovery-${{ github.run_id }}-${{ github.run_attempt }}"
+          New-Item -ItemType Directory -Force $out | Out-Null
+          if (Test-Path artifact/ui-recovery) { Copy-Item artifact/ui-recovery/* $out }
+          @{ tested_commit = "$env:GITHUB_SHA"; run_id = "${{ github.run_id }}"; workflow = 'bounded Windows-only recovery diagnostic; not an EXE acceptance substitute' } | ConvertTo-Json | Set-Content "$out/provenance.json" -Encoding utf8
+          git fetch origin "$env:GITHUB_REF_NAME"
+          if ($LASTEXITCODE -ne 0) { throw 'Diagnostic fetch failed' }
+          git diff --quiet "$env:GITHUB_SHA" FETCH_HEAD -- src tests tools requirements.txt .github/workflows
+          if ($LASTEXITCODE -ne 0) { throw 'Refusing to append diagnostics for changed code/configuration' }
+          git checkout -B "$env:GITHUB_REF_NAME" FETCH_HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot append diagnostic outcomes safely' }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- $out
+          git commit -m "Record Windows Qt recovery diagnostics for $env:GITHUB_SHA [skip ci]"
+          if ($LASTEXITCODE -ne 0) { throw 'Diagnostic commit failed' }
+          git push origin HEAD:refs/heads/feature/v125-modularization-20261013
+          if ($LASTEXITCODE -ne 0) { throw 'Diagnostic push failed' }

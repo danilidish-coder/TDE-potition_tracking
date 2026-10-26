@@ -1,0 +1,202 @@
+[
+  {
+    "sha": "d128e6db8cde73b174b8fb20020228058c9daf7a",
+    "subject": "Require external frozen EXE offline restart and online GUI acceptance before packaging"
+  },
+  {
+    "sha": "dd170354aa9b705f09456c875037442bb051a24b",
+    "subject": "Exercise real Qt offline restart online position actions and protected dialogs"
+  },
+  {
+    "sha": "8aa0beb628caadd3e793a62aa7bc1459c4a6feed",
+    "subject": "Verify complete modular dependency boundaries and unchanged store UI method semantics"
+  },
+  {
+    "sha": "9ac9eb9d921cb5c0dbf17f015054ff82ce2f4431",
+    "subject": "Reduce application entry to compatible exports and explicit modular UI composition"
+  },
+  {
+    "sha": "b8b9a18e806fb4aaffb5d9ce83a2918c56ab3c6f",
+    "subject": "Separate officer administration audit backup and view navigation"
+  },
+  {
+    "sha": "8febfdedd1927c596cea7294192364b6acd32889",
+    "subject": "Separate authorized personnel history dialog and immutable application metadata"
+  },
+  {
+    "sha": "35deb1a3a2eb1eb72fb82f295934180fb6cba6e4",
+    "subject": "Separate current report actions and archive search dialog"
+  },
+  {
+    "sha": "906710271dc83b9c669a10c9da273e252ec7543b",
+    "subject": "Separate shift preview membership and asynchronous status controller"
+  },
+  {
+    "sha": "fae2c38e405b10ee86fdf389126ba4a2caa775c2",
+    "subject": "Isolate guarded shift completion dialog after full prerequisite verification"
+  },
+  {
+    "sha": "a6ca674129e7b8a0cee29fe3cb52cf6d5c01772c",
+    "subject": "Record isolated Windows visual evidence for b943a8693a3eed2329dc8b1fc4601afe4e0990a3 [skip ci]"
+  },
+  {
+    "sha": "0bb32c5b19f6e0d6278dc2d8a4605fcfc14f605e",
+    "subject": "Record Linux regression outcomes for b943a8693a3eed2329dc8b1fc4601afe4e0990a3 [skip ci]"
+  },
+  {
+    "sha": "b943a8693a3eed2329dc8b1fc4601afe4e0990a3",
+    "subject": "Keep backend stage contracts independent of Qt while checking linked UI ordering"
+  },
+  {
+    "sha": "e51305a5ffd467f1b3c5daeb8cb14ef612bb6532",
+    "subject": "Start theme contract on actual first Qt paint instead of constructor timer race"
+  },
+  {
+    "sha": "16db2858d67a0fa949e160dcb821a327f71d6b99",
+    "subject": "Separate safe operator exit and client lifecycle cleanup"
+  },
+  {
+    "sha": "9cdef80557ad3762b3aba5f852042db0d5b846e5",
+    "subject": "Record isolated Windows visual evidence for 7444dc905cb181e807bf0368f690eb0d3efdbe8a [skip ci]"
+  },
+  {
+    "sha": "0356a3fbdc148fbcb0c4926476570075e0113dd9",
+    "subject": "Record Linux regression outcomes for 7444dc905cb181e807bf0368f690eb0d3efdbe8a [skip ci]"
+  },
+  {
+    "sha": "7444dc905cb181e807bf0368f690eb0d3efdbe8a",
+    "subject": "Gate initial native presentation on the completed real Qt backing-store paint"
+  },
+  {
+    "sha": "31892d44f05b702c8fbbb14fc336d5c8221071d0",
+    "subject": "Serve background fixture Windows messages throughout EXE startup captures"
+  },
+  {
+    "sha": "d0fc5408a2728048a768a2f1c64142a61648f9c8",
+    "subject": "Separate durable UI position actions and offline handoff reconciliation"
+  },
+  {
+    "sha": "3e5e334df699df7d32bbaab386a852085cdafd78",
+    "subject": "Isolate personnel selection and asynchronous active-state controller"
+  },
+  {
+    "sha": "6827b93f14bf99c3a776f58b2e94367b5baef7eb",
+    "subject": "Separate message target and remote close dialogs"
+  },
+  {
+    "sha": "fa71594d9f895e687c417a2d90633123447e635a",
+    "subject": "Isolate asynchronous heartbeat and message alarm controller"
+  },
+  {
+    "sha": "be13404b28603316915a61c7bf2e95d2ae90501f",
+    "subject": "Inject runtime path providers and isolate UI configuration controller"
+  },
+  {
+    "sha": "5b42fb0dd2850bb100afd017d1d7a09cb6ecb77d",
+    "subject": "Separate main view layout and coherent theme controller"
+  },
+  {
+    "sha": "820b64e5cca925f6f3d0202a984ccff1c9753a3f",
+    "subject": "Isolate live booth map and preserve action guards across equivalent formatting"
+  },
+  {
+    "sha": "f3cd60a1cd9ce1105f6ddc1538e5c431effbce53",
+    "subject": "Record isolated Windows visual evidence for da9b4d181cd59234d4cf00a0a17630d6973838f9 [skip ci]"
+  },
+  {
+    "sha": "1d7f11aa516788935f5293429807692edc76decd",
+    "subject": "Record Linux regression outcomes for da9b4d181cd59234d4cf00a0a17630d6973838f9 [skip ci]"
+  },
+  {
+    "sha": "da9b4d181cd59234d4cf00a0a17630d6973838f9",
+    "subject": "Package and upload development EXE only after complete strict acceptance"
+  },
+  {
+    "sha": "55d69b75d78dd6f15c5ccad16eea6276b06b8370",
+    "subject": "Compare canonical Windows frozen paths across 8.3 temp directory aliases"
+  },
+  {
+    "sha": "bdcf4f37a8ed650a249f9e89115405937789eb40",
+    "subject": "Separate immutable artwork and Qt icon watermark renderers"
+  },
+  {
+    "sha": "69e423bfb4ff9e8ac5a4671b1af0ba364b3d65b0",
+    "subject": "Move the small shared-store composition and maintenance service out of entry point"
+  },
+  {
+    "sha": "f1275aaa38a520e17763aa5b76328c700fe2c306",
+    "subject": "Separate read-only event projections and shift time-window queries"
+  },
+  {
+    "sha": "59f19b8f03223b29083c2e429aef34eab2b31c31",
+    "subject": "Isolate officer shift lifecycle and member approval transitions"
+  },
+  {
+    "sha": "a2707c906014050b114503b872b4d005f0db15c2",
+    "subject": "Isolate position START END receipts and corrections with inherited handoff contract"
+  },
+  {
+    "sha": "f6995c040c765368322cccb814e6cf40a6ce8113",
+    "subject": "Record isolated Windows visual evidence for f31fe5cd6f77bca7994acf3f86ed4ba32b1ff425 [skip ci]"
+  },
+  {
+    "sha": "28537a62e43611cb20a478df97b6f658fc7c93cf",
+    "subject": "Record Linux regression outcomes for f31fe5cd6f77bca7994acf3f86ed4ba32b1ff425 [skip ci]"
+  },
+  {
+    "sha": "f31fe5cd6f77bca7994acf3f86ed4ba32b1ff425",
+    "subject": "Avoid separate native background erase before the first complete Qt paint"
+  },
+  {
+    "sha": "ecdeef01c5174af49ae4ad2813c09798caa7f0ed",
+    "subject": "Stabilize only the owned CI background without excluding application frames"
+  },
+  {
+    "sha": "3dd406786c588f9858e0d34277d4a4754964800c",
+    "subject": "Isolate shift schema and snapshot index persistence"
+  },
+  {
+    "sha": "5ffa016efba267df9db6cda4b3bb4501b12d8562",
+    "subject": "Isolate durable session indexing and personnel history search"
+  },
+  {
+    "sha": "2f25fc30c05f2714cf7fc4164a74d0e17ff4d5b8",
+    "subject": "Separate shared client communication and acknowledgement storage"
+  },
+  {
+    "sha": "6927c44f92be54fc12c62243ab6240fa9c767a35",
+    "subject": "Isolate shared store locking and atomic I/O primitives without behavior changes"
+  },
+  {
+    "sha": "b0c53953225c9173aff0a2e5fa9e51af45e3df47",
+    "subject": "Separate personnel Excel statistics and charts service"
+  },
+  {
+    "sha": "5c4bb45bc0f34a1c2353f2c852fd25ecfc108202",
+    "subject": "Isolate Word report generation and archive naming"
+  },
+  {
+    "sha": "2904fc46d692993c2a43a04d63ce0c12a565a6e7",
+    "subject": "Separate PDF reports and personnel history summaries from the application"
+  },
+  {
+    "sha": "2aae814d1936decda44275a5e45eb979b37e00ab",
+    "subject": "Extract pure shift text and HTML formatting with compatible entry exports"
+  },
+  {
+    "sha": "910b34072257f6833fde0d5023aeea52bbac89e1",
+    "subject": "Isolate settings persistence and runtime paths with legacy provider compatibility"
+  },
+  {
+    "sha": "09c8cf021b9ca5ff2834451513c59b0245b92ff5",
+    "subject": "Record isolated Windows visual evidence for 0f6fee53ed5194d98318fd9f1037052012056184 [skip ci]"
+  },
+  {
+    "sha": "1763f29678a61d6a265bdcae3a8a8b5960e4d36b",
+    "subject": "Record Linux regression outcomes for 0f6fee53ed5194d98318fd9f1037052012056184 [skip ci]"
+  },
+  {
+    "sha": "0f6fee53ed5194d98318fd9f1037052012056184",
+    "subject": "Retain exact startup background differences and lossless failure references"
+  }
+]

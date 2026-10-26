@@ -1,0 +1,14 @@
+Fontconfig error: No writable cache directories
+F.
+======================================================================
+FAIL: test_remote_read_cannot_resurrect_start_after_another_process_replayed_end (__main__.DelayedSelectionObservation.test_remote_read_cannot_resurrect_start_after_another_process_replayed_end)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/selection_backpressure_regression.py", line 95, in test_remote_read_cannot_resurrect_start_after_another_process_replayed_end
+    self.assertIsNone(journal.local_active('1'), 'Delayed SMB read resurrected an already ended START')
+AssertionError: {'version': 2, 'event_id': '290ca51a6fc846e4a9760ed3b91d6636', 'kind': 'START', 'timestamp': '2026-10-16T12:47:47', 'agms': '1', 'rank': 'TEST', 'surname': 'SYNTHETIC', 'given_name': 'ONLY', 'full_name': 'SYNTHETIC ONLY', 'position': '14', 'direction': 'ΕΞΟΔΟΣ', 'computer': '6eb9660580df', 'user': 'agent', 'client_id': '', 'event_file': '/tmp/tmp7gya6ein/central/TDE_DATA/events/2026/10/2026-10-16/20261016_124747_000000_290ca51a6fc846e4a9760ed3b91d6636.json'} is not None : Delayed SMB read resurrected an already ended START
+
+----------------------------------------------------------------------
+Ran 2 tests in 1.397s
+
+FAILED (failures=1)

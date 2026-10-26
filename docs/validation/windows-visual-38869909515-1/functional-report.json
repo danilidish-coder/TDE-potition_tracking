@@ -1,0 +1,55 @@
+{
+  "source_commit": "f44331ea5d4b7c08b2fb504334f4a03d0f986c3c",
+  "exe_sha256": "9b6fd6c3bbadf2b709e27d320ce41f6fbe7dfdb5e5efb5a4b4d49785c7f8b149",
+  "temporary_data_only": true,
+  "status": "FAILED",
+  "offline_operations": [
+    {
+      "id": "f5e3de3411f643deb5f868c778c4d012",
+      "kind": "START",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T07:55:51",
+      "start_id": "",
+      "status": "PENDING"
+    },
+    {
+      "id": "d834620d88074e9c9cf0241fd420ef9a",
+      "kind": "END",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T07:55:52",
+      "start_id": "f5e3de3411f643deb5f868c778c4d012",
+      "status": "PENDING"
+    }
+  ],
+  "workflow_error": {
+    "type": "RuntimeError",
+    "message": "Cannot activate the owned visual background fixture"
+  },
+  "observed_operations": [
+    {
+      "id": "f5e3de3411f643deb5f868c778c4d012",
+      "kind": "START",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T07:55:51",
+      "start_id": "",
+      "status": "PENDING"
+    },
+    {
+      "id": "d834620d88074e9c9cf0241fd420ef9a",
+      "kind": "END",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T07:55:52",
+      "start_id": "f5e3de3411f643deb5f868c778c4d012",
+      "status": "PENDING"
+    }
+  ],
+  "observed_events": [],
+  "error": {
+    "type": "RuntimeError",
+    "message": "Cannot activate the owned visual background fixture"
+  }
+}

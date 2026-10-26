@@ -1,0 +1,42 @@
+[
+  {
+    "commit": "c7cdfd5747ad5d89e6cb11201ab1be587b00a1c2",
+    "subject": "Allow proven idle application exit without pretending to release a service position [skip ci]"
+  },
+  {
+    "commit": "8eb31dcf1e84a92ed2952099fe4c388f4ada599d",
+    "subject": "Move live-map END off Qt and prevent stale selection from ending a replacement START [skip ci]"
+  },
+  {
+    "commit": "a784152734efc3433807fd4454b815ee476056cd",
+    "subject": "Require native idle application exit proof before accepting a test EXE [skip ci]"
+  },
+  {
+    "commit": "ec8eab72e5c95f7b31add2b2b4208d30fb2493ee",
+    "subject": "Guard and move live-map time correction off Qt while preserving START identity"
+  },
+  {
+    "commit": "f4a76fd90039b8d32977b7079d19510fb8d2c04d",
+    "subject": "Record Linux regression outcomes for ec8eab72e5c95f7b31add2b2b4208d30fb2493ee [skip ci]"
+  },
+  {
+    "commit": "6c1260b87cf054d2814acca985a6196e1259e14e",
+    "subject": "Record isolated Windows visual evidence for ec8eab72e5c95f7b31add2b2b4208d30fb2493ee [skip ci]"
+  },
+  {
+    "commit": "410bf72fe197e6e7d9a4a1a299a135a716c71bf3",
+    "subject": "Recheck strict idle-exit proof after an initially pending connection fails"
+  },
+  {
+    "commit": "55d29bb0ad5dd9abad95f44057531da5ba795b54",
+    "subject": "Record Linux regression outcomes for 410bf72fe197e6e7d9a4a1a299a135a716c71bf3 [skip ci]"
+  },
+  {
+    "commit": "625aa2c1ab244c03447acf5743cf85e53649000e",
+    "subject": "Checkpoint exact final candidate and isolated idle-exit field protocol [skip ci]"
+  },
+  {
+    "commit": "cc3451dcb9450716f2473b3feb5a55a4020d8ca6",
+    "subject": "Record isolated Windows visual evidence for 410bf72fe197e6e7d9a4a1a299a135a716c71bf3 [skip ci]"
+  }
+]

@@ -1,0 +1,15 @@
+F
+======================================================================
+FAIL: test_offline_restart_and_online_receipts_preserve_ids_and_timestamps (__main__.ActualUIWorkflow.test_offline_restart_and_online_receipts_preserve_ids_and_timestamps)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\TDE-potition_tracking\TDE-potition_tracking\tests\ui_workflow_regression.py", line 59, in test_offline_restart_and_online_receipts_preserve_ids_and_timestamps
+    wait(lambda:w.store is not None and w.offline.pending_count()==0)
+  File "D:\a\TDE-potition_tracking\TDE-potition_tracking\tests\ui_workflow_regression.py", line 37, in wait
+    self.fail('Qt workflow condition did not complete')
+AssertionError: Qt workflow condition did not complete
+
+----------------------------------------------------------------------
+Ran 1 test in 13.099s
+
+FAILED (failures=1)

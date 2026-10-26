@@ -1,0 +1,8 @@
+RECOVERY_ELAPSED_SECONDS=14.854; HEARTBEATS=297
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+.
+----------------------------------------------------------------------
+Ran 1 test in 15.735s
+
+OK

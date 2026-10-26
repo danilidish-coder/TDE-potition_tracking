@@ -1,0 +1,6547 @@
+{
+  "startup_runs": [
+    {
+      "frames": 22,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 21,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.037839,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.106278,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.147456,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.21022,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.271948,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.335156,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.397254,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.445136,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.491567,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.55417,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.600749,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.647609,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.695645,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.741513,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.803783,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.866533,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.938394,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.992349,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.055448,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.10032,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.148195,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 1,
+      "root_pid": 5544,
+      "window_pid": 6140,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 21,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.033535,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.098348,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.159943,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.222587,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.269857,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.316142,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.378292,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.440556,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.502999,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.565432,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.598236,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.661975,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.72325,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.770663,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.833923,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.895864,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.958419,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.005079,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.074014,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.129359,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.183104,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 2,
+      "root_pid": 2228,
+      "window_pid": 3888,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 23,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 22,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.046293,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.121755,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.16501,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.216214,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.274752,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.335484,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.398112,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.444679,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.492715,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.541417,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.585706,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.631966,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.694415,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.741351,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.805101,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.869855,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.915458,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.960961,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.008402,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.055278,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.102085,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.14863,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 3,
+      "root_pid": 7016,
+      "window_pid": 6224,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 21,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.041112,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.104898,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.162088,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.211086,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.257558,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.302898,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.365271,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.42824,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.473666,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.535709,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.598079,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.649541,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.691514,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.754341,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.800712,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.863983,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.927899,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.989518,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.052505,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.100862,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.163576,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 4,
+      "root_pid": 2520,
+      "window_pid": 7000,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 23,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 22,
+      "endpoint_distances": [
+        {
+          "t_s": 1e-06,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.041161,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.092843,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.150329,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.201266,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.260532,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.308217,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.37474,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.431739,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.478571,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.52486,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.590918,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.654857,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.697404,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.744584,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.806726,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.873719,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.916006,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.967074,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.027347,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.071958,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.119686,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.165696,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 5,
+      "root_pid": 7536,
+      "window_pid": 2280,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 24,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 23,
+      "endpoint_distances": [
+        {
+          "t_s": 1e-06,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.040366,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.085433,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.144135,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.176159,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.247352,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.286649,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.332828,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.395091,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.458109,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.504915,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.569159,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.613054,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.663217,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.725248,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.790764,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.838282,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.884207,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.931447,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.974349,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.0222,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.083898,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.130796,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.194082,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 6,
+      "root_pid": 1880,
+      "window_pid": 6024,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 23,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 22,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.043541,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.091687,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.141511,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.204827,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.269077,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.313846,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.360947,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.408217,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.454934,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.529075,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.573134,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.615213,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.658667,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.705673,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.768504,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.830512,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.878875,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.925703,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.990919,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.050993,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.101888,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.159881,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 7,
+      "root_pid": 5016,
+      "window_pid": 640,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 23,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 22,
+      "endpoint_distances": [
+        {
+          "t_s": 1e-06,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.045723,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.132938,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.200918,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.256019,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.3237,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.366952,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.414075,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.461312,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.508796,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.569551,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.61648,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.666087,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.713384,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.775695,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.839175,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.898699,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.945961,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.01017,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.056685,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.115471,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.147504,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.194841,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 8,
+      "root_pid": 3364,
+      "window_pid": 6924,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 21,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.038928,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.112037,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.145462,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.208237,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.272243,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.334819,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.38131,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.428844,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.489807,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.538404,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.59935,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.661853,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.708878,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.771956,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.835171,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.89305,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.945696,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.99977,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.065081,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.10901,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.171894,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 9,
+      "root_pid": 8044,
+      "window_pid": 1444,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 23,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 22,
+      "endpoint_distances": [
+        {
+          "t_s": 1e-06,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.04645,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.112881,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.163185,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.217738,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.265947,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.31643,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.383532,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.420467,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.484702,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.550166,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.609721,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.669623,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.732072,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.795062,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.842179,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.889789,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.936934,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.983764,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.031194,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.0931,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.145116,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.186894,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 10,
+      "root_pid": 716,
+      "window_pid": 4448,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 21,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 20,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.038233,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.114322,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.148569,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.196462,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.25731,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.320662,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.384895,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.44713,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.509385,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.572087,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.635443,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.697154,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.744421,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.807118,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.869647,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.932551,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.99579,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.042721,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.089961,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.136628,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 11,
+      "root_pid": 7396,
+      "window_pid": 5560,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 23,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 22,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.041679,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.125069,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.178145,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.240298,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.303056,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.350129,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.397221,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.459638,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.507236,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.568347,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.617518,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.679626,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.72636,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.789137,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.83724,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.882346,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.945323,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.993009,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.039388,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.086404,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.133039,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.180275,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 12,
+      "root_pid": 336,
+      "window_pid": 4364,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 21,
+      "endpoint_distances": [
+        {
+          "t_s": 1e-06,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.036719,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.113227,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.16323,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.210115,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.273354,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.33542,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.381866,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.445044,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.507726,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.569914,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.632963,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.679096,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.726553,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.789413,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.834707,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.882505,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.945228,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.992171,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.055225,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.101299,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.163493,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 13,
+      "root_pid": 4944,
+      "window_pid": 2680,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 24,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 23,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.036814,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.083855,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.117358,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.171468,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.212776,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.275207,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.337951,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.400408,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.447288,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.493621,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.541775,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.588414,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.650418,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.697591,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.744998,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.791114,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.853864,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.90043,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.963941,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.009609,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.072173,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.118757,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.165081,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 14,
+      "root_pid": 820,
+      "window_pid": 3196,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 23,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 22,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.043445,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.094861,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.140653,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.187478,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.233834,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.29678,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.34342,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.406027,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.467444,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.531283,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.593092,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.656421,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.718576,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.766376,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.81288,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.859709,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.906312,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.95356,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.00043,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.062988,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.109657,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.172323,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 15,
+      "root_pid": 5548,
+      "window_pid": 6172,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 23,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 22,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.033746,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.125377,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.160567,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.207264,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.254883,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.316673,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.379949,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.441627,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.488707,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.535502,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.582505,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.645426,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.69289,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.75769,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.8043,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.84854,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.895682,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.942117,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.004672,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.067683,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.129597,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.192064,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 16,
+      "root_pid": 5180,
+      "window_pid": 5540,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 21,
+      "endpoint_distances": [
+        {
+          "t_s": 1e-06,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.03702,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.099177,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.17542,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.239409,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.28429,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.346328,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.393575,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.439864,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.487187,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.549832,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.612388,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.659163,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.721694,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.769635,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.83136,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.879343,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.940772,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.004209,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.067023,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.111394,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.174985,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 17,
+      "root_pid": 5116,
+      "window_pid": 7772,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 21,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.035498,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.097122,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.1592,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.220784,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.283414,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.346434,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.40845,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.470811,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.517352,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.581258,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.627955,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.673933,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.736444,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.783755,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.846817,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.893713,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.95676,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.003982,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.050651,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.113311,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.159849,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 18,
+      "root_pid": 5856,
+      "window_pid": 7936,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 22,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 21,
+      "endpoint_distances": [
+        {
+          "t_s": 0.0,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.042267,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.103746,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.137873,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.184831,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.248135,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.310841,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.356588,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.403764,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.466685,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.514086,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.561318,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.607684,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.669984,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.716744,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.780357,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.843446,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.889497,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.952093,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.015993,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.077649,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.144507,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 19,
+      "root_pid": 5256,
+      "window_pid": 7480,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    },
+    {
+      "frames": 23,
+      "baseline_luma": 208.187,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 160.0,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.31098,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "endpoint_anomaly_frames": 0,
+      "max_endpoint_distance": 0.31098,
+      "max_application_endpoint_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "endpoint_threshold": 0.08,
+      "desktop_loading_frames": 1,
+      "application_frames": 22,
+      "endpoint_distances": [
+        {
+          "t_s": 1e-06,
+          "distance": 0.310978,
+          "unchanged_prelaunch_desktop": true,
+          "desktop_distance": 0.0,
+          "desktop_difference_bbox": null
+        },
+        {
+          "t_s": 0.036316,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.071112,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.13404,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.195493,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.259104,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.304572,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.351399,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.398248,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.445425,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.508868,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.556799,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.618626,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.680896,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.728258,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.774512,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.837581,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.900251,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 0.946955,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.008818,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.055641,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.117793,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        },
+        {
+          "t_s": 1.165282,
+          "distance": 0.0,
+          "unchanged_prelaunch_desktop": false,
+          "desktop_distance": 0.310978,
+          "desktop_difference_bbox": [
+            0,
+            0,
+            1160,
+            720
+          ]
+        }
+      ],
+      "run": 20,
+      "root_pid": 3452,
+      "window_pid": 2448,
+      "bbox_before": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "bbox_after": [
+        380,
+        160,
+        1540,
+        880
+      ],
+      "window_dpi": 96
+    }
+  ],
+  "theme_toggles": [
+    {
+      "frames": 17,
+      "baseline_luma": 45.954,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 45.954,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.00014,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.00014,
+      "endpoint_flicker_detected": false,
+      "toggle": 1,
+      "pre_mean_luma": 208.187,
+      "post_mean_luma": 45.954,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 45.954,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.00161,
+      "suspect_frames": 5,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.00161,
+      "endpoint_flicker_detected": false,
+      "toggle": 2,
+      "pre_mean_luma": 46.049,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.00014,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.00014,
+      "endpoint_flicker_detected": false,
+      "toggle": 3,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 7,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 4,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 5,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 5,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 6,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 18,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.00014,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.00014,
+      "endpoint_flicker_detected": false,
+      "toggle": 7,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 7,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 8,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 9,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 18,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 8,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 10,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.00014,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.00014,
+      "endpoint_flicker_detected": false,
+      "toggle": 11,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 5,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 12,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 18,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 13,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 5,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 14,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.00014,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.00014,
+      "endpoint_flicker_detected": false,
+      "toggle": 15,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 18,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 8,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 16,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 18,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 17,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 7,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 18,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 1,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 19,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 7,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 20,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.00014,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.00014,
+      "endpoint_flicker_detected": false,
+      "toggle": 21,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 7,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 22,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.00014,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.00014,
+      "endpoint_flicker_detected": false,
+      "toggle": 23,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 7,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 24,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.00014,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.00014,
+      "endpoint_flicker_detected": false,
+      "toggle": 25,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.00029,
+      "suspect_frames": 5,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.00029,
+      "endpoint_flicker_detected": false,
+      "toggle": 26,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 16,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.00014,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.00014,
+      "endpoint_flicker_detected": false,
+      "toggle": 27,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 16,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.0,
+      "suspect_frames": 5,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 28,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    },
+    {
+      "frames": 16,
+      "baseline_luma": 46.19,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.00014,
+      "suspect_frames": 0,
+      "flicker_detected": false,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.00014,
+      "endpoint_flicker_detected": false,
+      "toggle": 29,
+      "pre_mean_luma": 207.271,
+      "post_mean_luma": 46.19,
+      "theme_changed": true
+    },
+    {
+      "frames": 17,
+      "baseline_luma": 207.271,
+      "baseline_black_ratio": 0.0,
+      "min_luma": 46.19,
+      "max_black_ratio": 0.0,
+      "max_frame_diff": 0.65323,
+      "suspect_frames": 7,
+      "flicker_detected": true,
+      "third_state_frames": 0,
+      "max_third_state_distance": 0.0,
+      "endpoint_flicker_detected": false,
+      "toggle": 30,
+      "pre_mean_luma": 46.19,
+      "post_mean_luma": 207.271,
+      "theme_changed": true
+    }
+  ],
+  "capture_supported": true,
+  "startup_flicker_runs_legacy": 20,
+  "startup_endpoint_flicker_runs": 0,
+  "startup_desktop_loading_runs": 20,
+  "theme_flicker_toggles_legacy": 20,
+  "theme_endpoint_flicker_toggles": 0,
+  "theme_clicks_confirmed": 30
+}

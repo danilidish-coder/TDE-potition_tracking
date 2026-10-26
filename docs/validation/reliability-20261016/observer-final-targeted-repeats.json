@@ -1,0 +1,27 @@
+[
+  {
+    "attempt": 1,
+    "exit_code": 0,
+    "output": ".....\n----------------------------------------------------------------------\nRan 5 tests in 3.001s\n\nOK\nFontconfig error: No writable cache directories\n"
+  },
+  {
+    "attempt": 2,
+    "exit_code": 0,
+    "output": ".....\n----------------------------------------------------------------------\nRan 5 tests in 3.031s\n\nOK\nFontconfig error: No writable cache directories\n"
+  },
+  {
+    "attempt": 3,
+    "exit_code": 0,
+    "output": ".....\n----------------------------------------------------------------------\nRan 5 tests in 3.078s\n\nOK\nFontconfig error: No writable cache directories\n"
+  },
+  {
+    "attempt": 4,
+    "exit_code": 0,
+    "output": ".....\n----------------------------------------------------------------------\nRan 5 tests in 2.472s\n\nOK\nFontconfig error: No writable cache directories\n"
+  },
+  {
+    "attempt": 5,
+    "exit_code": 0,
+    "output": ".....\n----------------------------------------------------------------------\nRan 5 tests in 2.847s\n\nOK\nFontconfig error: No writable cache directories\n"
+  }
+]

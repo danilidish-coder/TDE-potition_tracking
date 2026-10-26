@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import ctypes
+from ctypes import wintypes
 import json
 import subprocess
 import time
@@ -10,7 +11,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from PIL import ImageGrab, ImageStat
+from PIL import ImageGrab, ImageStat, ImageChops
+from support.windows_visual_processes import (
+    descendant_pids, process_snapshot, stop_process_tree,
+    use_physical_pixel_coordinates, theme_button_point, stable_visual_desktop, activate_visual_background,
+)
+
+use_physical_pixel_coordinates()
 
 user32 = ctypes.windll.user32
 SW_RESTORE = 9
@@ -27,6 +34,20 @@ class POINT(ctypes.Structure):
     _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
 
 
+# HWND is pointer-sized: default ctypes integer arguments can truncate it.
+user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+user32.IsWindowVisible.argtypes = [wintypes.HWND]
+user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(RECT)]
+user32.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(POINT)]
+user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+user32.GetDpiForWindow.argtypes = [wintypes.HWND]
+user32.GetDpiForWindow.restype = wintypes.UINT
+
+
 @dataclass
 class Sample:
     t: float
@@ -35,11 +56,16 @@ class Sample:
     diff: float
 
 
-def find_position_window() -> Optional[int]:
+def find_position_window(pid: int) -> Optional[int]:
     found = []
+    owners = descendant_pids(pid, process_snapshot())
 
-    @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
     def cb(hwnd, _):
+        owner = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+        if owner.value not in owners:
+            return True
         if not user32.IsWindowVisible(hwnd):
             return True
         length = user32.GetWindowTextLengthW(hwnd)
@@ -89,6 +115,11 @@ def frame_metrics(img, prev_small=None):
 
 def capture_sequence(hwnd: int, seconds: float, interval: float = 0.025):
     bbox = client_bbox(hwnd)
+    desktop = (user32.GetSystemMetrics(76), user32.GetSystemMetrics(77),
+               user32.GetSystemMetrics(78), user32.GetSystemMetrics(79))
+    x, y, width, height = desktop
+    if not (x <= bbox[0] < bbox[2] <= x + width and y <= bbox[1] < bbox[3] <= y + height):
+        raise RuntimeError(f"Visual client area {bbox} is clipped by desktop {desktop}")
     samples = []
     raw = []
     prev = None
@@ -147,18 +178,59 @@ def normalized_image_distance(img_a, img_b) -> float:
     return total / (len(pa)*3*255.0)
 
 
-def startup_endpoint_check(raw, out_dir: Path, prefix: str, threshold: float = 0.08):
+def startup_endpoint_check(raw, out_dir: Path, prefix: str, threshold: float = 0.08, desktop_reference=None):
     if not raw:
-        return {"endpoint_anomaly_frames": 0, "max_endpoint_distance": 0.0}
+        raise RuntimeError("No startup frames captured.")
     final_ref = raw[-1][1]
+    raw[0][1].save(out_dir / f"{prefix}_first.png")
+    final_ref.save(out_dir / f"{prefix}_reference.png")
+    if desktop_reference is not None:
+        desktop_reference.save(out_dir / f"{prefix}_desktop_reference.png")
     scored = [(t, normalized_image_distance(img, final_ref), img) for t, img in raw]
-    anomalies = [x for x in scored if x[1] > threshold]
+    loading_indexes = []
+    application_seen = desktop_reference is None
+    for index, (_, _, img) in enumerate(scored):
+        unchanged_desktop = (
+            desktop_reference is not None and img.size == desktop_reference.size
+            and ImageChops.difference(img.convert("RGB"), desktop_reference.convert("RGB")).getbbox() is None
+        )
+        if not application_seen and unchanged_desktop:
+            loading_indexes.append(index)
+        else:
+            application_seen = True
+    if not application_seen:
+        raise RuntimeError("No application pixels captured: only the unchanged pre-launch desktop was observed.")
+    loading = set(loading_indexes)
+    # Every frame remains in the report/evidence. Only byte-identical desktop
+    # BEFORE the first application pixels is classified as launch latency.
+    # Partial/black UI and desktop reappearing after UI remain strict failures.
+    anomalies = [x for index, x in enumerate(scored) if index not in loading and x[1] > threshold]
+    # Keep the entire suspect startup, including normal frames between anomalies.
+    # This distinguishes a monotonic first paint from a transient third state;
+    # it does not exclude early frames or change the acceptance threshold.
+    if anomalies or loading_indexes:
+        sequence_dir = out_dir / f"{prefix}_sequence"
+        sequence_dir.mkdir(parents=True, exist_ok=True)
+        for index, (t, dist, img) in enumerate(scored):
+            img.save(sequence_dir / f"{index:04d}_{t:.3f}s_d{dist:.3f}.png")
     for rank, (t, dist, img) in enumerate(sorted(scored, key=lambda x: x[1], reverse=True)[:5], 1):
         img.save(out_dir / f"{prefix}_endpoint_{rank:02d}_{t:.3f}s_d{dist:.3f}.png")
     return {
         "endpoint_anomaly_frames": len(anomalies),
         "max_endpoint_distance": round(max(x[1] for x in scored), 5),
+        "max_application_endpoint_distance": round(max(x[1] for index, x in enumerate(scored) if index not in loading), 5),
         "endpoint_flicker_detected": bool(anomalies),
+        "endpoint_threshold": threshold,
+        "desktop_loading_frames": len(loading_indexes),
+        "application_frames": len(scored) - len(loading_indexes),
+        "endpoint_distances": [
+            {"t_s": round(t, 6), "distance": round(dist, 6), "unchanged_prelaunch_desktop": index in loading,
+             "desktop_distance": (round(normalized_image_distance(scored[index][2], desktop_reference), 6)
+                                  if desktop_reference is not None else None),
+             "desktop_difference_bbox": (ImageChops.difference(scored[index][2].convert("RGB"), desktop_reference.convert("RGB")).getbbox()
+                                         if desktop_reference is not None else None)}
+            for index, (t, dist, _) in enumerate(scored)
+        ],
     }
 
 
@@ -207,10 +279,10 @@ def write_csv(samples, path: Path):
 def click_theme(hwnd: int):
     user32.ShowWindow(hwnd, SW_RESTORE)
     user32.SetForegroundWindow(hwnd)
-    left, top, right, bottom = client_bbox(hwnd)
-    width = right-left
-    x = left + width - 70
-    y = top + 40
+    # The last 86px of the header belong to the Greece map, not the
+    # theme button. The main window has 28px outer and 20px header margins,
+    # a 16px widget gap, and a 108px theme-button minimum width.
+    x, y = theme_button_point(client_bbox(hwnd), user32.GetDpiForWindow(hwnd))
     user32.SetCursorPos(x, y)
     time.sleep(0.05)
     user32.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
@@ -220,43 +292,40 @@ def click_theme(hwnd: int):
 def wait_for_window(pid: int, timeout=20.0):
     end = time.time()+timeout
     while time.time() < end:
-        hwnd = find_position_window()
+        hwnd = find_position_window(pid)
         if hwnd:
             return hwnd
         time.sleep(0.01)
     raise RuntimeError("Main window not found")
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--exe", required=True)
-    ap.add_argument("--out", required=True)
-    args = ap.parse_args()
-
-    exe = str(Path(args.exe).resolve())
-    out = Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
-
-    report = {"startup_runs": [], "theme_toggles": [], "capture_supported": True}
-
+def _run_visual_tests(exe, out, report, background_hwnd=None):
     for run in range(1, 21):
+        if background_hwnd is not None:
+            activate_visual_background(background_hwnd)
+        desktop = ImageGrab.grab(all_screens=True)
+        desktop_origin = (user32.GetSystemMetrics(76), user32.GetSystemMetrics(77))
         p = subprocess.Popen([exe], cwd=str(Path(exe).parent))
         try:
             hwnd = wait_for_window(p.pid)
+            before_bbox = client_bbox(hwnd)
+            left, top, right, bottom = before_bbox
+            desktop_reference = desktop.crop((left - desktop_origin[0], top - desktop_origin[1],
+                                               right - desktop_origin[0], bottom - desktop_origin[1]))
             samples, raw = capture_sequence(hwnd, 1.2)
             summary = summarize(samples)
-            summary.update(startup_endpoint_check(raw, out, f"startup_{run:02d}"))
+            summary.update(startup_endpoint_check(raw, out, f"startup_{run:02d}", desktop_reference=desktop_reference))
             summary["run"] = run
+            owner = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+            summary.update(root_pid=p.pid, window_pid=owner.value,
+                           bbox_before=before_bbox, bbox_after=client_bbox(hwnd),
+                           window_dpi=user32.GetDpiForWindow(hwnd))
             report["startup_runs"].append(summary)
             write_csv(samples, out / f"startup_{run:02d}.csv")
             save_worst(raw, samples, out, f"startup_{run:02d}")
         finally:
-            if p.poll() is None:
-                p.terminate()
-                try:
-                    p.wait(3)
-                except subprocess.TimeoutExpired:
-                    p.kill()
+            stop_process_tree(p)
         time.sleep(0.6)
 
     p = subprocess.Popen([exe], cwd=str(Path(exe).parent))
@@ -284,22 +353,44 @@ def main():
             save_worst(raw, combined, out, f"theme_{toggle:02d}")
             time.sleep(0.25)
     finally:
-        if p.poll() is None:
-            p.terminate()
-            try:
-                p.wait(3)
-            except subprocess.TimeoutExpired:
-                p.kill()
+        stop_process_tree(p)
 
     report["startup_flicker_runs_legacy"] = sum(1 for x in report["startup_runs"] if x.get("flicker_detected"))
     report["startup_endpoint_flicker_runs"] = sum(1 for x in report["startup_runs"] if x.get("endpoint_flicker_detected"))
+    report["startup_desktop_loading_runs"] = sum(1 for x in report["startup_runs"] if x.get("desktop_loading_frames"))
     report["theme_flicker_toggles_legacy"] = sum(1 for x in report["theme_toggles"] if x.get("flicker_detected"))
     report["theme_endpoint_flicker_toggles"] = sum(1 for x in report["theme_toggles"] if x.get("endpoint_flicker_detected"))
     report["theme_clicks_confirmed"] = sum(1 for x in report["theme_toggles"] if x.get("theme_changed"))
 
     (out / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(report, indent=2))
+    # Prevent a false-green visual test when it never clicked the theme button.
+    if report["theme_clicks_confirmed"] < 28:
+        raise RuntimeError("Visual test did not activate the actual theme button reliably.")
+    if report["startup_endpoint_flicker_runs"] or report["theme_endpoint_flicker_toggles"]:
+        raise RuntimeError("Visible flicker or unintended third-state frames detected.")
     return 0
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--exe", required=True)
+    ap.add_argument("--out", required=True)
+    args = ap.parse_args()
+    exe = str(Path(args.exe).resolve())
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    report = {"startup_runs": [], "theme_toggles": [], "capture_supported": True}
+    try:
+        with stable_visual_desktop() as background:
+            return _run_visual_tests(exe, out, report, background_hwnd=background)
+    except Exception as exc:
+        report["error"] = {"type": type(exc).__name__, "message": str(exc)}
+        raise
+    finally:
+        # Preserve partial runs and the actual error even if capture/window
+        # discovery fails before the usual final summary is produced.
+        (out / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":

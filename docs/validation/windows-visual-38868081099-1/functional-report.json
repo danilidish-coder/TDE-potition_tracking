@@ -1,0 +1,30 @@
+{
+  "source_commit": "d128e6db8cde73b174b8fb20020228058c9daf7a",
+  "exe_sha256": "5310b561795a8a6701f1af1fe661a55f480b643605fd9e601372e9a0a9f68b67",
+  "temporary_data_only": true,
+  "status": "FAILED",
+  "offline_operations": [
+    {
+      "id": "94f8554e028b477cb9b4cae15770a293",
+      "kind": "START",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T07:38:19",
+      "start_id": "",
+      "status": "PENDING"
+    },
+    {
+      "id": "0340badc13c24eb8900d96089fcaf8a3",
+      "kind": "END",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T07:38:19",
+      "start_id": "94f8554e028b477cb9b4cae15770a293",
+      "status": "PENDING"
+    }
+  ],
+  "error": {
+    "type": "PermissionError",
+    "message": "[WinError 32] The process cannot access the file because it is being used by another process: 'C:\\\\Users\\\\RUNNER~1\\\\AppData\\\\Local\\\\Temp\\\\tde-exe-functional-tyep5gn1\\\\queue\\\\position_outbox.sqlite3'"
+  }
+}
