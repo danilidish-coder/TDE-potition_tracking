@@ -13,8 +13,8 @@
 - **Ακριβής πηγαίος κώδικας build:** commit `4340c41865328cd893e6dc23fcdcedfefa7f9bf2`, branch `fix/isolated-offline-conflicts-20261025`.
 - **GitHub Actions run:** https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40225683055 — αναφέρθηκαν 51/51 PASS (Windows build/launch/functional/visual).
 - **Διαφορές:** στοχευμένη διόρθωση των OFFLINE conflicts ώστε προβληματική εγγραφή να μην μπλοκάρει άλλες· χωρίς σκόπιμη αλλαγή βασικής εμφάνισης ή λειτουργιών.
-- **SHA-256 του παραδοθέντος EXE:** **ΕΚΚΡΕΜΕΙ ΑΚΡΙΒΗΣ ΕΠΑΛΗΘΕΥΣΗ**. Το hash του ZIP artifact GitHub **ΔΕΝ** είναι hash του EXE.
-- **Μόνιμη τοποθεσία EXE:** **ΕΚΚΡΕΜΕΙ ΕΠΑΛΗΘΕΥΣΗ** (η αρχική παράδοση έγινε μέσα στη συνομιλία και αναφέρθηκε αντιγραφή στο Drive χωρίς επιβεβαιωμένο μόνιμο URL). Τα Actions artifacts λήγουν· μην τα χρησιμοποιείτε ως μοναδικό αρχείο.
+- **SHA-256 του EXE από το ZIP Google Drive (μετρήθηκε 26/10/2026):** `e59587390a398808ad454a1fb4de9d46c7d6139f203785489294655242b6de0d` (63.808.868 bytes). Επιβεβαιώθηκε ότι το ZIP περιέχει ακριβώς ένα EXE. **Δεν έχει ακόμη συγκριθεί byte-for-byte με το GitHub Actions artifact.**
+- **Μόνιμο πακέτο ZIP στο Drive:** https://drive.google.com/file/d/1sjcXwqM2je6AAZponb4tRZqTThRgY_vd/view (μεταφέρθηκε στον φάκελο τελευταίας λειτουργικής έκδοσης 26/10/2026). Το EXE είναι μέσα στο ZIP. Τα Actions artifacts λήγουν· μην τα χρησιμοποιείτε ως μοναδικό αρχείο.
 - **ΚΑΝΟΝΑΣ:** όταν ζητείται «τελευταίο λειτουργικό EXE», επιλέγεται αυτή η παράδοση 25/10 και όχι το παλιό GitHub Release v1.2.6. Αν δεν υπάρχει επαληθεύσιμο αντίγραφο binary, **μην αντικαθιστάτε** από εικασία ή rebuild.
 
 ## Καταγραφή Θέσεων Εργασίας
