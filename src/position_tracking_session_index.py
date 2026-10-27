@@ -72,6 +72,8 @@ class SessionIndexMixin:
 
 
     def _has_end_receipt(self, active: dict) -> bool:
+        if self._committed_position_end(_clean(active.get("event_id"))):
+            return True
         start_id = _safe_name(active.get("event_id"))
         receipt = self.pending_index / f"{start_id}.json"
         if not receipt.is_file():

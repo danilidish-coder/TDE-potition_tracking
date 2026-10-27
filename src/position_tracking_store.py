@@ -21,9 +21,10 @@ from position_tracking_shift_index import ShiftIndexMixin
 from position_tracking_positions import PositionStoreMixin
 from position_tracking_shifts import ShiftLifecycleMixin
 from position_tracking_event_queries import EventQueryMixin
+from position_tracking_position_recovery import PositionRecoveryMixin
 
 
-class SharedEventStore(EventQueryMixin, ShiftLifecycleMixin, PositionStoreMixin, ShiftIndexMixin, SessionIndexMixin, CommunicationStoreMixin, StoreIOMixin):
+class SharedEventStore(PositionRecoveryMixin, EventQueryMixin, ShiftLifecycleMixin, PositionStoreMixin, ShiftIndexMixin, SessionIndexMixin, CommunicationStoreMixin, StoreIOMixin):
     def __init__(self, central_root: str | Path):
         root = Path(central_root)
         self.root = root if root.name == ".tde_runtime" else (root if root.name.upper() == "TDE_DATA" else root / "TDE_DATA")
@@ -54,6 +55,7 @@ class SharedEventStore(EventQueryMixin, ShiftLifecycleMixin, PositionStoreMixin,
         ):
             p.mkdir(parents=True, exist_ok=True)
         self._init_shift_db()
+        self._init_position_recovery()
         # Recover END events left unindexed after a process or SQLite interruption.
         try:
             self.reconcile_pending_sessions()

@@ -93,7 +93,10 @@ class StoreIOMixin:
     def _atomic_json(path: Path, data: dict):
         path.parent.mkdir(parents=True, exist_ok=True)
         temp = path.with_name(path.name + f".{uuid.uuid4().hex}.tmp")
-        temp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        with temp.open("w", encoding="utf-8") as fh:
+            fh.write(json.dumps(data, ensure_ascii=False, indent=2))
+            fh.flush()
+            os.fsync(fh.fileno())
         os.replace(temp, path)
 
 

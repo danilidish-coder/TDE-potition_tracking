@@ -90,26 +90,23 @@ class PositionStoreMixin:
     def _existing_operation_event(self, op_id: str, when: datetime) -> dict | None:
         if not op_id:
             return None
-        # A retry after a server acknowledgement was lost must never record
-        # another START/END. Shared lock for AGMS protects this lookup.
-        folder = self.events / f"{when:%Y}" / f"{when:%m}" / f"{when:%Y-%m-%d}"
-        prefix = f"{when:%Y%m%d_%H%M%S}_"
-        for path in folder.glob(f"{prefix}*_{_safe_name(op_id)}.json"):
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                if data.get("event_id") == op_id:
-                    return data
-            except (OSError, ValueError):
-                raise BusyError("Δεν διαβάζεται η προηγούμενη καταχώριση συγχρονισμού.")
-        return None
+        # IDs are immutable across reconnects and day boundaries. A retry's
+        # wall-clock time must never choose another event folder.
+        return self._committed_position_operation(op_id)
 
 
     def _write_event(self, event: dict) -> Path:
-        dt = datetime.fromisoformat(event["timestamp"])
-        folder = self.events / f"{dt:%Y}" / f"{dt:%m}" / f"{dt:%Y-%m-%d}"
-        filename = f"{dt:%Y%m%d_%H%M%S_%f}_{event['event_id']}.json"
-        path = folder / filename
+        path = self._prepare_position_event(event)
+        if event["kind"] == "END":
+            start = self._committed_position_operation(event["start_event_id"])
+            if not start or start["agms"] != event["agms"]:
+                raise BusyError("Δεν επιβεβαιώθηκε η αρχική ΕΝΑΡΞΗ της ΛΗΞΗΣ.")
+            start = self._apply_start_correction(start)
+            if datetime.fromisoformat(event["timestamp"]) < datetime.fromisoformat(start["timestamp"]):
+                raise ValueError("Η αρχική ώρα της εντολής ΛΗΞΗΣ προηγείται της ΕΝΑΡΞΗΣ.")
         self._atomic_json(path, event)
+        self._position_index_write(
+            "UPDATE position_operations SET state='COMMITTED' WHERE event_id=?", (event["event_id"],))
         return path
 
 
@@ -121,10 +118,11 @@ class PositionStoreMixin:
             raise ValueError("Επιλέξτε θέση.")
         if direction not in {"ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"}:
             raise ValueError("Επιλέξτε κατεύθυνση ΕΙΣΟΔΟΣ ή ΕΞΟΔΟΣ.")
-        with self.officer_lock(person.agms):
+        with self._position_transaction(person.agms):
             previous = self._existing_operation_event(event_id, when)
             if previous:
-                if previous.get("kind") != "START" or previous.get("agms") != person.agms:
+                if (previous.get("kind") != "START" or previous.get("agms") != person.agms
+                        or previous.get("position") != position or previous.get("direction") != direction):
                     raise BusyError("Ασυμφωνία αναγνωριστικού START.")
                 current = self.get_active(person.agms)
                 if current and _clean(current.get("event_id")) == event_id:
@@ -207,11 +205,13 @@ class PositionStoreMixin:
                                 # Confirmed pre-commit failure: retain the old
                                 # guarantee that no phantom START is reported.
                                 path.unlink(missing_ok=True)
+                                self._abort_position_event(event["event_id"])
                         except OSError:
                             pass  # uncertain share state: preserve evidence
                     except OSError:
                         pass
                     raise
+                self._settle_position_event(event["event_id"])
         try:
             self.sync_active_shift()
         except Exception:
@@ -223,10 +223,11 @@ class PositionStoreMixin:
 
     def end(self, person: PersonnelRecord, when: datetime | None = None, expected_start_event_id: str = "", end_reason: str = "", end_officer: PersonnelRecord | None = None, event_id: str = "", origin_computer: str = "", origin_user: str = "") -> dict:
         when = when or datetime.now()
-        with self.officer_lock(person.agms):
+        with self._position_transaction(person.agms):
             previous = self._existing_operation_event(event_id, when)
             if previous:
-                if previous.get("kind") != "END" or previous.get("agms") != person.agms:
+                if (previous.get("kind") != "END" or previous.get("agms") != person.agms
+                        or (expected_start_event_id and previous.get("start_event_id") != expected_start_event_id)):
                     raise BusyError("Ασυμφωνία αναγνωριστικού END.")
                 current = self.get_active(person.agms)
                 if current and _clean(current.get("event_id")) == _clean(previous.get("start_event_id")):
@@ -248,6 +249,8 @@ class PositionStoreMixin:
                 raise ValueError(f"Δεν υπάρχει ανοικτή θέση για {person.full_name}.")
             if expected_start_event_id and _clean(current.get("event_id")) != _clean(expected_start_event_id):
                 raise BusyError("Η θέση άλλαξε χρήστη πριν επιβεβαιωθεί η λήξη. Δεν τροποποιήθηκε η νέα καταχώριση.")
+            if when < datetime.fromisoformat(current["timestamp"]):
+                raise ValueError("Η ώρα ΛΗΞΗΣ προηγείται της ΕΝΑΡΞΗΣ.")
             event = {
                 "version": 2,
                 "event_id": event_id or uuid.uuid4().hex,
@@ -280,6 +283,7 @@ class PositionStoreMixin:
                 event["session_index_pending"] = True
             else:
                 receipt.unlink(missing_ok=True)
+                self._settle_position_event(event["event_id"])
             return event
 
 
