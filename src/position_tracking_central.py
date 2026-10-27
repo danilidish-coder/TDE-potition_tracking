@@ -118,6 +118,8 @@ class CentralOperator:
                                   event_id=request.operation_id, expected_start_event_id=request.expected_start_id)
             else:
                 raise ValueError("Μη έγκυρη ενέργεια θέσης.")
+            if event.get("superseded"):
+                return self.check(request)
             return PositionOutcome("CONFIRMED", event, "Η καταχώριση επιβεβαιώθηκε κεντρικά.")
         except Exception as error:
             # No speculative failure or success. Read back the SAME ID, without

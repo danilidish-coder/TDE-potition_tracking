@@ -79,12 +79,19 @@ class PositionStoreMixin:
             raise BusyError("Ο κοινός φάκελος ενεργών θέσεων δεν είναι διαθέσιμος.")
         try:
             item = json.loads(path.read_text(encoding="utf-8"))
-            return None if self._has_end_receipt(item) else self._apply_start_correction(item)
         except FileNotFoundError:
-            return None
+            item = None
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             # Fail closed: an unreadable shared active file is NOT a free booth.
             raise BusyError(f"Δεν είναι ασφαλής η ανάγνωση ενεργής θέσης {agms}: {exc}") from exc
+        canonical = self._claim_event(agms)
+        if not canonical or self._has_end_receipt(canonical):
+            return None
+        # Preserve legacy workstation labels only for the identical START.
+        # Booth, AGMS, timestamps and operation identity come from central evidence.
+        if item and item.get("event_id") == canonical["event_id"]:
+            canonical.update({key: item[key] for key in ("computer", "user") if key in item})
+        return self._apply_start_correction(canonical)
 
 
     def _existing_operation_event(self, op_id: str, when: datetime) -> dict | None:
@@ -95,8 +102,13 @@ class PositionStoreMixin:
         return self._committed_position_operation(op_id)
 
 
-    def _write_event(self, event: dict) -> Path:
-        path = self._prepare_position_event(event)
+    def _write_event(self, event: dict) -> tuple[Path, str, bool]:
+        """Write evidence; START is accepted after its marker, or by recovery.
+
+        The token is retained by this caller for conditional commit/compensation.
+        A rejected/superseded attempt must never be presented as a new success.
+        """
+        path, attempt = self._prepare_position_event(event)
         if event["kind"] == "END":
             start = self._committed_position_operation(event["start_event_id"])
             if not start or start["agms"] != event["agms"]:
@@ -105,9 +117,10 @@ class PositionStoreMixin:
             if datetime.fromisoformat(event["timestamp"]) < datetime.fromisoformat(start["timestamp"]):
                 raise ValueError("Η αρχική ώρα της εντολής ΛΗΞΗΣ προηγείται της ΕΝΑΡΞΗΣ.")
         self._atomic_json(path, event)
-        self._position_index_write(
-            "UPDATE position_operations SET state='COMMITTED' WHERE event_id=?", (event["event_id"],))
-        return path
+        if event["kind"] == "START":
+            row = self._position_operation(event["event_id"])
+            return path, attempt, row["state"] == "PREPARED" and row["attempt"] == attempt
+        return path, attempt, self._commit_position_attempt(event["event_id"], attempt)
 
 
     def start(self, person: PersonnelRecord, position: str, direction: str, when: datetime | None = None, client_id: str = "", event_id: str = "", origin_computer: str = "", origin_user: str = "", sync_shift: bool = True) -> dict:
@@ -188,7 +201,9 @@ class PositionStoreMixin:
                     "user": origin_user or os.environ.get("USERNAME") or os.environ.get("USER") or "",
                     "client_id": _clean(client_id),
                 }
-                path = self._write_event(event)
+                path, attempt, committed = self._write_event(event)
+                if not committed:
+                    return {**event, "superseded": True}
                 event["event_file"] = str(path)
                 try:
                     self._atomic_json(self._active_path(person.agms), event)
@@ -202,15 +217,20 @@ class PositionStoreMixin:
                     except FileNotFoundError:
                         try:
                             if self.active.is_dir():
-                                # Confirmed pre-commit failure: retain the old
+                                # Confirmed pre-marker failure: retain the old
                                 # guarantee that no phantom START is reported.
-                                path.unlink(missing_ok=True)
-                                self._abort_position_event(event["event_id"])
+                                # Preserve raw bytes as aborted attempt evidence;
+                                # deleting here could race a retry with the same ID.
+                                self._abort_position_event(event["event_id"], attempt)
                         except OSError:
                             pass  # uncertain share state: preserve evidence
                     except OSError:
-                        pass
+                        self._commit_position_attempt(event["event_id"], attempt)
+                    else:
+                        self._commit_position_attempt(event["event_id"], attempt)
                     raise
+                if not self._commit_position_attempt(event["event_id"], attempt):
+                    return {**event, "superseded": True}
                 self._settle_position_event(event["event_id"])
         try:
             if sync_shift:
@@ -272,7 +292,9 @@ class PositionStoreMixin:
                 event["end_reason"] = _clean(end_reason)
             if end_officer:
                 event["end_officer"] = self._person_payload(end_officer)
-            self._write_event(event)
+            _, attempt, committed = self._write_event(event)
+            if not committed:
+                return {**event, "superseded": True}
             # Durable receipt before releasing a booth; history indexing can be
             # retried later if SQLite is locked or temporarily unavailable.
             receipt = self.pending_index / f"{_safe_name(current.get('event_id'))}.json"
@@ -291,14 +313,19 @@ class PositionStoreMixin:
     def active_all(self) -> list[dict]:
         if not self.active.is_dir():
             raise BusyError("Δεν είναι διαθέσιμος ο κοινός φάκελος ενεργών θέσεων.")
-        result: list[dict] = []
+        # Validate remaining JSON projections, including unexpected corrupt files,
+        # but derive occupants from transactional claims even if a stale worker
+        # deleted or replaced a newer projection.
         for path in sorted(self.active.glob("*.json")):
             try:
                 item = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError, json.JSONDecodeError) as exc:
                 raise BusyError(f"Δεν διαβάζεται η δέσμευση {path.name}: {exc}") from exc
-            if not self._has_end_receipt(item):
-                result.append(self._apply_start_correction(item))
+        result = []
+        for row in self._position_rows("SELECT agms FROM position_live"):
+            active = self.get_active(row["agms"])
+            if active:
+                result.append(active)
         return sorted(result, key=lambda x: (_clean(x.get("direction")), _clean(x.get("position")), _clean(x.get("full_name"))))
 
 

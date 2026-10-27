@@ -1,7 +1,8 @@
 """Central-only operation index and bounded recovery of immutable event files.
 
-The JSON event is the commit evidence. SQLite records its location BEFORE the
-write, so a lost rename acknowledgement cannot hide it. No local queue is used.
+The JSON event supplies immutable evidence. SQLite records its location BEFORE
+the write and atomically accepts its token/live claim, so a superseded worker's
+later JSON write cannot regain authority. No local queue is used.
 All callers hold __POSITION_TRANSACTIONS__, then any per-person locks.
 """
 from datetime import datetime
@@ -9,7 +10,9 @@ from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+from itertools import islice
 import re
+import uuid
 
 from position_tracking_common import _clean
 from position_tracking_store_io import BusyError
@@ -33,7 +36,7 @@ class PositionRecoveryMixin:
     def _position_index_write(self, sql, args=()):
         with self._shift_db_write_lock():
             with self._shift_db_connect() as db:
-                db.execute(sql, args)
+                return db.execute(sql, args).rowcount
 
     def _event_path(self, event):
         ident = event.get("event_id", "")
@@ -68,17 +71,18 @@ class PositionRecoveryMixin:
 
     def _committed_position_operation(self, event_id):
         row = self._position_operation(event_id)
-        if not row or row["state"] == "ABORTED":
+        if not row or row["state"] != "COMMITTED":
             return None
         return self._position_evidence(row)
 
     def _committed_position_end(self, start_id):
         rows = self._position_rows(
-            "SELECT * FROM position_operations WHERE start_id=? AND kind='END' AND state<>'ABORTED'",
+            "SELECT * FROM position_operations WHERE start_id=? AND kind='END' AND state='COMMITTED'",
             (start_id,))
         return self._position_evidence(rows[0]) if rows else None
 
     def _prepare_position_event(self, event):
+        attempt = uuid.uuid4().hex
         previous = self._position_operation(event["event_id"])
         if previous:
             original = json.loads(previous["payload"])
@@ -89,24 +93,24 @@ class PositionRecoveryMixin:
             event.clear()
             event.update(original)
             self._position_index_write(
-                "UPDATE position_operations SET state='PREPARED', settled=0 WHERE event_id=?",
-                (event["event_id"],))
-            return self.root / previous["event_path"]
+                "UPDATE position_operations SET state='PREPARED', settled=0,attempt=? WHERE event_id=? AND state='ABORTED' AND attempt=?",
+                (attempt, event["event_id"], previous["attempt"]))
+            # Never borrow a competing worker's token if this CAS lost.
+            return self.root / previous["event_path"], attempt
         path = self._event_path(event)
         path.parent.mkdir(parents=True, exist_ok=True)
         self._position_index_write(
-            "INSERT INTO position_operations VALUES (?, ?, ?, ?, ?, ?, 'PREPARED', 0)",
+            "INSERT INTO position_operations (event_id,kind,agms,start_id,event_path,payload,state,settled,attempt) VALUES (?, ?, ?, ?, ?, ?, 'PREPARED', 0, ?)",
             (event["event_id"], event["kind"], event["agms"], event.get("start_event_id"),
-             str(path.relative_to(self.root)), json.dumps(self._event_payload(event), ensure_ascii=False)))
-        return path
+             str(path.relative_to(self.root)), json.dumps(self._event_payload(event), ensure_ascii=False),attempt))
+        return path, attempt
 
     def _settle_position_event(self, event_id):
         self._position_index_write(
-            "UPDATE position_operations SET state='COMMITTED', settled=1 WHERE event_id=?", (event_id,))
+            "UPDATE position_operations SET settled=1 WHERE event_id=? AND state='COMMITTED'", (event_id,))
 
-    def _abort_position_event(self, event_id):
-        self._position_index_write(
-            "UPDATE position_operations SET state='ABORTED', settled=1 WHERE event_id=?", (event_id,))
+    def _abort_position_event(self, event_id, attempt=None):
+        return self._abort_position_attempt(event_id, attempt)
 
     def _init_position_recovery(self):
         with self.officer_lock("__POSITION_TRANSACTIONS__"):
@@ -120,9 +124,14 @@ class PositionRecoveryMixin:
                         ON position_operations(start_id) WHERE kind='END' AND state<>'ABORTED'""")
                     db.execute("CREATE INDEX IF NOT EXISTS position_unsettled ON position_operations(settled)")
                     migrated = db.execute("SELECT value FROM meta WHERE key='position_events_index_v1'").fetchone()
+                    # Columns must exist before either legacy insert or a retry.
+                    columns = {r['name'] for r in db.execute('PRAGMA table_info(position_operations)')}
+                    if 'attempt' not in columns:
+                        db.execute("ALTER TABLE position_operations ADD COLUMN attempt TEXT NOT NULL DEFAULT ''")
                     if not migrated:
                         self._index_legacy_position_events(db)
                         db.execute("INSERT INTO meta VALUES ('position_events_index_v1', '1')")
+                    self._init_position_claims(db, rebuild=not migrated)
             self._recover_position_operations_locked()
 
     def _index_legacy_position_events(self, db):
@@ -152,11 +161,23 @@ class PositionRecoveryMixin:
         if event.get("kind") not in ("START", "END"):
             return
         self._event_path(event)  # Validate identity/timestamp, keep original path.
-        db.execute("INSERT INTO position_operations VALUES (?, ?, ?, ?, ?, ?, 'COMMITTED', 0)",
+        db.execute("INSERT INTO position_operations (event_id,kind,agms,start_id,event_path,payload,state,settled) VALUES (?, ?, ?, ?, ?, ?, 'COMMITTED', 0)",
                    (event["event_id"], event["kind"], event["agms"], event.get("start_event_id"),
                     str(path.relative_to(self.root)), json.dumps(self._event_payload(event), ensure_ascii=False)))
 
     def _recover_position_operations_locked(self):
+        # Older central pending receipts are durable evidence too. Import them
+        # before considering a booth free, without relying on an active marker.
+        receipts = list(islice(self.pending_index.glob("*.json"), self.POSITION_RECOVERY_LIMIT + 1))
+        if len(receipts) > self.POSITION_RECOVERY_LIMIT:
+            raise BusyError("Υπέρβαση ορίου κεντρικών αποδείξεων ΛΗΞΗΣ.")
+        for path in receipts:
+            receipt = json.loads(path.read_text(encoding="utf-8"))
+            start, end = receipt["start"], receipt["end"]
+            if not self._committed_position_operation(end["event_id"]):
+                if end.get("start_event_id") != start.get("event_id") or end.get("agms") != start.get("agms"):
+                    raise BusyError("Ασυμφωνία κεντρικής απόδειξης ΛΗΞΗΣ.")
+                self._write_event(dict(end))
         rows = self._position_rows(
             "SELECT * FROM position_operations WHERE settled=0 ORDER BY kind LIMIT ?",
             (self.POSITION_RECOVERY_LIMIT + 1,))
@@ -167,11 +188,10 @@ class PositionRecoveryMixin:
         for row in rows:
             event = self._position_evidence(row)
             if event is None:
-                self._abort_position_event(row["event_id"])
+                self._abort_position_event(row["event_id"], row["attempt"])
             else:
-                self._position_index_write(
-                    "UPDATE position_operations SET state='COMMITTED' WHERE event_id=?", (row["event_id"],))
-                committed.append(event)
+                if self._commit_position_attempt(row["event_id"], row["attempt"]):
+                    committed.append(event)
         # END sorts before START, so recovery never resurrects a completed START.
         for event in committed:
             with self.officer_lock(event["agms"]):

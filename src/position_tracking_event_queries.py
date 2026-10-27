@@ -9,6 +9,7 @@ from position_tracking_settings import DEFAULT_CUTOFF
 
 class EventQueryMixin:
     def iter_events(self, start_dt: datetime, end_dt: datetime) -> list[dict]:
+        states = self._event_states()
         result: list[dict] = []
         current = start_dt.date()
         last = end_dt.date()
@@ -18,6 +19,8 @@ class EventQueryMixin:
                 for path in sorted(folder.glob("*.json")):
                     try:
                         e = self._apply_start_correction(json.loads(path.read_text(encoding="utf-8")))
+                        if states is not None and states.get(e.get("event_id")) != "COMMITTED":
+                            continue
                         ts = datetime.fromisoformat(e.get("timestamp", ""))
                         if start_dt <= ts < end_dt:
                             result.append(e)
@@ -28,12 +31,15 @@ class EventQueryMixin:
 
 
     def iter_all_events(self) -> list[dict]:
+        states = self._event_states()
         result: list[dict] = []
         if not self.events.exists():
             return result
         for path in sorted(self.events.rglob("*.json")):
             try:
                 event = self._apply_start_correction(json.loads(path.read_text(encoding="utf-8")))
+                if states is not None and states.get(event.get("event_id")) != "COMMITTED":
+                    continue
                 if _clean(event.get("timestamp")):
                     result.append(event)
             except Exception:
