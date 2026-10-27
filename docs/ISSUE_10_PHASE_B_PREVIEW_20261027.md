@@ -1,5 +1,10 @@
 # Issue #10 — Phase B direct-central operator preview
 
+**FROZEN / UNSAFE TO DEPLOY:** see `ISSUE_10_STALE_WORKER_STOP_20261027.md`.
+Two additional stale-worker assertions fail, and Linux CI exposed a Qt shutdown
+crash. The local PASS results below predate the additional safety gate; the
+overall candidate is FAIL. No further functional development follows this stop.
+
 **TEST ONLY / PARTIAL PHASE B.** The central recovery gate passed first in
 `2599257440a9e8b46b770f1ef4ef21a092b44e42`. This checkpoint adds a runnable
 operator path; it is not the complete Issue #10 application and is not approved

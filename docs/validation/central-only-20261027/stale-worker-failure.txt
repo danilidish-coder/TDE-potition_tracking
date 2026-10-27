@@ -1,0 +1,21 @@
+FF
+======================================================================
+FAIL: test_stale_end_must_not_unlink_replacement_start (__main__.StaleWorkerContract.test_stale_end_must_not_unlink_replacement_start)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/central_stale_worker_regression.py", line 89, in test_stale_end_must_not_unlink_replacement_start
+    self.assertIsNotNone(active, "A stale END must not remove a later confirmed START")
+AssertionError: unexpectedly None : A stale END must not remove a later confirmed START
+
+======================================================================
+FAIL: test_stale_start_must_not_claim_booth_taken_after_lock_loss (__main__.StaleWorkerContract.test_stale_start_must_not_claim_booth_taken_after_lock_loss)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/central_stale_worker_regression.py", line 67, in test_stale_start_must_not_claim_booth_taken_after_lock_loss
+    self.assertEqual(len([item for item in active if item["position"] == "1"]), 1,
+AssertionError: 2 != 1 : A stale START must not create two live occupants of one physical booth
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.019s
+
+FAILED (failures=2)

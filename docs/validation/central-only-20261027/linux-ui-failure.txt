@@ -1,0 +1,31 @@
+Source: f0b4606ff51fa7bc083b12106d1e7ad56fcf9d71
+Actions run: 40566794748
+Job: 122410105225
+Result: FAIL
+Excerpt from actual job log:
+
+2026-10-27T19:11:54.2226324Z .This plugin does not support propagateSizeHints()
+2026-10-27T19:11:58.1193579Z .This plugin does not support propagateSizeHints()
+2026-10-27T19:11:59.8126245Z .
+2026-10-27T19:11:59.8126878Z ======================================================================
+2026-10-27T19:11:59.8129183Z FAIL: test_central_preview_launch_never_initializes_legacy_window_or_local_providers (__main__.OperatorUI.test_central_preview_launch_never_initializes_legacy_window_or_local_providers)
+2026-10-27T19:11:59.8131072Z ----------------------------------------------------------------------
+2026-10-27T19:11:59.8131938Z Traceback (most recent call last):
+2026-10-27T19:11:59.8139802Z   File "/home/runner/work/TDE-potition_tracking/TDE-potition_tracking/tests/central_operator_ui_regression.py", line 191, in test_central_preview_launch_never_initializes_legacy_window_or_local_providers
+2026-10-27T19:11:59.8141347Z     self.assertEqual(completed.returncode, 0, completed.stderr)
+2026-10-27T19:11:59.8142401Z AssertionError: -6 != 0 : This plugin does not support propagateSizeHints()
+2026-10-27T19:11:59.8143201Z QObject: shared QObject was deleted directly. The program is malformed and may crash.
+2026-10-27T19:11:59.8143871Z corrupted double-linked list
+2026-10-27T19:11:59.8144109Z 
+2026-10-27T19:11:59.8144114Z 
+2026-10-27T19:11:59.8144327Z ----------------------------------------------------------------------
+2026-10-27T19:11:59.8144808Z Ran 6 tests in 15.545s
+2026-10-27T19:11:59.8145435Z 
+2026-10-27T19:11:59.8145564Z FAILED (failures=1)
+2026-10-27T19:11:59.8561733Z ##[error]Process completed with exit code 1.
+2026-10-27T19:11:59.8683794Z ##[group]Run actions/upload-artifact@v4
+2026-10-27T19:11:59.8684095Z with:
+2026-10-27T19:11:59.8684508Z   name: CENTRAL_SOURCE_GATES-ubuntu-latest-f0b4606ff51fa7bc083b12106d1e7ad56fcf9d71-40566794748
+2026-10-27T19:11:59.8685005Z   path: artifact/regressions
+2026-10-27T19:11:59.8685264Z   if-no-files-found: ignore
+

@@ -1,5 +1,10 @@
 # Issue #10 — central recovery checkpoint
 
+**SUPERSEDED AS A READINESS GATE:** the later
+`ISSUE_10_STALE_WORKER_STOP_20261027.md` records two failing stale-worker safety
+assertions. The PASS evidence below is scoped to ordinary interruption/reopen;
+it does not establish safety after SMB server lock loss. Development is STOPPED.
+
 Continues `839c3c5d319fdb5a1f0f2fa1526db78a870b58a8` on
 `feature/central-only-simple-20261027`, descended from approved baseline
 `4340c41865328cd893e6dc23fcdcedfefa7f9bf2`. Implements the follow-up instruction

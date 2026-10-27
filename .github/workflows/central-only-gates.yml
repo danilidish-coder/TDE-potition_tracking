@@ -37,6 +37,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python tests/central_stale_worker_regression.py
           python tests/central_end_interruption_regression.py
           python tests/central_position_recovery_regression.py
           python tests/central_operator_regression.py
