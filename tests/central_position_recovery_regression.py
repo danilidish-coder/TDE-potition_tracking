@@ -277,6 +277,25 @@ class RecoveryContract(unittest.TestCase):
             self.reopen()
         self.assertEqual(len(self.events("END")), 2)  # Preserve both as evidence.
 
+    def test_old_aborted_end_bytes_cannot_bypass_corrected_start_on_recovery(self):
+        self.when = self.when.replace(hour=12, minute=0)
+        self.start()
+        self.interrupt_json(lambda path, e: path.is_relative_to(self.store.events) and e["kind"] == "END")
+        with self.assertRaises(OSError):
+            self.end()
+        self.reopen()
+        original = json.loads(self.store._position_operation("end-original")["payload"])
+        # A lost-lock worker may deliver its old bytes AFTER being superseded.
+        self.store._atomic_json(self.store._event_path(original), original)
+        self.store.correct_active_start(self.person.agms, self.when + timedelta(minutes=3),
+                                        self.other, "Synthetic audited correction")
+        with self.assertRaises(ValueError):
+            self.store.end(self.person, when=self.when + timedelta(days=1), event_id="end-original")
+        self.reopen()
+        self.assertIsNotNone(self.store.get_active(self.person.agms))
+        self.assertEqual(self.events("END"), [])
+        self.assertEqual(self.store._position_operation("end-original")["state"], "ABORTED")
+
     def test_legacy_conflicting_starts_are_preserved_and_blocked(self):
         first = self.start()
         second = {**first, "event_id": "conflicting-start", "agms": self.other.agms}

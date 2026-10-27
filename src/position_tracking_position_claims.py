@@ -7,6 +7,7 @@ accepted central operation may supply live/report state.
 """
 import json
 import sqlite3
+from datetime import datetime
 from position_tracking_store_io import BusyError
 
 
@@ -51,6 +52,12 @@ class PositionClaimsMixin:
                     db.execute("INSERT INTO position_live VALUES (?, ?, ?)",
                                (event["agms"], event["position"], event_id))
                 else:
+                    start = db.execute("SELECT payload FROM position_operations WHERE event_id=? AND state='COMMITTED'",
+                                       (event["start_event_id"],)).fetchone()
+                    effective = self._apply_start_correction(json.loads(start["payload"])) if start else None
+                    if not effective or datetime.fromisoformat(event["timestamp"]) < datetime.fromisoformat(effective["timestamp"]):
+                        db.execute("UPDATE position_operations SET state='ABORTED',settled=1 WHERE event_id=?", (event_id,))
+                        return False
                     changed = db.execute("DELETE FROM position_live WHERE agms=? AND start_id=?",
                                          (event["agms"], event["start_event_id"])).rowcount
                     if not changed:
