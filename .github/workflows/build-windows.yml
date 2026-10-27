@@ -28,6 +28,9 @@ permissions:
 
 jobs:
   build:
+    # Issue #10 runs source gates first. Its operator preview is not yet a
+    # complete packaged candidate; do not build the legacy default EXE here.
+    if: ${{ github.ref != 'refs/heads/feature/central-only-simple-20261027' && github.head_ref != 'feature/central-only-simple-20261027' }}
     runs-on: windows-2022
     timeout-minutes: 25
     steps:

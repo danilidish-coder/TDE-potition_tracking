@@ -1,0 +1,186 @@
+"""Test-only Phase B operator screen; every shared-file operation runs in a worker."""
+import time
+from PySide6.QtCore import QTimer, Qt
+from PySide6.QtWidgets import (QComboBox, QFormLayout, QHBoxLayout, QLabel,
+                              QLineEdit, QMainWindow, QMessageBox, QPushButton,
+                              QVBoxLayout, QWidget)
+
+from position_tracking_central import CentralOperator, PositionRequest, UNCONFIRMED
+from position_tracking_worker import SingleFlightWorker
+
+
+class CentralOperatorWindow(QMainWindow):
+    def __init__(self, services):
+        super().__init__()
+        self.services = services
+        self.endpoint = None
+        self._read_worker = SingleFlightWorker("TDE-central-read")
+        self._action_worker = SingleFlightWorker("TDE-central-action")
+        self._read_future = None
+        self._action_future = None
+        self._request = None
+        self._active = None
+        self._person = None
+        self._dirty = True
+        self._closing = False
+        self.setWindowTitle("Καταγραφή Θέσεων — κεντρική λειτουργία για δοκιμή")
+        self.resize(800, 560)
+        root = QWidget(self)
+        self.setCentralWidget(root)
+        layout = QVBoxLayout(root)
+        layout.setContentsMargins(28, 24, 28, 24)
+        title = QLabel("Τ.Δ.Ε. ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ\nΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ")
+        title.setAlignment(Qt.AlignCenter)
+        title.setStyleSheet("font-size:22px;font-weight:800")
+        layout.addWidget(title)
+        form = QFormLayout()
+        self.agms_input = QLineEdit()
+        self.agms_input.setPlaceholderText("Πληκτρολογήστε Α.Γ.Μ.Σ.")
+        self.agms_input.textChanged.connect(self._selection_changed)
+        self.person_name = QLabel("—")
+        self.direction = QComboBox()
+        self.direction.addItems(["ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"])
+        self.position = QComboBox()
+        self.position.addItems([str(i) for i in range(1, 15)])
+        for label, widget in (("Α.Γ.Μ.Σ.", self.agms_input), ("Αστυνομικός", self.person_name),
+                              ("ΚΑΤΕΥΘΥΝΣΗ", self.direction), ("ΘΕΣΗ", self.position)):
+            form.addRow(label, widget)
+        layout.addLayout(form)
+        self.active_status = QLabel("ΕΛΕΓΧΟΣ ΚΕΝΤΡΙΚΩΝ ΔΕΔΟΜΕΝΩΝ…")
+        self.active_status.setWordWrap(True)
+        layout.addWidget(self.active_status)
+        row = QHBoxLayout()
+        self.start_btn = QPushButton("ΕΝΑΡΞΗ")
+        self.end_btn = QPushButton("ΛΗΞΗ")
+        self.start_btn.clicked.connect(lambda: self._act("START"))
+        self.end_btn.clicked.connect(lambda: self._act("END"))
+        for button in (self.start_btn, self.end_btn):
+            button.setMinimumHeight(54)
+            button.setEnabled(False)
+            row.addWidget(button)
+        layout.addLayout(row)
+        self.recheck_btn = QPushButton("ΕΠΑΝΕΛΕΓΧΟΣ ΚΕΝΤΡΙΚΩΝ ΔΕΔΟΜΕΝΩΝ")
+        self.recheck_btn.clicked.connect(self._recheck)
+        layout.addWidget(self.recheck_btn)
+        self.info = QLabel("")
+        self.info.setWordWrap(True)
+        layout.addWidget(self.info)
+        layout.addStretch()
+        self.exit_btn = QPushButton("ΕΞΟΔΟΣ ΑΠΟ ΤΟ ΠΡΟΓΡΑΜΜΑ")
+        self.exit_btn.clicked.connect(self.close)
+        layout.addWidget(self.exit_btn)
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._poll)
+        self._timer.start(100)
+        self._poll()
+
+    def _selection_changed(self):
+        self._dirty = True
+        self._person = None
+        self._active = None
+        self.person_name.setText("—")
+        self._buttons()
+
+    def _buttons(self):
+        busy = self._request is not None or self._action_future is not None
+        ready = self._person is not None and not busy and not self._dirty
+        self.start_btn.setEnabled(ready and self._active is None)
+        self.end_btn.setEnabled(ready and self._active is not None)
+        # Repeated clicks never submit another job behind blocked SMB work.
+        self.recheck_btn.setEnabled(self._read_future is None and self._action_future is None)
+
+    def _load_selection(self, agms):
+        endpoint = self.endpoint or CentralOperator.from_shared_directory(self.services.app_dir())
+        return endpoint, endpoint.lookup(agms)
+
+    def _poll(self):
+        if self._closing:
+            return
+        if self._action_future is not None:
+            if not self._action_future.done():
+                if time.monotonic() - self._action_started > 3:
+                    self.info.setText(UNCONFIRMED + "\nΗ εντολή παραμένει σε εξέλιξη. Μην την επαναλάβετε.")
+                self._buttons()
+                return
+            future = self._action_future
+            self._action_future = None
+            try:
+                outcome = future.result()
+            except Exception:
+                self.info.setText(UNCONFIRMED + "\nΠατήστε ΕΠΑΝΕΛΕΓΧΟΣ όταν αποκατασταθεί η πρόσβαση.")
+            else:
+                self.info.setText(outcome.message)
+                if outcome.status != "UNKNOWN":
+                    self._request = None
+                    self._dirty = True
+        if self._read_future is not None:
+            if not self._read_future.done():
+                if time.monotonic() - self._read_started > 3 and self._request is None:
+                    self.active_status.setText(UNCONFIRMED)
+                self._buttons()
+                return
+            future = self._read_future
+            self._read_future = None
+            current = self._read_agms == self.agms_input.text().strip()
+            try:
+                endpoint, (person, active) = future.result()
+            except Exception:
+                if current and self._request is None:
+                    self.active_status.setText(UNCONFIRMED)
+                    self._person = None
+                    self._active = None
+                    self._dirty = False  # Explicit recheck; no network polling.
+            else:
+                self.endpoint = endpoint
+                if current and self._request is None:
+                    self._person, self._active = person, active
+                    self._dirty = False
+                    self.person_name.setText(person.display if person else "—")
+                    if active:
+                        self.active_status.setText(
+                            f"ΕΝΕΡΓΗ: ΘΕΣΗ {active['position']} — {active['direction']} — από {active['timestamp'].replace('T', ' ')}")
+                    else:
+                        self.active_status.setText("Δεν υπάρχει ανοικτή καταχώριση" if person else "Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ.")
+        if self._dirty and self._read_future is None and self._request is None:
+            self._read_agms = self.agms_input.text().strip()
+            self._read_started = time.monotonic()
+            self._read_future = self._read_worker.submit(self._load_selection, self._read_agms)
+        self._buttons()
+
+    def _act(self, kind):
+        if self._closing or self._request is not None or self._dirty or self._person is None:
+            return
+        if (kind == "START" and self._active) or (kind == "END" and not self._active):
+            return
+        self._request = PositionRequest(kind, self._person.agms, self.position.currentText(),
+                                        self.direction.currentText(), (self._active or {}).get("event_id", ""))
+        self._action_started = time.monotonic()
+        self._action_future = self._action_worker.submit(self.endpoint.execute, self._request)
+        self.info.setText("ΑΝΑΜΟΝΗ ΚΕΝΤΡΙΚΗΣ ΕΠΙΒΕΒΑΙΩΣΗΣ…")
+        self._buttons()
+
+    def _recheck(self):
+        if self._closing or self._read_future is not None or self._action_future is not None:
+            return
+        if self._request is not None:
+            self._action_started = time.monotonic()
+            self._action_future = self._action_worker.submit(self.endpoint.check, self._request)
+        else:
+            self._dirty = True
+        self._buttons()
+
+    def closeEvent(self, event):
+        # App exit and Windows account changes are never operator END actions.
+        if self._action_future is not None or self._request is not None:
+            answer = QMessageBox.question(self, "Έξοδος", UNCONFIRMED +
+                "\nΗ εντολή μπορεί να έχει καταχωριστεί. Να κλείσει η εφαρμογή; "
+                "Στην επόμενη εκκίνηση ελέγξτε την κεντρική ενεργή θέση.",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if answer != QMessageBox.Yes:
+                event.ignore()
+                return
+        self._closing = True
+        self._timer.stop()
+        self._read_worker.close()
+        self._action_worker.close()
+        event.accept()

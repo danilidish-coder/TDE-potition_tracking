@@ -7,8 +7,17 @@ from position_tracking_diagnostics import start_runtime_diagnostics
 
 
 def launch(args, services) -> int:
-    app = QApplication(list(args or sys.argv))
+    arguments = list(args or sys.argv)
+    central_preview = "--central-only" in arguments
+    arguments = [argument for argument in arguments if argument != "--central-only"]
+    app = QApplication(arguments)
     app.setApplicationName("TDE Position Tracking")
+    if central_preview:
+        from position_tracking_ui_central import CentralOperatorWindow
+        window = CentralOperatorWindow(services)
+        presentation = arm_initial_presentation(window)
+        window.show()
+        return app.exec()
     try:
         window = MainWindow(services)
     except RuntimeError as exc:

@@ -1,0 +1,53 @@
+name: Central-only candidate source gates
+
+on:
+  push:
+    branches: [feature/central-only-simple-20261027]
+    paths: ["src/**", "tests/**", "requirements.txt", ".github/workflows/central-only-gates.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-gates:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source test dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Install Linux Qt runtime libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libegl1 libopengl0
+      - name: Focused central recovery and operator gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tests/central_end_interruption_regression.py
+          python tests/central_position_recovery_regression.py
+          python tests/central_operator_regression.py
+          python tests/central_operator_ui_regression.py
+      - name: Full source regressions
+        run: python tools/run_regressions.py --out artifact/regressions
+      - name: Retain source diagnostics (no EXE)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CENTRAL_SOURCE_GATES-${{ matrix.os }}-${{ github.sha }}-${{ github.run_id }}
+          path: artifact/regressions
+          if-no-files-found: ignore
+          retention-days: 14

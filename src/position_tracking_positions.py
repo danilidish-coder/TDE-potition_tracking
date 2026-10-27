@@ -110,7 +110,7 @@ class PositionStoreMixin:
         return path
 
 
-    def start(self, person: PersonnelRecord, position: str, direction: str, when: datetime | None = None, client_id: str = "", event_id: str = "", origin_computer: str = "", origin_user: str = "") -> dict:
+    def start(self, person: PersonnelRecord, position: str, direction: str, when: datetime | None = None, client_id: str = "", event_id: str = "", origin_computer: str = "", origin_user: str = "", sync_shift: bool = True) -> dict:
         when = when or datetime.now()
         position = _clean(position)
         direction = _clean(direction).upper()
@@ -213,7 +213,8 @@ class PositionStoreMixin:
                     raise
                 self._settle_position_event(event["event_id"])
         try:
-            self.sync_active_shift()
+            if sync_shift:
+                self.sync_active_shift()
         except Exception:
             # START was durably recorded. Do not report its failure merely
             # because synchronizing the shift membership is delayed.
