@@ -9,6 +9,13 @@ from position_tracking_central import CentralOperator, PositionRequest, UNCONFIR
 from position_tracking_worker import SingleFlightWorker
 
 
+def _load_selection(endpoint, app_directory, agms):
+    # Workers must not own a bound QWidget method: its last reference could be
+    # released on that thread after QApplication/window teardown (Qt 6.12 crash).
+    endpoint = endpoint or CentralOperator.from_shared_directory(app_directory())
+    return endpoint, endpoint.lookup(agms)
+
+
 class CentralOperatorWindow(QMainWindow):
     def __init__(self, services):
         super().__init__()
@@ -89,10 +96,6 @@ class CentralOperatorWindow(QMainWindow):
         # Repeated clicks never submit another job behind blocked SMB work.
         self.recheck_btn.setEnabled(self._read_future is None and self._action_future is None)
 
-    def _load_selection(self, agms):
-        endpoint = self.endpoint or CentralOperator.from_shared_directory(self.services.app_dir())
-        return endpoint, endpoint.lookup(agms)
-
     def _poll(self):
         if self._closing:
             return
@@ -144,7 +147,8 @@ class CentralOperatorWindow(QMainWindow):
         if self._dirty and self._read_future is None and self._request is None:
             self._read_agms = self.agms_input.text().strip()
             self._read_started = time.monotonic()
-            self._read_future = self._read_worker.submit(self._load_selection, self._read_agms)
+            self._read_future = self._read_worker.submit(
+                _load_selection, self.endpoint, self.services.app_dir, self._read_agms)
         self._buttons()
 
     def _act(self, kind):
@@ -179,8 +183,14 @@ class CentralOperatorWindow(QMainWindow):
             if answer != QMessageBox.Yes:
                 event.ignore()
                 return
+        self.shutdown()
+        event.accept()
+
+    def shutdown(self):
+        """GUI-thread cleanup; no waiting for SMB and no operator END."""
+        if self._closing:
+            return
         self._closing = True
         self._timer.stop()
         self._read_worker.close()
         self._action_worker.close()
-        event.accept()

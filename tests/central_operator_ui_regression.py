@@ -12,7 +12,8 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, QCoreApplication, QEvent
+from shiboken6 import isValid
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMessageBox
 from position_tracking_central import PositionOutcome, UNCONFIRMED
@@ -39,7 +40,7 @@ class OperatorUI(unittest.TestCase):
         self.services = SimpleNamespace(app_dir=lambda: self.directory,
                                          local_root=forbidden, machine_queue_root=forbidden)
         self.window = CentralOperatorWindow(self.services)
-        self.addCleanup(self.window.close)
+        self.addCleanup(self.destroy_window, self.window)
         self.window.show()
         self.wait(lambda: self.window._read_future is None and not self.window._dirty)
 
@@ -49,6 +50,17 @@ class OperatorUI(unittest.TestCase):
             self.app.processEvents()
             QTest.qWait(5)
         self.assertTrue(predicate(), "Qt state did not settle")
+
+    @staticmethod
+    def destroy_window(window):
+        # Match real launch teardown. close() merely hides a top-level widget;
+        # retaining native widgets until interpreter/QApplication teardown is
+        # unsafe in Qt 6.12, even when all test assertions already passed.
+        if isValid(window):
+            window.shutdown()
+            window.close()
+            window.deleteLater()
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
     def select(self):
         self.window.agms_input.setText("999001")
@@ -77,7 +89,7 @@ class OperatorUI(unittest.TestCase):
         self.window.close()
         with patch.dict(os.environ, {"USERNAME": "another-synthetic-user"}):
             reopened = CentralOperatorWindow(self.services)
-            self.addCleanup(reopened.close)
+            self.addCleanup(self.destroy_window, reopened)
             reopened.agms_input.setText("999001")
             self.wait(lambda: reopened.end_btn.isEnabled())
         self.assertEqual(reopened._active["event_id"], start_id)
@@ -167,6 +179,7 @@ class OperatorUI(unittest.TestCase):
         source = Path(__file__).resolve().parents[1] / "src"
         program = """
 import sys
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -175,6 +188,12 @@ from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 import position_tracking_ui_application as ui
 import position_tracking_ui_central as central
+from position_tracking_central import CentralOperator
+if sys.argv[3] == 'blocked':
+    def blocked_lookup(endpoint, agms):
+        threading.Event().wait(30)
+        raise OSError('synthetic blocked share')
+    CentralOperator.lookup = blocked_lookup
 def forbidden(): raise AssertionError('local/legacy runtime called')
 services = SimpleNamespace(app_dir=lambda: Path(sys.argv[2]), local_root=forbidden, machine_queue_root=forbidden)
 real_window = central.CentralOperatorWindow
@@ -186,9 +205,11 @@ def construct(services):
 with patch.object(central, 'CentralOperatorWindow', side_effect=construct), patch.object(ui, 'MainWindow', side_effect=forbidden), patch('position_tracking_offline.OfflineJournal.__init__', side_effect=forbidden):
     raise SystemExit(ui.launch(['test', '--central-only'], services))
 """
-        completed = subprocess.run([sys.executable, "-c", program, str(source), str(self.directory)],
-                                   capture_output=True, text=True, timeout=10)
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+        for mode in ("ordinary", "ordinary", "blocked"):
+            with self.subTest(mode=mode):
+                completed = subprocess.run([sys.executable, "-c", program, str(source), str(self.directory), mode],
+                                           capture_output=True, text=True, timeout=10)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(list(self.directory.rglob("position_outbox.sqlite3")), [])
 
 
