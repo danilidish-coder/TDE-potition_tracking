@@ -1,5 +1,6 @@
 """Test-only Phase B operator screen; every shared-file operation runs in a worker."""
 import time
+import uuid
 from dataclasses import replace
 from datetime import datetime
 from PySide6.QtCore import QTimer, Qt
@@ -32,6 +33,10 @@ class CentralOperatorWindow(QMainWindow):
         self._person = None
         self._dirty = True
         self._closing = False
+        self._client_id = uuid.uuid4().hex
+        self._mail_worker = SingleFlightWorker('TDE-central-mail')
+        self._mail_future = None
+        self._mail_messages = []
         self.setWindowTitle("Καταγραφή Θέσεων — κεντρική λειτουργία για δοκιμή")
         self.resize(800, 560)
         root = QWidget(self)
@@ -74,6 +79,10 @@ class CentralOperatorWindow(QMainWindow):
         self.info = QLabel("")
         self.info.setWordWrap(True)
         layout.addWidget(self.info)
+        self.service_message = QLabel(''); self.service_message.setWordWrap(True)
+        self.ack_message = QPushButton('ΕΛΑΒΑ ΓΝΩΣΗ ΥΠΗΡΕΣΙΑΚΟΥ ΜΗΝΥΜΑΤΟΣ')
+        self.ack_message.setVisible(False); self.ack_message.clicked.connect(self._ack_message)
+        layout.addWidget(self.service_message); layout.addWidget(self.ack_message)
         layout.addStretch()
         self.exit_btn = QPushButton("ΕΞΟΔΟΣ ΑΠΟ ΤΟ ΠΡΟΓΡΑΜΜΑ")
         self.exit_btn.clicked.connect(self.close)
@@ -81,7 +90,35 @@ class CentralOperatorWindow(QMainWindow):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
         self._timer.start(100)
+        self._mail_timer = QTimer(self); self._mail_timer.timeout.connect(self._poll_mail); self._mail_timer.start(10000)
         self._poll()
+
+    def _poll_mail(self):
+        if self._closing or self.endpoint is None:
+            return
+        if self._mail_future is None:
+            self._mail_future = self._mail_worker.submit(self.endpoint.communication, self._client_id)
+
+    def _finish_mail(self):
+        if self._mail_future is not None:
+            if not self._mail_future.done():
+                return
+            try:
+                self._mail_messages = self._mail_future.result()
+            except Exception:
+                self.service_message.setText('Δεν επιβεβαιώθηκε ο έλεγχος υπηρεσιακών μηνυμάτων.')
+            else:
+                message = self._mail_messages[0] if self._mail_messages else None
+                self.service_message.setText(message['text'] if message else '')
+                self.ack_message.setVisible(bool(message))
+            self._mail_future = None
+
+    def _ack_message(self):
+        if self._mail_future is not None or not self._mail_messages:
+            return
+        self._mail_future = self._mail_worker.submit(self.endpoint.communication, self._client_id,
+                                                   self._mail_messages[0]['message_id'])
+        self.ack_message.setVisible(False)
 
     def _selection_changed(self):
         self._dirty = True
@@ -101,6 +138,7 @@ class CentralOperatorWindow(QMainWindow):
     def _poll(self):
         if self._closing:
             return
+        self._finish_mail()
         if self._action_future is not None:
             if not self._action_future.done():
                 if time.monotonic() - self._action_started > 3:
@@ -214,5 +252,7 @@ class CentralOperatorWindow(QMainWindow):
             return
         self._closing = True
         self._timer.stop()
+        self._mail_timer.stop()
+        self._mail_worker.close()
         self._read_worker.close()
         self._action_worker.close()
