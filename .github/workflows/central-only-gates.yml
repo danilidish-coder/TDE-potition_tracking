@@ -61,6 +61,7 @@ jobs:
           python tests/central_operator_ui_regression.py
           python tests/central_load_and_report_warning_regression.py
           python tests/central_operator_load_ui_regression.py
+          python tests/central_main_regression.py
       - name: Full source regressions
         run: python tools/run_regressions.py --out artifact/regressions
       - name: Retain source diagnostics (no EXE)
@@ -121,3 +122,95 @@ jobs:
           path: dist/TDE_Katagrafi_Theseon_TRIAL.exe
           if-no-files-found: error
           retention-days: 7
+
+  # Normal (non-sandbox) central-only build for the user's own acceptance test.
+  # Status stays CANDIDATE until the user explicitly approves this exact hash.
+  candidate-exe:
+    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[candidate-exe]') }}
+    needs: source-gates
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      EXE_NAME: TDE_Katagrafi_Theseon_v1.2.7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Build central-only candidate (not approved)
+        shell: pwsh
+        run: |
+          python tools/generate_network_icon.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --icon build_assets/position_tracking_network.ico --version-file tools/windows_version_info_central_v127.txt --name $env:EXE_NAME src/position_tracking_central_main.py
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate build failed' }
+          if (-not (Test-Path "dist/$($env:EXE_NAME).exe")) { throw 'Missing EXE' }
+      - name: Frozen functional self-test on synthetic data
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path "dist/$($env:EXE_NAME).exe").Path
+          $work = Join-Path $env:RUNNER_TEMP 'tde-frozen-selftest'
+          $p = Start-Process $exe -ArgumentList @('--selftest', "`"$work`"") -Wait -PassThru
+          $report = Join-Path $work 'selftest_result.json'
+          if (-not (Test-Path $report)) { throw "Self-test wrote no report (exit $($p.ExitCode))" }
+          $result = Get-Content $report -Raw -Encoding UTF8 | ConvertFrom-Json
+          $result.checks | ForEach-Object { Write-Host ("{0} {1} {2}" -f $(if ($_.ok) {'PASS'} else {'FAIL'}), $_.name, $_.detail) }
+          if ($p.ExitCode -ne 0 -or $result.selftest -ne 'PASS' -or -not $result.frozen) { throw 'Frozen self-test failed' }
+      - name: Frozen window startup in an ordinary (non-sandbox) folder
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path "dist/$($env:EXE_NAME).exe").Path
+          foreach ($mode in @('operator', 'officer')) {
+            $dir = Join-Path $env:RUNNER_TEMP "tde-frozen-$mode"
+            if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
+            $seed = Start-Process $exe -ArgumentList @('--selftest', "`"$dir`"") -Wait -PassThru
+            if ($seed.ExitCode -ne 0) { throw "Synthetic seed failed for $mode" }
+            $copy = Join-Path $dir "$($env:EXE_NAME).exe"
+            Copy-Item $exe $copy
+            if ($mode -eq 'officer') { $p = Start-Process $copy -ArgumentList @('--central-officer') -PassThru }
+            else { $p = Start-Process $copy -PassThru }
+            $found = $null
+            for ($i = 0; $i -lt 50 -and -not $found; $i++) {
+              Start-Sleep -Milliseconds 500
+              if ($p.HasExited) { throw "Window process exited early: $mode (exit $($p.ExitCode))" }
+              $found = Get-Process | Where-Object { $_.MainWindowTitle -like '*v1.2.7*' } | Select-Object -First 1
+            }
+            if (-not $found) { throw "No v1.2.7 window appeared: $mode" }
+            Write-Host "WINDOW_OK mode=$mode title=$($found.MainWindowTitle)"
+            taskkill /IM "$($env:EXE_NAME).exe" /T /F | Out-Null
+            Start-Sleep -Seconds 3
+            if (Get-Process -Name $env:EXE_NAME -ErrorAction SilentlyContinue) { throw "Process still running: $mode" }
+          }
+      - name: Write manifest and checksums
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path "dist/$($env:EXE_NAME).exe").Path
+          $file = Get-Item $exe
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+          New-Item -ItemType Directory -Path candidate -Force | Out-Null
+          Copy-Item $exe candidate/
+          $manifest = [ordered]@{
+            product = 'TDE Katagrafi Theseon'; version = 'v1.2.7'; entry = 'src/position_tracking_central_main.py'
+            status = 'CANDIDATE - NOT APPROVED (awaiting user acceptance of this exact SHA256)'
+            file = "$($env:EXE_NAME).exe"; sha256 = $hash; bytes = $file.Length
+            source_commit = '${{ github.sha }}'; branch = '${{ github.ref_name }}'
+            run_id = '${{ github.run_id }}'; run_attempt = '${{ github.run_attempt }}'
+            checks = @('Windows source gates (full regressions)', 'frozen functional self-test', 'frozen operator window startup', 'frozen officer window startup')
+            not_run = @('real SMB share', 'multiple physical stations', 'user/shift change on real Windows accounts', 'compatibility of an existing production data folder with v1.2.6 rollback')
+          }
+          $manifest | ConvertTo-Json -Depth 4 | Set-Content candidate/MANIFEST.json -Encoding UTF8
+          "$hash *$($env:EXE_NAME).exe" | Set-Content candidate/SHA256.txt -Encoding ASCII
+          Copy-Item (Join-Path $env:RUNNER_TEMP 'tde-frozen-selftest/selftest_result.json') candidate/selftest_result.json
+          Write-Host "CANDIDATE_SOURCE_SHA=${{ github.sha }}"
+          Write-Host "CANDIDATE_EXE_SHA256=$hash"
+          Write-Host "CANDIDATE_EXE_BYTES=$($file.Length)"
+      - name: Upload candidate (private artifact, 90 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: TDE-CANDIDATE-v1.2.7-${{ github.sha }}-${{ github.run_id }}
+          path: candidate/*
+          if-no-files-found: error
+          retention-days: 90

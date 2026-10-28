@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QFormLayout, QHBoxLayout,
     QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QPlainTextEdit, QDialogButtonBox,
     QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget, QInputDialog)
-from position_tracking_constants import STATISTICS_PIN_SHA256
+from position_tracking_constants import CENTRAL_VERSION, STATISTICS_PIN_SHA256
 from position_tracking_central import UNCONFIRMED
 from position_tracking_officer import CentralOfficer, OfficerRequest
 from position_tracking_ui_map import BoothMapWidget
@@ -35,7 +35,7 @@ class CentralOfficerWindow(QMainWindow):
         self._future = None
         self._worker = SingleFlightWorker('TDE-officer')
         self._closing = False
-        self.setWindowTitle('Κεντρικό πάνελ ΑΞΥΠ — δοκιμαστική λειτουργία')
+        self.setWindowTitle(f'Κεντρικό πάνελ ΑΞΥΠ v{CENTRAL_VERSION}')
         self.resize(1120, 850)
         root = QWidget(); self.setCentralWidget(root); layout = QVBoxLayout(root)
         notice = QLabel('Απλή πρόσβαση. Το ΑΓΜΣ είναι δηλωμένο στοιχείο χειριστή, όχι πιστοποιημένη ταυτότητα.')

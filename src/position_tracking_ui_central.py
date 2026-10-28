@@ -1,4 +1,4 @@
-"""Test-only Phase B operator screen; every shared-file operation runs in a worker."""
+"""Central operator screen; every shared-file operation runs in a worker."""
 import time
 import uuid
 from dataclasses import replace
@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (QComboBox, QFormLayout, QHBoxLayout, QLabel,
                               QVBoxLayout, QWidget)
 
 from position_tracking_central import CentralOperator, PositionRequest, UNCONFIRMED
+from position_tracking_constants import CENTRAL_VERSION
 from position_tracking_worker import SingleFlightWorker
 
 
@@ -49,7 +50,7 @@ class CentralOperatorWindow(QMainWindow):
         self._mail_worker = SingleFlightWorker('TDE-central-mail')
         self._mail_future = None
         self._mail_messages = []
-        self.setWindowTitle("Καταγραφή Θέσεων — κεντρική λειτουργία για δοκιμή")
+        self.setWindowTitle(f"Καταγραφή Θέσεων v{CENTRAL_VERSION} — κεντρική λειτουργία")
         self.resize(800, 560)
         root = QWidget(self)
         self.setCentralWidget(root)
