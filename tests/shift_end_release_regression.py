@@ -27,12 +27,14 @@ with tempfile.TemporaryDirectory() as tmp:
     )
     assert store.get_active(first.agms) is not None
     ended = store.end_officer_shift(admin, when=base + timedelta(hours=1))
+    # D1 replaces the old auto-END policy: preserve approved and excluded work.
     assert ended["status"] == "FINALIZED"
-    assert ended["closed_active_agms"] == [first.agms]
-    assert store.get_active(first.agms) is None
+    assert ended["closed_active_agms"] == []
+    assert store.get_active(first.agms)["timestamp"] == base.isoformat(timespec="seconds")
     assert store.get_active(excluded.agms) is not None
     rows = store.search_personnel_sessions()
-    assert any(row["agms"] == first.agms for row in rows)
+    assert rows == [], "Shift completion must not invent completed physical work"
+    store.end(first, when=base + timedelta(hours=1, minutes=1))
     store.start(first, "1", "ΕΙΣΟΔΟΣ", when=base + timedelta(hours=1, minutes=1))
     assert store.get_active(first.agms) is not None
 

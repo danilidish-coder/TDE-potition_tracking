@@ -69,17 +69,18 @@ with tempfile.TemporaryDirectory() as tmp:
         op=journal.enqueue("START",new,"8","ΕΞΟΔΟΣ","B_CLIENT")
         before=json.loads(json.dumps(journal._rows(("PENDING",))[0]))
         result=replay(store,journal,"BOOTH-08","ACCOUNT_B")
-        assert result["pending"]==0 and not result["conflicts"],result
-        assert result["applied"]==[op["operation_id"]]
-        assert store.get_active(old.agms) is None
-        assert store.get_active(new.agms)["event_id"]==op["operation_id"]
-        assert store.get_active(new.agms)["timestamp"]==before["created_at"]
-        assert store.get_active(other.agms)["event_id"]==keep["event_id"]
-        end=all_ends(store,old.agms)
-        assert len(end)==1 and end[0]["start_event_id"]==prior["event_id"]
-        assert end[0].get("end_reason")=="WINDOWS_USER_HANDOFF_RECOVERY"
-        assert replay(store,journal,"BOOTH-08","ACCOUNT_B")["applied"]==[]
-        assert len(all_ends(store,old.agms))==1,"No duplicate HANDOFF END"
+        # D1: a different Windows user cannot implicitly release the booth.
+        # Preserve the queued conflicting command, its ID/time and both STARTs.
+        assert result["conflicts"] and result["applied"] == [], result
+        assert store.get_active(old.agms)["event_id"] == prior["event_id"]
+        assert store.get_active(new.agms) is None
+        assert store.get_active(other.agms)["event_id"] == keep["event_id"]
+        assert all_ends(store, old.agms) == []
+        retained = journal._rows(("CONFLICT",))
+        assert len(retained) == 1
+        assert retained[0]["id"] == before["id"]
+        assert retained[0]["created_at"] == before["created_at"]
+        assert replay(store,journal,"BOOTH-08","ACCOUNT_B")["applied"] == []
 
 # 2. Durable old-user END has priority: preserve its original ID/timestamp.
 with tempfile.TemporaryDirectory() as tmp:
@@ -178,11 +179,11 @@ with tempfile.TemporaryDirectory() as tmp:
         sessions.append((machine,old,new,prior,nxt,journal))
     for machine,old,new,prior,nxt,journal in reversed(sessions):
         result=replay(store,journal,machine,"ACCOUNT_B")
-        assert result["pending"]==0 and not result["conflicts"],(machine,result)
-        assert store.get_active(old.agms) is None
-        assert store.get_active(new.agms)["event_id"]==nxt["operation_id"]
-        assert len(all_ends(store,old.agms))==1
-        assert all_ends(store,old.agms)[0]["start_event_id"]==prior["event_id"]
+        assert result["conflicts"] and result["applied"] == [], (machine,result)
+        assert store.get_active(old.agms)["event_id"] == prior["event_id"]
+        assert store.get_active(new.agms) is None
+        assert all_ends(store,old.agms) == []
+        assert journal._rows(("CONFLICT",))[0]["id"] == nxt["operation_id"]
     assert len(store.active_all())==14
     assert sum(1 for x in store.active_all() if x["direction"]=="ΕΞΟΔΟΣ")==7
 

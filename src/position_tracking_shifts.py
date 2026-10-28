@@ -112,12 +112,12 @@ class ShiftLifecycleMixin:
                 seen = set()
                 for value in initial_approved or []:
                     agms = _clean(value)
-                    if agms and agms in active_by_agms and agms not in seen:
+                    if agms and agms not in seen:
                         approved.append(agms); seen.add(agms)
                 excluded = []
                 for value in initial_excluded or []:
                     agms = _clean(value)
-                    if agms and agms in active_by_agms and agms not in seen:
+                    if agms and agms not in seen:
                         excluded.append(agms); seen.add(agms)
                 for agms in active_by_agms:
                     if agms not in seen:
@@ -169,6 +169,14 @@ class ShiftLifecycleMixin:
             agms = _clean(item.get("agms"))
             if agms and agms not in known:
                 pending.append(agms); known.add(agms); changed = True
+        # A person may explicitly END before the officer next refreshes. Their
+        # durable work must still be offered for the membership decision.
+        for row in self._position_rows("""SELECT DISTINCT agms FROM position_operations
+                WHERE kind='START' AND state='COMMITTED'
+                AND json_extract(payload, '$.timestamp')>=?""", (shift['start_at'],)):
+            agms = row['agms']
+            if agms not in known:
+                pending.append(agms); known.add(agms); changed = True
         if changed:
             shift["pending"] = pending
             shift["updated_at"] = datetime.now().isoformat(timespec="seconds")
@@ -181,12 +189,16 @@ class ShiftLifecycleMixin:
             return self._sync_active_shift_locked()
 
 
-    def set_shift_member_state(self, agms: str, state: str) -> dict:
+    def set_shift_member_state(self, agms: str, state: str, expected_shift_id: str = '') -> dict:
         with self.officer_lock("__SHIFT_CONTROL__", timeout=20.0):
             shift = self.current_shift()
             if not shift:
                 raise ValueError("Δεν υπάρχει ενεργή βάρδια.")
+            if expected_shift_id and shift['shift_id'] != expected_shift_id:
+                raise BusyError('Η βάρδια άλλαξε. Ελέγξτε ξανά πριν από αλλαγή συμμετοχής.')
             agms = _clean(agms)
+            if not agms:
+                raise ValueError('Απαιτείται ΑΓΜΣ μέλους βάρδιας.')
             state = _clean(state).upper()
             if state not in {"APPROVED", "EXCLUDED"}:
                 raise ValueError("Μη έγκυρη κατάσταση μέλους βάρδιας.")
@@ -250,64 +262,13 @@ class ShiftLifecycleMixin:
                 raise BusyError("Η βάρδια άλλαξε. Ανανεώστε τη λίστα πριν συνεχίσετε.")
             if shift.get("pending"):
                 raise ValueError("Υπάρχουν άτομα σε ΑΝΑΜΟΝΗ. Κάντε πρώτα ΑΠΟΔΟΧΗ ή ΕΞΑΙΡΕΣΗ.")
-            if expected_active_start_ids is not None:
-                approved = set(map(_clean, shift.get("approved", [])))
-                actual = {
-                    _clean(item.get("agms")): _clean(item.get("event_id"))
-                    for item in self.active_all()
-                    if _clean(item.get("agms")) in approved
-                }
-                if actual != expected_active_start_ids:
-                    raise BusyError(
-                        "Οι ενεργές θέσεις άλλαξαν μετά την επιβεβαίωση. "
-                        "Ελέγξτε ξανά τον κατάλογο πριν από τη λήξη βάρδιας."
-                    )
             when = when or datetime.now()
-            # A finalized roster must not leave its selected officers blocking the
-            # physical desks. Close only APPROVED active records, through the same
-            # audited END path used by the normal operator action. This operation
-            # is deliberately retryable: already closed records are skipped.
-            closed_agms = []
-            for agms in sorted(set(_clean(a) for a in shift.get("approved", []))):
-                if not agms:
-                    continue
-                current = self.get_active(agms)
-                if not current:
-                    continue
-                started = datetime.fromisoformat(current["timestamp"])
-                if started > when:
-                    raise ValueError(
-                        f"Η έναρξη του ΑΓΜΣ {agms} είναι μεταγενέστερη της λήξης βάρδιας."
-                    )
-                member = PersonnelRecord(
-                    agms=agms,
-                    rank=_clean(current.get("rank")),
-                    surname=_clean(current.get("surname")),
-                    given_name=_clean(current.get("given_name")),
-                )
-                expected_start = (
-                    expected_active_start_ids.get(agms, "")
-                    if expected_active_start_ids is not None
-                    else _clean(current.get("event_id"))
-                )
-                if not expected_start or _clean(current.get("event_id")) != _clean(expected_start):
-                    raise BusyError(
-                        "Η ενεργή καταχώριση άλλαξε μετά την επιβεβαίωση. "
-                        "Δεν πραγματοποιήθηκε λήξη νεότερης θέσης."
-                    )
-                self.end(
-                    member, when=when, expected_start_event_id=expected_start,
-                    end_reason="SHIFT_FINALIZED_BY_OFFICER", end_officer=officer,
-                )
-                self.log_admin_action("SHIFT_AUTO_END_POSITION", {
-                    "shift_id": shift["shift_id"],
-                    "officer_agms": officer.agms,
-                    "member_agms": agms,
-                    "end_at": when.isoformat(timespec="seconds"),
-                    "reason": "FINALIZE_SELECTED_SHIFT_MEMBER",
-                })
-                closed_agms.append(agms)
-            shift["closed_active_agms"] = closed_agms
+            if when < datetime.fromisoformat(shift['start_at']):
+                raise ValueError('Η λήξη βάρδιας προηγείται της έναρξής της.')
+            # A shift is a report/membership boundary, never a physical END.
+            # Retain the old argument for callers; a live-position preview no
+            # longer constrains finalization because no live record is mutated.
+            shift["closed_active_agms"] = []
             shift["status"] = "FINALIZED"
             shift["end_at"] = when.isoformat(timespec="seconds")
             shift["end_officer"] = self._person_payload(officer)

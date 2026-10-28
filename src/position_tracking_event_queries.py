@@ -117,21 +117,19 @@ class EventQueryMixin:
                     pass
                 if sdt >= threshold and sdt < end_at:
                     sessions.append({"start": st, "end": e, "start_dt": sdt, "end_dt": min(edt, end_at)})
-        for st in self.active_all():
-            agms = _clean(st.get("agms"))
-            if agms not in approved:
+        # Reconstruct work as of the report boundary, independently of who is
+        # live NOW. A real END after shift close must never erase that shift's
+        # work, nor may report clipping create an actual physical END.
+        paired = {row['start']['event_id'] for row in sessions}
+        for st in starts.values():
+            agms = _clean(st.get('agms'))
+            if agms not in approved or st['event_id'] in paired:
                 continue
-            try:
-                sdt = datetime.fromisoformat(st["timestamp"])
-            except Exception:
-                continue
-            threshold = start_at
-            try:
-                threshold = datetime.fromisoformat(_clean((initial.get(agms) or {}).get("timestamp")))
-            except Exception:
-                pass
+            sdt = datetime.fromisoformat(st['timestamp'])
+            threshold = datetime.fromisoformat(initial[agms]['timestamp']) if agms in initial else start_at
             if threshold <= sdt < end_at:
-                sessions.append({"start": st, "end": None, "start_dt": sdt, "end_dt": end_at if shift.get("end_at") else None})
+                sessions.append({'start': st, 'end': None, 'start_dt': sdt,
+                                 'end_dt': end_at if shift.get('end_at') else None})
         return sorted(sessions, key=lambda x: (_clean(x["start"].get("full_name")), x["start_dt"]))
 
 

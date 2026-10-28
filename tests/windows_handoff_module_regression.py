@@ -1,4 +1,4 @@
-"""Stage 3a: extracted handoff module MUST preserve all prior behavior."""
+"""D1: identity-change compatibility hook preserves every confirmed position."""
 from __future__ import annotations
 import ast, importlib.util, sys, tempfile, inspect, textwrap
 from pathlib import Path
@@ -38,10 +38,10 @@ with tempfile.TemporaryDirectory() as tmp:
     assert store.close_previous_windows_user_positions("BOOTH-08","ACCOUNT_A")==[], "Same Windows user must not be closed"
     assert store.close_previous_windows_user_positions("BOOTH-08","")==[], "Missing Windows identity must not end"
     closed=store.close_previous_windows_user_positions("BOOTH-08","ACCOUNT_B")
-    assert len(closed)==1 and closed[0]["start_event_id"]==first["event_id"]
-    assert store.get_active(old.agms) is None
+    assert closed == []
+    assert store.get_active(old.agms)["event_id"] == first["event_id"]
     assert store.get_active(unrelated.agms) is not None
     assert store.close_previous_windows_user_positions("BOOTH-08","ACCOUNT_B")==[], "Replay must be idempotent"
     ends=[x for x in store.iter_all_events() if x.get("kind")=="END" and x.get("agms")==old.agms]
-    assert len(ends)==1 and ends[0].get("end_reason")=="WINDOWS_USER_HANDOFF_RECOVERY"
+    assert ends == [], "Windows identity changes must never synthesize physical END"
 print("HANDOFF_MODULE_STAGE3A: PASS (protected IDs, same PC, idempotence, unmatched PC preserved)")

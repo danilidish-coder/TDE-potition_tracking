@@ -19,7 +19,7 @@ from position_tracking_ui_main import MainWindow
 from position_tracking_store import SharedEventStore
 
 class ActualUIWorkflow(unittest.TestCase):
-    def exercise(self, hold_handoff_lock=False):
+    def exercise(self, hold_position_lock=False):
         app=QApplication.instance() or QApplication([]);app.setQuitOnLastWindowClosed(False)
         windows=[];notices=[];release=None;locker=None;release_timer=None
         with tempfile.TemporaryDirectory() as directory:
@@ -73,27 +73,28 @@ class ActualUIWorkflow(unittest.TestCase):
                     original=w.offline._rows(('PENDING',));self.assertEqual([x['kind'] for x in original],['START','END'])
                     self.assertFalse(central.exists());close_window(w)
                     central.mkdir()
-                    if hold_handoff_lock:
+                    if hold_position_lock:
                         fixture=SharedEventStore(central);acquired=threading.Event();release=threading.Event();lock_errors=[]
-                        def own_handoff_lock():
+                        def own_position_lock():
                             try:
-                                with fixture.officer_lock('__WINDOWS_USER_HANDOFF__',timeout=3):
+                                with fixture.officer_lock('__POSITION_TRANSACTIONS__',timeout=3):
                                     acquired.set();release.wait(40)
                             except BaseException as exc:lock_errors.append(exc);acquired.set()
-                        locker=threading.Thread(target=own_handoff_lock,daemon=True);locker.start()
+                        locker=threading.Thread(target=own_position_lock,daemon=True);locker.start()
                         self.assertTrue(acquired.wait(5));self.assertFalse(lock_errors,repr(lock_errors))
                     w=open_window();ticks=[];heartbeat=QTimer(w)
                     heartbeat.timeout.connect(lambda:ticks.append(time.monotonic()));heartbeat.start(50)
-                    if hold_handoff_lock:
+                    if hold_position_lock:
                         release_timer=threading.Timer(13,release.set);release_timer.start()
                     started=time.monotonic()
-                    # Production permits a 10s schema lock + 15s handoff lock;
-                    # allow two actual 3s polling periods to deliver results.
+                    # D1 removed the implicit Windows handoff mutation/lock.
+                    # Exercise the actual position recovery lock instead; keep
+                    # the existing 31s ceiling and all receipt/heartbeat checks.
                     recovery_budget=10+15+2*3
                     wait(lambda:w.store is not None and w.offline.pending_count()==0,seconds=recovery_budget)
                     recovery_elapsed=time.monotonic()-started;heartbeat.stop()
                     print(f'RECOVERY_ELAPSED_SECONDS={recovery_elapsed:.3f}; HEARTBEATS={len(ticks)}',flush=True)
-                    if hold_handoff_lock:
+                    if hold_position_lock:
                         self.assertGreater(recovery_elapsed,12,'The old 12s assumption must be disproved by the real lock fixture')
                         self.assertGreater(len(ticks),100,'Qt must stay responsive during the legitimate lock wait')
                         locker.join(5);self.assertFalse(locker.is_alive());self.assertFalse(lock_errors)

@@ -98,8 +98,9 @@ with tempfile.TemporaryDirectory() as tmp:
     items = store.shift_sessions_v2(shift)
     assert len(items) == 1 and items[0]["start_dt"] == base + timedelta(minutes=5), items
     final = store.end_officer_shift(officer, when=base + timedelta(minutes=30))
-    assert final["closed_active_agms"] == [worker.agms]
-    assert not store.active_all()
+    assert final["closed_active_agms"] == []
+    assert store.get_active(worker.agms)["timestamp"] == (base + timedelta(minutes=5)).isoformat(timespec="seconds")
+    store.end(worker, when=base + timedelta(minutes=35))  # Explicit physical END, separate from shift.
     matches = [x for x in store.search_personnel_sessions() if x["agms"] == worker.agms]
     assert matches and matches[0]["start_at"] == (base + timedelta(minutes=5)).isoformat(timespec="seconds")
     checks += 1

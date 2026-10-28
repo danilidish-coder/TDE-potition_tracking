@@ -232,13 +232,8 @@ class PositionStoreMixin:
                 if not self._commit_position_attempt(event["event_id"], attempt):
                     return {**event, "superseded": True}
                 self._settle_position_event(event["event_id"])
-        try:
-            if sync_shift:
-                self.sync_active_shift()
-        except Exception:
-            # START was durably recorded. Do not report its failure merely
-            # because synchronizing the shift membership is delayed.
-            pass
+        # Membership discovery belongs to the officer workflow. Keep sync_shift
+        # as a compatibility argument, but never wait on __SHIFT_CONTROL__ here.
         return event
 
 

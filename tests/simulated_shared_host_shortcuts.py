@@ -127,17 +127,20 @@ with tempfile.TemporaryDirectory(prefix="TDE-15-clients-") as tmp:
             offline_real.rename(hub)
         assert len(store.active_all()) == 14
 
-    # A switched Windows account on same computer closes only that host's old
-    # position. Same-user or unrelated computer positions stay unchanged.
+    # D1: account changes preserve all physical STARTs. Only explicit END frees a booth.
     old_owner = next((spec for spec, reply in successes if spec[3] == "BOOTH-04"))
     old_id, old_pos, old_user, old_pc = old_owner
     handoff = run_station(root, "handoff", "NA", "-", "NEW_WINDOWS_USER", old_pc)
-    assert handoff["ok"] and handoff["ended"] == [old_id], handoff
-    assert store.get_active(old_id) is None
-    assert len(store.active_all()) == 13
+    assert handoff["ok"] and handoff["ended"] == [], handoff
+    original = store.get_active(old_id)
+    assert original is not None
+    assert len(store.active_all()) == 14
     again = run_station(root, "handoff", "NA", "-", "NEW_WINDOWS_USER", old_pc)
     assert again["ended"] == [], again
-    assert len(store.active_all()) == 13
+    assert len(store.active_all()) == 14
+    newcomer = run_station(root, "start", "2000", old_pos, "NEW_WINDOWS_USER", old_pc)
+    assert not newcomer["ok"], "Windows user change cannot steal an occupied booth"
+    store.end(person(old_id), expected_start_event_id=original["event_id"])
     newcomer = run_station(root, "start", "2000", old_pos, "NEW_WINDOWS_USER", old_pc)
     assert newcomer["ok"], newcomer
     assert len(store.active_all()) == 14

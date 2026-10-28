@@ -41,17 +41,15 @@ with tempfile.TemporaryDirectory() as tmp:
     relabel(store, same_user, computer="BOOTH-01", user="NEW_USER")
     relabel(store, unknown_user, computer="BOOTH-01", user="")
     closed = store.close_previous_windows_user_positions("booth-01", "new_user")
-    assert len(closed) == 1 and closed[0]["agms"] == old.agms, closed
-    assert store.get_active(old.agms) is None
+    assert closed == []
+    assert store.get_active(old.agms)["event_id"] == a["event_id"]
     for p in (other_pc, same_user, unknown_user):
         assert store.get_active(p.agms) is not None, p.agms
     assert store.close_previous_windows_user_positions("BOOTH-01", "NEW_USER") == []
     assert store.close_previous_windows_user_positions("", "NEW_USER") == []
     assert store.close_previous_windows_user_positions("BOOTH-01", "") == []
     ends = [e for e in store.iter_all_events() if e.get("kind") == "END" and e.get("agms") == old.agms]
-    assert len(ends) == 1, ends
-    assert ends[0].get("end_reason") == "WINDOWS_USER_HANDOFF_RECOVERY", ends[0]
-    assert ends[0]["start_event_id"] == a["event_id"]
+    assert ends == [], "D1: account change is not an explicit END"
 
 with tempfile.TemporaryDirectory() as tmp:
     store = MOD.SharedEventStore(Path(tmp) / "TDE_DATA")
@@ -61,17 +59,12 @@ with tempfile.TemporaryDirectory() as tmp:
     store.start_officer_shift(officer)
     snapshot = {x["agms"]: x["event_id"] for x in store.active_all()}
     store.end(second)
-    try:
-        store.end_officer_shift(officer, expected_active_start_ids=snapshot)
-    except MOD.BusyError:
-        pass
-    else:
-        raise AssertionError("The changed active list was accepted without re-confirmation")
-    assert store.current_shift() is not None
-    confirmed = {x["agms"]: x["event_id"] for x in store.active_all()}
-    finalized = store.end_officer_shift(officer, expected_active_start_ids=confirmed)
-    assert finalized["closed_active_agms"] == [first.agms], finalized
-    assert not store.active_all()
+    # D1: a stale live preview no longer blocks a shift-only finalization.
+    finalized = store.end_officer_shift(officer, expected_active_start_ids=snapshot)
+    assert finalized["closed_active_agms"] == []
+    assert store.get_active(first.agms)["event_id"] == snapshot[first.agms]
+    assert store.get_active(second.agms) is None  # Its explicit END is retained.
+    assert len([e for e in store.iter_all_events() if e['kind'] == 'END']) == 1
 
 with tempfile.TemporaryDirectory() as tmp:
     store = MOD.SharedEventStore(Path(tmp) / "TDE_DATA")
@@ -82,10 +75,10 @@ with tempfile.TemporaryDirectory() as tmp:
     store.set_shift_member_state(excluded.agms, "EXCLUDED")
     snapshot = {approved.agms: store.get_active(approved.agms)["event_id"]}
     finalized = store.end_officer_shift(officer, expected_active_start_ids=snapshot)
-    assert finalized["closed_active_agms"] == [approved.agms]
-    assert store.get_active(approved.agms) is None
+    assert finalized["closed_active_agms"] == []
+    assert store.get_active(approved.agms)["event_id"] == snapshot[approved.agms]
     assert store.get_active(excluded.agms) is not None
-    assert any(
+    assert not any(
         e.get("kind") == "END" and e.get("agms") == approved.agms
         and e.get("end_reason") == "SHIFT_FINALIZED_BY_OFFICER"
         for e in store.iter_all_events()
