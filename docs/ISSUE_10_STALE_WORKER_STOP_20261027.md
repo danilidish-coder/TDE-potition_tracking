@@ -1,10 +1,12 @@
-# Issue #10 — Windows GUI diagnosis, 28 October 2026
+# Issue #10 — Windows/Linux source gates PASS, 28 October 2026
 
 ## Current continuation from 81ccc3a (supersedes the WIP below)
 
 Application remains incomplete; no EXE or production change. Application source
 is still `184567e3f0ef34cee11ce40b5728ea26fdbaa87a`. This continuation changes
-only `tests/central_operator_ui_regression.py`:
+regression fixtures and documentation only. The three original Windows failures
+are resolved. Overall source verification at test revision
+`e688cc79b9bb0f2df6a4ca0cbb5b270d985420a9` is PASS on both platforms:
 
 - Diagnostic commit `8f9b95536df453f8b5608ff45dd76af9f37e88be`, run
   `40654847842`, Windows job `122703285275`, reproduces the three failures with
@@ -28,17 +30,36 @@ only `tests/central_operator_ui_regression.py`:
   loops too. The offline code itself was not changed or revived.
 - Local targeted validation of e688cc7: legacy exit 6/6 PASS (4.536 seconds),
   legacy workflow 1/1 PASS (4.105 seconds, 62 GUI heartbeats during recovery).
-- Final verification run `40656531869` for e688cc7 is IN PROGRESS. Until its
-  complete Windows/Linux results are known, do not advance Issue #10 features.
+- Final verification run `40656531869` for e688cc7 is **SUCCESS** on both
+  platforms: Linux job `122708794143` and Windows job `122708794596`.
+  Each passed all focused gates and the complete **56-script suite, 0 failures**.
+  This includes the three originally failing Windows GUI cases and the two
+  subsequently exposed legacy regression scripts. Actual job-log summaries are
+  retained in `docs/validation/central-only-20261028/source-gates-e688cc7.json`.
 - EXE build run `40655231033`: SKIPPED intentionally. Packaged EXE, physical SMB
   interruption/restart and 15 physical stations: NOT RUN.
 
-Exact next step: read the final result/logs of run `40655231061`, Windows job
-`122704530486`, without rerunning successful gates. If it fails, isolate the
-first failing script and fix its actual cause without extending timeouts or
-weakening assertions. Only after both full platform gates pass may the next
-small Issue #10 change begin. Preserve branch
-`feature/central-only-simple-20261027`, approved source ancestry and production.
+Exact next continuation instruction (do not repeat this completed diagnosis):
+
+> Continue TDE-potition_tracking on feature/central-only-simple-20261027 from
+> the commit containing this checkpoint. Verify clean HEAD and ancestry from
+> e688cc79b9bb0f2df6a4ca0cbb5b270d985420a9 and approved baseline 4340c41865328cd893e6dc23fcdcedfefa7f9bf2.
+> Read this current section first. Run 40656531869 already passed both complete
+> platform gates. Continue Issue #10 with the next small Phase C change:
+> explicit confirmed booth handover, atomic END-old + START-new with identical
+> timestamp, preserved operation identities, actor/reason audit and stale-worker
+> fencing. NO must leave all central state unchanged; ordinary START after END
+> must show no handover dialog. Preserve all previous gates, use synthetic
+> temporary stores, checkpoint and repeat relevant source CI. Do not modify main,
+> CURRENT_APPROVED.json, approved EXE, production data or deployed queues.
+
+Remaining Issue #10 work is NOT IMPLEMENTED/NOT VERIFIED by this checkpoint:
+handover; officer authorization/panel and centralized roster administration;
+full shift/live-position separation; historical report admissions, overlap checks
+and regeneration; remaining officer/map/report GUI I/O isolation; eventual default
+central-only entry and packaged candidate/real SMB acceptance. The operator
+preview remains opt-in (`--central-only`), and passing source gates is not full
+application completion or permission to use production data.
 
 ---
 
