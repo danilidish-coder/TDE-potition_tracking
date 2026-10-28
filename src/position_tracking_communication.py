@@ -97,8 +97,13 @@ class CommunicationStoreMixin:
         client_id = _clean(client_id)
         cutoff = datetime.now() - timedelta(days=max(1, int(max_age_days)))
         result = []
+        cutoff_ts = cutoff.timestamp() - 86400  # one day of clock/mtime tolerance
         for path in sorted(self.comm_messages.glob("*.json")):
             try:
+                # Old messages are never shown; do not download and parse them
+                # again on every poll of every station.
+                if path.stat().st_mtime < cutoff_ts:
+                    continue
                 data = json.loads(path.read_text(encoding="utf-8"))
                 if client_id not in [_clean(x) for x in data.get("targets", [])]:
                     continue

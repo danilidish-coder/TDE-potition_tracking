@@ -19,6 +19,16 @@ def _load_selection(endpoint, app_directory, agms):
     return endpoint, endpoint.lookup(agms)
 
 
+# A lookup starts only after the operator pauses typing. Every lookup touches
+# the shared folder, so one lookup per keystroke from 15 stations is needless load.
+LOOKUP_PAUSE_SECONDS = 0.35
+# A shared-folder read cannot be cancelled. After this long the window stops
+# waiting for it, ignores its late result and lets the operator recheck with a
+# fresh worker. START/END commands are never abandoned this way.
+READ_ABANDON_SECONDS = 8
+MAX_ABANDONED_READS = 3
+
+
 class CentralOperatorWindow(QMainWindow):
     def __init__(self, services):
         super().__init__()
@@ -32,6 +42,8 @@ class CentralOperatorWindow(QMainWindow):
         self._active = None
         self._person = None
         self._dirty = True
+        self._lookup_not_before = 0.0
+        self._abandoned_reads = 0
         self._closing = False
         self._client_id = uuid.uuid4().hex
         self._mail_worker = SingleFlightWorker('TDE-central-mail')
@@ -122,6 +134,7 @@ class CentralOperatorWindow(QMainWindow):
 
     def _selection_changed(self):
         self._dirty = True
+        self._lookup_not_before = time.monotonic() + LOOKUP_PAUSE_SECONDS
         self._person = None
         self._active = None
         self.person_name.setText("—")
@@ -133,7 +146,8 @@ class CentralOperatorWindow(QMainWindow):
         self.start_btn.setEnabled(ready and self._active is None)
         self.end_btn.setEnabled(ready and self._active is not None)
         # Repeated clicks never submit another job behind blocked SMB work.
-        self.recheck_btn.setEnabled(self._read_future is None and self._action_future is None)
+        self.recheck_btn.setEnabled(self._read_future is None and self._action_future is None
+                                    and self._abandoned_reads < MAX_ABANDONED_READS)
 
     def _poll(self):
         if self._closing:
@@ -162,8 +176,11 @@ class CentralOperatorWindow(QMainWindow):
                     self._dirty = True
         if self._read_future is not None:
             if not self._read_future.done():
-                if time.monotonic() - self._read_started > 3 and self._request is None:
+                waited = time.monotonic() - self._read_started
+                if waited > 3 and self._request is None:
                     self.active_status.setText(UNCONFIRMED)
+                if waited > READ_ABANDON_SECONDS and self._request is None:
+                    self._abandon_read()
                 self._buttons()
                 return
             future = self._read_future
@@ -188,12 +205,29 @@ class CentralOperatorWindow(QMainWindow):
                             f"ΕΝΕΡΓΗ: ΘΕΣΗ {active['position']} — {active['direction']} — από {active['timestamp'].replace('T', ' ')}")
                     else:
                         self.active_status.setText("Δεν υπάρχει ανοικτή καταχώριση" if person else "Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ.")
-        if self._dirty and self._read_future is None and self._request is None:
+        if (self._dirty and self._read_future is None and self._request is None
+                and time.monotonic() >= self._lookup_not_before):
             self._read_agms = self.agms_input.text().strip()
             self._read_started = time.monotonic()
             self._read_future = self._read_worker.submit(
                 _load_selection, self.endpoint, self.services.app_dir, self._read_agms)
         self._buttons()
+
+    def _abandon_read(self):
+        """Stop waiting for a hung shared-folder read; never touch a START/END."""
+        self._read_future = None
+        self._abandoned_reads += 1
+        self._person = None
+        self._active = None
+        self._dirty = False  # Explicit recheck only; no automatic retry storm.
+        self._read_worker.close()
+        if self._abandoned_reads >= MAX_ABANDONED_READS:
+            self.info.setText(UNCONFIRMED + "\nΟ κοινός φάκελος δεν ανταποκρίνεται. "
+                              "Κλείστε και ανοίξτε ξανά το πρόγραμμα.")
+        else:
+            self._read_worker = SingleFlightWorker("TDE-central-read")
+            self.info.setText(UNCONFIRMED + "\nΠατήστε ΕΠΑΝΕΛΕΓΧΟΣ για νέα προσπάθεια.")
+            self.active_status.setText(UNCONFIRMED)
 
     def _confirm_handover(self, previous):
         answer = QMessageBox.question(self, 'Αντικατάσταση αστυνομικού',
@@ -231,6 +265,7 @@ class CentralOperatorWindow(QMainWindow):
             self._action_future = self._action_worker.submit(self.endpoint.check, self._request)
         else:
             self._dirty = True
+            self._lookup_not_before = 0.0
         self._buttons()
 
     def closeEvent(self, event):

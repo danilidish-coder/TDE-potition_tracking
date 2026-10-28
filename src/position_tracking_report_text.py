@@ -19,6 +19,23 @@ GREEK_MONTH_GENITIVE = {
 
 
 
+def begin_report_read(store) -> None:
+    """Forget earlier read problems before gathering the data of one report."""
+    clear = getattr(store, "clear_read_problems", None)
+    if clear:
+        clear()
+
+
+def read_problem_notice(store) -> str:
+    """Visible warning when some registration files could not be read."""
+    getter = getattr(store, "read_problems", None)
+    problems = getter() if getter else []
+    if not problems:
+        return ""
+    return (f"ΠΡΟΣΟΧΗ: {len(problems)} αρχεία καταχώρισης ΔΕΝ διαβάστηκαν. "
+            "Η αναφορά ενδέχεται να είναι ΕΛΛΙΠΗΣ. Ελέγξτε τα κεντρικά δεδομένα πριν τη χρήση.")
+
+
 def _duration_text(start_dt: datetime, end_dt: datetime | None) -> str:
     if end_dt is None:
         return "ΑΝΟΙΚΤΗ"
@@ -29,12 +46,16 @@ def _duration_text(start_dt: datetime, end_dt: datetime | None) -> str:
 
 
 def build_shift_text(store: ShiftSessionSource, day: date, cutoff: str) -> str:
+    begin_report_read(store)
     start_dt, end_dt, sessions = store.shift_sessions(day, cutoff)
     lines = [
         "ΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ - ΑΝΑΦΟΡΑ ΒΑΡΔΙΑΣ",
         f"Από {start_dt:%d/%m/%Y %H:%M} έως {end_dt:%d/%m/%Y %H:%M}",
         "",
     ]
+    notice = read_problem_notice(store)
+    if notice:
+        lines.extend([notice, ""])
     by_person: dict[tuple[str, str], list[dict]] = {}
     for s in sessions:
         st = s["start"]
@@ -70,6 +91,7 @@ def build_shift_text(store: ShiftSessionSource, day: date, cutoff: str) -> str:
 
 def build_roster_shift_text(store: ShiftSessionSource, shift: dict, people_by_agms: dict[str, PersonnelRecord] | None = None) -> str:
     people_by_agms = people_by_agms or {}
+    begin_report_read(store)
     sessions = store.shift_sessions_v2(shift) if int(shift.get("version", 1)) >= 2 else store.roster_sessions(
         datetime.fromisoformat(shift["start_at"]), shift.get("agms", []), int(shift.get("lookback_minutes", 30)), int(shift.get("max_window_hours", 12))
     )
@@ -93,6 +115,9 @@ def build_roster_shift_text(store: ShiftSessionSource, shift: dict, people_by_ag
         f"Βάρδια: {start_at:%d/%m/%Y %H:%M}" + (f" - {end_at:%d/%m/%Y %H:%M}" if end_at else " - ΣΕ ΕΞΕΛΙΞΗ"),
         "",
     ]
+    notice = read_problem_notice(store)
+    if notice:
+        lines.extend([notice, ""])
     for agms in roster:
         items = sorted(by_agms.get(agms, []), key=lambda x: x["start_dt"])
         person = people_by_agms.get(agms)

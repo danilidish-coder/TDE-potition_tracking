@@ -59,6 +59,8 @@ jobs:
           python tests/central_position_recovery_regression.py
           python tests/central_operator_regression.py
           python tests/central_operator_ui_regression.py
+          python tests/central_load_and_report_warning_regression.py
+          python tests/central_operator_load_ui_regression.py
       - name: Full source regressions
         run: python tools/run_regressions.py --out artifact/regressions
       - name: Retain source diagnostics (no EXE)

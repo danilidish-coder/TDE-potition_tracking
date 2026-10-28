@@ -5,7 +5,8 @@ from pathlib import Path
 import re
 from position_tracking_common import _clean
 from position_tracking_personnel import PersonnelRecord
-from position_tracking_report_text import ShiftSessionSource as SharedEventStore, shift_report_title
+from position_tracking_report_text import (ShiftSessionSource as SharedEventStore, shift_report_title,
+                                           begin_report_read, read_problem_notice)
 
 def create_shift_docx(store: SharedEventStore, shift: dict, people_by_agms: dict[str, PersonnelRecord] | None = None, target: str | Path | None = None) -> Path:
     try:
@@ -15,6 +16,7 @@ def create_shift_docx(store: SharedEventStore, shift: dict, people_by_agms: dict
     except Exception as exc:
         raise RuntimeError("Δεν είναι διαθέσιμη η δημιουργία Word (python-docx).") from exc
     people_by_agms = people_by_agms or {}
+    begin_report_read(store)
     sessions = store.shift_sessions_v2(shift) if int(shift.get("version", 1)) >= 2 else []
     roster = [_clean(x) for x in shift.get("approved", []) if _clean(x)]
     by_agms: dict[str, list[dict]] = {a: [] for a in roster}
@@ -33,6 +35,9 @@ def create_shift_docx(store: SharedEventStore, shift: dict, people_by_agms: dict
     p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p.add_run(f"{start_at:%d/%m/%Y %H:%M}" + (f" - {end_at:%d/%m/%Y %H:%M}" if end_at else " - ΣΕ ΕΞΕΛΙΞΗ"))
     doc.add_paragraph()
+    notice = read_problem_notice(store)
+    if notice:
+        warning = doc.add_paragraph().add_run(notice); warning.bold = True
     for agms in roster:
         items = sorted(by_agms.get(agms, []), key=lambda x: x["start_dt"])
         person = people_by_agms.get(agms)

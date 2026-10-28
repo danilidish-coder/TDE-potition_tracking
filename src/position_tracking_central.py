@@ -1,8 +1,10 @@
 """Direct central operator requests. No local settings, outbox, replay or cache."""
 from dataclasses import dataclass, field
 from datetime import datetime
+import hashlib
 import json
 from pathlib import Path
+import threading
 import uuid
 
 from position_tracking_common import _clean
@@ -35,6 +37,13 @@ class CentralOperator:
     def __init__(self, root: Path, personnel: Path):
         self.root = Path(root)
         self.personnel = Path(personnel)
+        # One store per process. Building SharedEventStore creates ~20
+        # directories, opens the database, takes the GLOBAL position
+        # transaction lock and runs recovery. Doing that for every keystroke
+        # or mail poll of 15 stations over SMB starved real START/END writes.
+        self._store_lock = threading.Lock()
+        self._store_cache = None
+        self._people_cache = None
 
     @classmethod
     def from_shared_directory(cls, directory: Path):
@@ -62,10 +71,20 @@ class CentralOperator:
         # must never cause a new fallback directory/database to be created.
         if not self.root.is_dir():
             raise OSError(UNCONFIRMED)
-        return SharedEventStore(self.root)
+        store = self._store_cache
+        if store is None:
+            with self._store_lock:
+                if self._store_cache is None:
+                    # A failed construction is not cached; the next call retries.
+                    self._store_cache = SharedEventStore(self.root)
+                store = self._store_cache
+        return store
 
     def lookup(self, agms: str):
         store = self._store()
+        # Read-only probe. The global lock is taken only when a crashed or
+        # interrupted operation really needs recovery before it is shown.
+        store.recover_if_needed()
         agms = _clean(agms)
         active = store.get_active(agms) if agms else None
         if active:
@@ -75,16 +94,34 @@ class CentralOperator:
         return person, active
 
     def people(self, store):
+        """Central personnel list, re-read only when the central document changes."""
         rows = store._position_rows("SELECT revision,payload FROM officer_documents WHERE document_key='personnel'")
-        path = store.root / json.loads(rows[0]['payload'])['path'] if rows else self.personnel
-        store._personnel_revision = rows[0]['revision'] if rows else 'LEGACY_CENTRAL_WORKBOOK'
         if rows:
-            import hashlib
+            meta = json.loads(rows[0]['payload'])
+            path = store.root / meta['path']
+            revision = rows[0]['revision']
+            key = ('central', str(path), meta['sha256'], revision)
+            cached = self._people_cache
+            if cached is not None and cached[0] == key:
+                store._personnel_revision = revision
+                return cached[1]
             data = path.read_bytes()
-            if hashlib.sha256(data).hexdigest() != json.loads(rows[0]['payload'])['sha256']:
+            if hashlib.sha256(data).hexdigest() != meta['sha256']:
                 raise OSError('Ασυμφωνία κεντρικής έκδοσης προσωπικού.')
-            return PersonnelRepository.load(data)
-        return PersonnelRepository.load(path)
+            people = PersonnelRepository.load(data)
+            store._personnel_revision = revision
+        else:
+            path = self.personnel
+            info = path.stat()
+            key = ('legacy', str(path), info.st_mtime_ns, info.st_size)
+            cached = self._people_cache
+            if cached is not None and cached[0] == key:
+                store._personnel_revision = 'LEGACY_CENTRAL_WORKBOOK'
+                return cached[1]
+            people = PersonnelRepository.load(path)
+            store._personnel_revision = 'LEGACY_CENTRAL_WORKBOOK'
+        self._people_cache = (key, people)
+        return people
 
     def communication(self, client_id, acknowledge=''):
         store = self._store()

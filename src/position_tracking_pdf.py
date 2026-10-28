@@ -5,7 +5,8 @@ from pathlib import Path
 import tempfile
 from position_tracking_common import _clean
 from position_tracking_personnel import PersonnelRecord
-from position_tracking_report_text import ShiftSessionSource as SharedEventStore, _escape_html, _format_seconds
+from position_tracking_report_text import (ShiftSessionSource as SharedEventStore, _escape_html, _format_seconds,
+                                           begin_report_read, read_problem_notice)
 
 def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[str, PersonnelRecord] | None = None, target: str | Path | None = None) -> Path:
     """Create the shift report directly as an A4 PDF, without Word."""
@@ -17,6 +18,7 @@ def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[
         raise RuntimeError("Δεν είναι διαθέσιμη η δημιουργία PDF.") from exc
 
     people_by_agms = people_by_agms or {}
+    begin_report_read(store)
     sessions = store.shift_sessions_v2(shift) if int(shift.get("version", 1)) >= 2 else store.roster_sessions(
         datetime.fromisoformat(shift["start_at"]),
         shift.get("agms", []),
@@ -52,6 +54,10 @@ def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[
             f"{start_at:%d/%m/%Y %H:%M}" + (f" - {end_at:%d/%m/%Y %H:%M}" if end_at else " - ΣΕ ΕΞΕΛΙΞΗ")
         ) + "</div>",
     ]
+
+    notice = read_problem_notice(store)
+    if notice:
+        body_parts.append("<p style='color:#b00020;font-weight:bold'>" + _escape_html(notice) + "</p>")
 
     if not roster:
         body_parts.append("<p class='empty'>Δεν υπάρχουν καταχωρίσεις στη βάρδια.</p>")

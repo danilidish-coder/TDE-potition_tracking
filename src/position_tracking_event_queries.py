@@ -2,12 +2,34 @@
 from __future__ import annotations
 from datetime import date, datetime, timedelta, time as dtime
 import json
+import threading
 import unicodedata
 from position_tracking_common import _clean
 from position_tracking_settings import DEFAULT_CUTOFF
 
+# Event files that could not be read while building a report. Kept per thread,
+# so a report built on a worker thread sees only its own problems.
+_READ_PROBLEMS = threading.local()
+
 
 class EventQueryMixin:
+    def clear_read_problems(self) -> None:
+        _READ_PROBLEMS.items = []
+
+    def read_problems(self) -> list[str]:
+        """Event files skipped since clear_read_problems() on this thread."""
+        return list(getattr(_READ_PROBLEMS, "items", []))
+
+    @staticmethod
+    def _note_read_problem(path, error, raw=None) -> None:
+        # A JSON file that is readable and is not a START/END event is not a
+        # lost registration. Anything else may be, and must never vanish silently.
+        if isinstance(raw, dict) and raw.get("kind") not in ("START", "END"):
+            return
+        if not hasattr(_READ_PROBLEMS, "items"):
+            _READ_PROBLEMS.items = []
+        _READ_PROBLEMS.items.append(f"{getattr(path, 'name', path)}: {error}")
+
     def iter_events(self, start_dt: datetime, end_dt: datetime) -> list[dict]:
         states = self._event_states()
         result: list[dict] = []
@@ -17,15 +39,17 @@ class EventQueryMixin:
             folder = self.events / f"{current:%Y}" / f"{current:%m}" / f"{current:%Y-%m-%d}"
             if folder.exists():
                 for path in sorted(folder.glob("*.json")):
+                    raw = None
                     try:
-                        e = self._apply_start_correction(json.loads(path.read_text(encoding="utf-8")))
+                        raw = json.loads(path.read_text(encoding="utf-8"))
+                        e = self._apply_start_correction(raw)
                         if states is not None and states.get(e.get("event_id")) != "COMMITTED":
                             continue
                         ts = datetime.fromisoformat(e.get("timestamp", ""))
                         if start_dt <= ts < end_dt:
                             result.append(e)
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        self._note_read_problem(path, exc, raw)
             current += timedelta(days=1)
         known = {event['event_id'] for event in result}
         result.extend(event for event in self._handover_events() if event['event_id'] not in known
@@ -39,14 +63,16 @@ class EventQueryMixin:
         if not self.events.exists():
             return result
         for path in sorted(self.events.rglob("*.json")):
+            raw = None
             try:
-                event = self._apply_start_correction(json.loads(path.read_text(encoding="utf-8")))
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                event = self._apply_start_correction(raw)
                 if states is not None and states.get(event.get("event_id")) != "COMMITTED":
                     continue
                 if _clean(event.get("timestamp")):
                     result.append(event)
-            except Exception:
-                pass
+            except Exception as exc:
+                self._note_read_problem(path, exc, raw)
         known = {event['event_id'] for event in result}
         result.extend(event for event in self._handover_events() if event['event_id'] not in known)
         return sorted(result, key=lambda e: (_clean(e.get("timestamp")), e.get('kind') == 'START'))

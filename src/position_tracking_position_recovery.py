@@ -114,6 +114,24 @@ class PositionRecoveryMixin:
     def _abort_position_event(self, event_id, attempt=None):
         return self._abort_position_attempt(event_id, attempt)
 
+    def _position_recovery_needed(self) -> bool:
+        """Cheap, lock-free probe: is there any unfinished central operation?"""
+        row = self._position_rows(
+            "SELECT (SELECT 1 FROM position_operations WHERE settled=0 LIMIT 1) AS ops, "
+            "(SELECT 1 FROM position_handovers WHERE mirrored=0 LIMIT 1) AS handovers")[0]
+        if row["ops"] or row["handovers"]:
+            return True
+        return any(True for _ in islice(self.pending_index.glob("*.json"), 1))
+
+    def recover_if_needed(self) -> bool:
+        """Recover only when work exists, so plain reads never queue on the
+        global position-transaction lock held by real START/END writers."""
+        if not self._position_recovery_needed():
+            return False
+        with self.officer_lock("__POSITION_TRANSACTIONS__"):
+            self._recover_position_operations_locked()
+        return True
+
     def _init_position_recovery(self):
         with self.officer_lock("__POSITION_TRANSACTIONS__"):
             with self._shift_db_write_lock():
