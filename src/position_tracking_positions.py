@@ -316,16 +316,35 @@ class PositionStoreMixin:
         # Validate remaining JSON projections, including unexpected corrupt files,
         # but derive occupants from transactional claims even if a stale worker
         # deleted or replaced a newer projection.
+        projections = {}
         for path in sorted(self.active.glob("*.json")):
             try:
                 item = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError, json.JSONDecodeError) as exc:
                 raise BusyError(f"Δεν διαβάζεται η δέσμευση {path.name}: {exc}") from exc
+            projections[_clean(item.get('agms'))] = item
         result = []
-        for row in self._position_rows("SELECT agms FROM position_live"):
-            active = self.get_active(row["agms"])
-            if active:
-                result.append(active)
+        # One SQL snapshot: selecting AGMS first and re-querying each separately
+        # could omit BOTH occupants if a handover committed between the reads.
+        for row in self._position_rows("SELECT o.* FROM position_live l JOIN position_operations o ON o.event_id=l.start_id"):
+            active = self._position_evidence(row)
+            projection = projections.get(active['agms'])
+            if projection and projection.get('event_id') == active['event_id']:
+                active.update({key: projection[key] for key in ('computer', 'user') if key in projection})
+            receipt = self.pending_index / f"{_safe_name(active['event_id'])}.json"
+            try:
+                pending = json.loads(receipt.read_text(encoding='utf-8'))
+            except FileNotFoundError:
+                self.pending_index.stat()
+            else:
+                if (pending.get('start', {}).get('event_id') != active['event_id']
+                        or pending.get('end', {}).get('start_event_id') != active['event_id']):
+                    raise BusyError('Ασυμφωνία προσωρινής απόδειξης ΛΗΞΗΣ.')
+                # Legacy unindexed receipts still release a booth. A newer END
+                # already accepted in SQL must not invalidate this older snapshot.
+                if not self._committed_position_operation(pending['end']['event_id']):
+                    continue
+            result.append(self._apply_start_correction(active))
         return sorted(result, key=lambda x: (_clean(x.get("direction")), _clean(x.get("position")), _clean(x.get("full_name"))))
 
 

@@ -52,6 +52,8 @@ class PositionRecoveryMixin:
         return {key: value for key, value in event.items() if key != "event_file"}
 
     def _position_evidence(self, row):
+        if row.get('handover_id') and row['state'] == 'COMMITTED':
+            return self._handover_evidence(row)
         path = self.root / row["event_path"]
         try:
             event = json.loads(path.read_text(encoding="utf-8"))
@@ -132,6 +134,8 @@ class PositionRecoveryMixin:
                         self._index_legacy_position_events(db)
                         db.execute("INSERT INTO meta VALUES ('position_events_index_v1', '1')")
                     self._init_position_claims(db, rebuild=not migrated)
+                    self._init_handovers(db)
+            self._handover_ready = True
             self._recover_position_operations_locked()
 
     def _index_legacy_position_events(self, db):
@@ -166,6 +170,7 @@ class PositionRecoveryMixin:
                     str(path.relative_to(self.root)), json.dumps(self._event_payload(event), ensure_ascii=False)))
 
     def _recover_position_operations_locked(self):
+        self._recover_handovers()
         # Older central pending receipts are durable evidence too. Import them
         # before considering a booth free, without relying on an active marker.
         receipts = list(islice(self.pending_index.glob("*.json"), self.POSITION_RECOVERY_LIMIT + 1))

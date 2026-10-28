@@ -27,7 +27,10 @@ class EventQueryMixin:
                     except Exception:
                         pass
             current += timedelta(days=1)
-        return sorted(result, key=lambda e: e.get("timestamp", ""))
+        known = {event['event_id'] for event in result}
+        result.extend(event for event in self._handover_events() if event['event_id'] not in known
+                      and start_dt <= datetime.fromisoformat(event['timestamp']) < end_dt)
+        return sorted(result, key=lambda e: (e.get("timestamp", ""), e.get('kind') == 'START'))
 
 
     def iter_all_events(self) -> list[dict]:
@@ -44,7 +47,9 @@ class EventQueryMixin:
                     result.append(event)
             except Exception:
                 pass
-        return sorted(result, key=lambda e: _clean(e.get("timestamp")))
+        known = {event['event_id'] for event in result}
+        result.extend(event for event in self._handover_events() if event['event_id'] not in known)
+        return sorted(result, key=lambda e: (_clean(e.get("timestamp")), e.get('kind') == 'START'))
 
 
     def completed_sessions_all(self) -> list[dict]:
@@ -92,7 +97,7 @@ class EventQueryMixin:
             except Exception:
                 pass
         events = self.iter_events(search_start, end_at + timedelta(seconds=1))
-        starts: dict[str, dict] = {}
+        starts: dict[str, dict] = {_clean(e.get("event_id")): e for e in events if e.get("kind") == "START"}
         sessions: list[dict] = []
         for e in events:
             agms = _clean(e.get("agms"))
@@ -198,7 +203,7 @@ class EventQueryMixin:
         search_start = start_at - timedelta(minutes=max(0, int(lookback_minutes)))
         search_end = start_at + timedelta(hours=max(1, int(horizon_hours)))
         events = self.iter_events(search_start, search_end)
-        starts: dict[str, dict] = {}
+        starts: dict[str, dict] = {_clean(e.get("event_id")): e for e in events if e.get("kind") == "START"}
         sessions: list[dict] = []
         for e in events:
             if _clean(e.get("agms")) not in allowed:
@@ -230,7 +235,7 @@ class EventQueryMixin:
         end_dt = start_dt + timedelta(days=1)
         # Read a wider window so sessions that started shortly before the cutoff can still be paired if needed.
         events = self.iter_events(start_dt - timedelta(days=1), end_dt)
-        starts: dict[str, dict] = {}
+        starts: dict[str, dict] = {_clean(e.get("event_id")): e for e in events if e.get("kind") == "START"}
         sessions: list[dict] = []
         for e in events:
             if e.get("kind") == "START":

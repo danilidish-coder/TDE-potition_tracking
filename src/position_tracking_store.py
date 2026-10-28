@@ -23,9 +23,10 @@ from position_tracking_shifts import ShiftLifecycleMixin
 from position_tracking_event_queries import EventQueryMixin
 from position_tracking_position_recovery import PositionRecoveryMixin
 from position_tracking_position_claims import PositionClaimsMixin
+from position_tracking_position_handover import PositionHandoverMixin
 
 
-class SharedEventStore(PositionClaimsMixin, PositionRecoveryMixin, EventQueryMixin, ShiftLifecycleMixin, PositionStoreMixin, ShiftIndexMixin, SessionIndexMixin, CommunicationStoreMixin, StoreIOMixin):
+class SharedEventStore(PositionHandoverMixin, PositionClaimsMixin, PositionRecoveryMixin, EventQueryMixin, ShiftLifecycleMixin, PositionStoreMixin, ShiftIndexMixin, SessionIndexMixin, CommunicationStoreMixin, StoreIOMixin):
     def __init__(self, central_root: str | Path):
         root = Path(central_root)
         self.root = root if root.name == ".tde_runtime" else (root if root.name.upper() == "TDE_DATA" else root / "TDE_DATA")
