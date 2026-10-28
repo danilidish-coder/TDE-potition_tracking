@@ -1,3 +1,51 @@
+# Issue #10 — Verified D2 Windows source checkpoint, 28 October 2026
+
+## D2 source verified, not packaged, field acceptance still pending
+
+Verified source HEAD before this documentation-only commit:
+`e0f693b79be5ebd9139f48682d2eb5ffd4a0a358`, branch
+`feature/central-only-simple-20261027`. Approved production remains
+`CURRENT_APPROVED.json` on main: v1.2.6, source
+`4340c41865328cd893e6dc23fcdcedfefa7f9bf2`, EXE SHA256
+`e59587390a398808ad454a1fb4de9d46c7d6139f203785489294655242b6de0d`.
+No production manifest, EXE, shortcut or service data was changed.
+
+Source test evidence: GitHub Actions run
+https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40750433255,
+Windows job `123035369182`, completed **SUCCESS** on the exact above source.
+Focused D2 backend **17/17 PASS**, real Qt officer panel **9/9 PASS**;
+full source regression **62 mandatory scripts, 0 failed**.
+The original five strong-officer-authentication tests genuinely **FAIL 5/5**
+under the user's later explicit free-access requirement; they remain visible
+as **historical/non-mandatory**, not misreported as passed. AGMS is declared
+attribution only, not cryptographically verified identity or enforced access
+control. No integrity/START/END/concurrency/recovery tests were exempted.
+
+D2 source-only behavior: `--central-officer` separate minimal officer GUI;
+central roster revision, shift member decisions, active positions/map,
+confirmed remote START/END, active-START correction, central immutable
+actor/reason/before-after journal, existing PDF and statistics PIN, official
+messages. `--central-only` preserves minimal operator GUI. These flags are
+not yet the default packaged EXE entry point. See
+`docs/ISSUE_10_D2_DECLARED_OPERATOR_20261028.md`.
+Prior Windows required failure (legacy DDL concurrency in run `40748148719`)
+was repaired at `e0f693b`; full Windows source CI reran successfully.
+
+**D2 SOURCE PASS; DOC CHECKPOINT COMPLETE; NOT AN EXE RELEASE.**
+Real isolated SMB host interruption/restart, multi-station field run, frozen
+EXE launcher/identity and final packaged Windows acceptance are **NOT RUN**.
+Phase D3 (durable completed historical work, regeneration and report regression)
+is **NOT IMPLEMENTED**. Windows-only automatic CI is configured, optional Linux
+manual execution is NOT RUN. No on-site acceptance is inferred.
+
+Next stage: make a small, isolated, independently tested D3 implementation
+based on this verified D2 source, keeping existing open live position state
+unchanged and the approved production baseline untouched. Do not merge to main
+or replace an approved EXE. Check for newer unpublished Codex workspace changes
+before reconciling independent changes into the same branch.
+
+---
+
 # Issue #10 — Phase D2 declared-operator WIP checkpoint, 28 October 2026
 
 ## Latest continuation — D2 source ready; Windows repair/mandatory CI pending
