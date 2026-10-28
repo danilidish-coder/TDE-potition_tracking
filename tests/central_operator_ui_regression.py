@@ -49,7 +49,31 @@ class OperatorUI(unittest.TestCase):
         while not predicate() and time.monotonic() < deadline:
             self.app.processEvents()
             QTest.qWait(5)
-        self.assertTrue(predicate(), "Qt state did not settle")
+        if not predicate():
+            import traceback
+            state = {}
+            for name in ("_read_future", "_action_future"):
+                future = getattr(self.window, name, None)
+                if future is None:
+                    state[name] = None
+                elif future.done():
+                    try:
+                        state[name] = repr(future.result())
+                    except Exception as error:
+                        state[name] = repr(error)
+                else:
+                    state[name] = "RUNNING"
+            frames = sys._current_frames()
+            state["workers"] = {
+                thread.name: [(Path(f.filename).name, f.lineno, f.name)
+                              for f in traceback.extract_stack(frames[thread.ident])[-12:]]
+                for thread in threading.enumerate()
+                if thread.name.startswith("TDE-") and thread.ident in frames}
+            state["info"] = self.window.info.text()
+            state["active_status"] = self.window.active_status.text()
+            state["dirty"] = self.window._dirty
+            state["request"] = repr(self.window._request)
+            self.fail("Qt state did not settle: " + repr(state))
 
     @staticmethod
     def destroy_window(window):
