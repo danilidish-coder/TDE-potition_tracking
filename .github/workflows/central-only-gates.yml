@@ -5,6 +5,12 @@ on:
     branches: [feature/central-only-simple-20261027]
     paths: ["src/**", "tests/**", "requirements.txt", ".github/workflows/central-only-gates.yml"]
   workflow_dispatch:
+    inputs:
+      include_linux:
+        description: Also run the optional Linux source checks
+        type: boolean
+        default: false
+        required: false
 
 permissions:
   contents: read
@@ -14,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.include_linux && '["windows-latest","ubuntu-latest"]' || '["windows-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     env:
