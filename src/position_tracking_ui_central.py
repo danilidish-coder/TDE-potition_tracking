@@ -205,7 +205,10 @@ class CentralOperatorWindow(QMainWindow):
                             f"ΕΝΕΡΓΗ: ΘΕΣΗ {active['position']} — {active['direction']} — από {active['timestamp'].replace('T', ' ')}")
                     else:
                         self.active_status.setText("Δεν υπάρχει ανοικτή καταχώριση" if person else "Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ.")
+        # After MAX_ABANDONED_READS the read worker is closed for good: submitting
+        # to it would raise in this 100 ms timer slot on every tick.
         if (self._dirty and self._read_future is None and self._request is None
+                and self._abandoned_reads < MAX_ABANDONED_READS
                 and time.monotonic() >= self._lookup_not_before):
             self._read_agms = self.agms_input.text().strip()
             self._read_started = time.monotonic()
@@ -259,6 +262,8 @@ class CentralOperatorWindow(QMainWindow):
 
     def _recheck(self):
         if self._closing or self._read_future is not None or self._action_future is not None:
+            return
+        if self._request is None and self._abandoned_reads >= MAX_ABANDONED_READS:
             return
         if self._request is not None:
             self._action_started = time.monotonic()

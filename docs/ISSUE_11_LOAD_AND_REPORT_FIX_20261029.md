@@ -22,8 +22,11 @@
 7. Αναφορές: εγγραφή START/END που δεν διαβάζεται δεν χάνεται σιωπηλά· η αναφορά (κείμενο, PDF, Word)
    δείχνει ΠΡΟΣΟΧΗ ότι μπορεί να είναι ΕΛΛΙΠΗΣ. JSON που δεν είναι START/END δεν θεωρείται απώλεια.
 
+8. Μετά το όριο των 3 εγκαταλείψεων ο worker ανάγνωσης είναι κλειστός. Νέο πληκτρολόγημα Α.Γ.Μ.Σ. πλέον
+   δεν καλεί `submit` (πριν εγείρονταν `RuntimeError` σε κάθε tick των 100 ms). Μένει το μήνυμα επανεκκίνησης.
+
 ## Αποτελέσματα (Linux, τοπικά)
-- Νέα τεστ: `central_load_and_report_warning_regression.py` 10/10 PASS, `central_operator_load_ui_regression.py` 3/3 PASS.
+- Νέα τεστ: `central_load_and_report_warning_regression.py` 10/10 PASS, `central_operator_load_ui_regression.py` 4/4 PASS.
   Στο αρχικό `dde0fe2` αποτυγχάνουν (7 failures + 1 error και 1 failure + 2 errors αντίστοιχα), άρα ανιχνεύουν το πρόβλημα.
 - Πλήρες `tools/run_regressions.py`: 65 scripts, 0 υποχρεωτικά FAIL· 1 ιστορικό (γνωστός αποδεκτός περιορισμός ΑΞΥΠ).
 - **NOT RUN:** Windows CI, EXE, πραγματικός SMB, 15 σταθμοί, πραγματική αλλαγή χρήστη/βάρδιας.

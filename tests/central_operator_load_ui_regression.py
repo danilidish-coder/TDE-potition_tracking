@@ -124,6 +124,49 @@ class OperatorLoadUI(unittest.TestCase):
             self.assertFalse(self.window.start_btn.isEnabled())
             self.assertFalse(self.window.end_btn.isEnabled())
 
+    def test_typing_after_the_hang_limit_never_submits_to_the_closed_worker(self):
+        """Regression: the read worker is closed on the last abandon. Typing a new
+        Α.Γ.Μ.Σ. afterwards must not call submit() on it (a RuntimeError in the
+        100 ms timer slot on every tick) and must keep the restart message."""
+        gate = threading.Event()
+        self.addCleanup(gate.set)
+
+        def always_hang(operator, agms):
+            gate.wait(30)
+
+        errors = []
+        with patch.object(ui_central, "READ_ABANDON_SECONDS", 0.2), \
+                patch.object(CentralOperator, "lookup", always_hang):
+            self.window.agms_input.setText("999001")
+            for _ in range(ui_central.MAX_ABANDONED_READS):
+                self.wait(lambda: self.window._read_future is None and
+                          not self.window._dirty or self.window._abandoned_reads >= ui_central.MAX_ABANDONED_READS)
+                if self.window._abandoned_reads >= ui_central.MAX_ABANDONED_READS:
+                    break
+                self.window.recheck_btn.click()
+            self.wait(lambda: self.window._abandoned_reads >= ui_central.MAX_ABANDONED_READS)
+
+            real_submit = self.window._read_worker.submit
+
+            def watching_submit(*args, **kwargs):
+                try:
+                    return real_submit(*args, **kwargs)
+                except Exception as exc:
+                    errors.append(exc)
+                    raise
+
+            self.window._read_worker.submit = watching_submit
+            self.window.agms_input.setText("999002")
+            deadline = time.monotonic() + 1.0
+            while time.monotonic() < deadline:
+                self.app.processEvents()
+                time.sleep(0.01)
+            self.assertEqual(errors, [])
+            self.assertIsNone(self.window._read_future)
+            self.assertIn("Κλείστε και ανοίξτε ξανά", self.window.info.text())
+            self.assertFalse(self.window.start_btn.isEnabled())
+            self.assertFalse(self.window.end_btn.isEnabled())
+
 
 if __name__ == "__main__":
     unittest.main()
