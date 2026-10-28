@@ -47,7 +47,10 @@ class HistoricalWorkMixin:
 
     def shift_sessions_v2(self, shift):
         sessions = super().shift_sessions_v2(shift)
-        return sorted(sessions + self.historical_session_items(shift["shift_id"]),
+        shift_id = _clean(shift.get("shift_id"))
+        if not shift_id:
+            return sessions
+        return sorted(sessions + self.historical_session_items(shift_id),
                       key=lambda row: (_clean(row["start"].get("full_name")), row["start_dt"]))
 
     def search_personnel_sessions(self, person_query="", date_from=None, date_to=None,
