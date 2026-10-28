@@ -47,10 +47,15 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(str(error), file=sys.stderr)
         return 2
-    from position_tracking import run
     if "--central-only" not in argv and "--central-officer" not in argv:
         argv.append("--central-only")
-    return int(run(argv))
+    # Build the central UI directly; never import the legacy application entry.
+    from position_tracking_settings import AppConfig, _app_dir, _open_path
+    from position_tracking_machine_queue import _local_root, _machine_queue_root
+    from position_tracking_ui_context import WindowServices
+    from position_tracking_ui_application import launch
+    services = WindowServices(AppConfig, _app_dir, _local_root, _machine_queue_root, _open_path)
+    return int(launch(argv, services))
 
 
 if __name__ == "__main__":
