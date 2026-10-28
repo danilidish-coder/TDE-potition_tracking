@@ -155,9 +155,11 @@ jobs:
           $work = Join-Path $env:RUNNER_TEMP 'tde-frozen-selftest'
           $p = Start-Process $exe -ArgumentList @('--selftest', "`"$work`"") -Wait -PassThru
           $report = Join-Path $work 'selftest_result.json'
-          if (-not (Test-Path $report)) { throw "Self-test wrote no report (exit $($p.ExitCode))" }
+          if (-not (Test-Path $report)) { Write-Host "::error title=frozen-selftest::no report written, exit $($p.ExitCode)"; throw "Self-test wrote no report (exit $($p.ExitCode))" }
           $result = Get-Content $report -Raw -Encoding UTF8 | ConvertFrom-Json
           $result.checks | ForEach-Object { Write-Host ("{0} {1} {2}" -f $(if ($_.ok) {'PASS'} else {'FAIL'}), $_.name, $_.detail) }
+          $compact = ($result | ConvertTo-Json -Depth 5 -Compress)
+          Write-Host "::notice title=frozen-selftest::$compact"
           if ($p.ExitCode -ne 0 -or $result.selftest -ne 'PASS' -or -not $result.frozen) { throw 'Frozen self-test failed' }
       - name: Frozen window startup in an ordinary (non-sandbox) folder
         shell: pwsh
@@ -180,6 +182,7 @@ jobs:
             }
             if (-not $found) { throw "No v1.2.7 window appeared: $mode" }
             Write-Host "WINDOW_OK mode=$mode title=$($found.MainWindowTitle)"
+            Write-Host "::notice title=window-$mode::title=$($found.MainWindowTitle)"
             taskkill /IM "$($env:EXE_NAME).exe" /T /F | Out-Null
             Start-Sleep -Seconds 3
             if (Get-Process -Name $env:EXE_NAME -ErrorAction SilentlyContinue) { throw "Process still running: $mode" }
@@ -207,6 +210,7 @@ jobs:
           Write-Host "CANDIDATE_SOURCE_SHA=${{ github.sha }}"
           Write-Host "CANDIDATE_EXE_SHA256=$hash"
           Write-Host "CANDIDATE_EXE_BYTES=$($file.Length)"
+          Write-Host "::notice title=candidate::sha256=$hash bytes=$($file.Length) commit=${{ github.sha }} file=$($env:EXE_NAME).exe"
       - name: Upload candidate (private artifact, 90 days)
         uses: actions/upload-artifact@v4
         with:

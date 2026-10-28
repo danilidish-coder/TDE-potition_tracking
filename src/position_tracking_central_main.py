@@ -18,11 +18,12 @@ import sys
 # the check reflects what PyInstaller really bundled for the application and
 # does not itself force a module into the bundle.
 REQUIRED_MODULES = (
-    "PySide6.QtWidgets", "openpyxl", "docx", "PIL",
+    "PySide6.QtWidgets", "PySide6.QtPrintSupport", "openpyxl",
     "position_tracking_central", "position_tracking_ui_central", "position_tracking_ui_officer",
-    "position_tracking_documents", "position_tracking_pdf", "position_tracking_statistics",
-    "position_tracking_store",
+    "position_tracking_pdf", "position_tracking_store",
 )
+# Deliberately absent: python-docx, position_tracking_documents and
+# position_tracking_statistics belong to the legacy application only.
 
 
 def run_selftest(directory: str | Path) -> int:
@@ -67,6 +68,15 @@ def run_selftest(directory: str | Path) -> int:
         check("END confirmed", operator.execute(end).status == "CONFIRMED")
         person, active = operator.lookup("999001")
         check("no active after END", active is None)
+        # The officer panel's PDF report: the same function, the same Qt printing stack.
+        from PySide6.QtWidgets import QApplication
+        app = QApplication.instance() or QApplication([])
+        from position_tracking_pdf import create_personnel_history_pdf
+        rows = operator._store().search_personnel_sessions(person_query="999001")
+        pdf = create_personnel_history_pdf(rows, "ΑΓΜΣ: 999001", target=folder / "selftest.pdf")
+        head = Path(pdf).read_bytes()[:5]
+        check("PDF report is created", head == b"%PDF-" and Path(pdf).stat().st_size > 1000,
+              f"rows={len(rows)} bytes={Path(pdf).stat().st_size}")
     except BaseException as error:  # a packaging fault must be reported, never hidden
         check("selftest completed", False, repr(error))
     ok = bool(checks) and all(item["ok"] for item in checks)

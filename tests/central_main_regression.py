@@ -1,5 +1,7 @@
 """Production central-only entry: no sandbox guard, no legacy import, safe self-test."""
 import ast
+import os
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from pathlib import Path
 import subprocess
 import sys
@@ -42,6 +44,10 @@ class CentralEntry(unittest.TestCase):
             target = Path(base) / "check"
             self.assertEqual(entry.run_selftest(target), 0)
             self.assertIn('"selftest": "PASS"', (target / "selftest_result.json").read_text(encoding="utf-8"))
+
+    def test_selftest_does_not_require_legacy_only_modules(self):
+        for name in ("docx", "position_tracking_documents", "position_tracking_statistics"):
+            self.assertNotIn(name, entry.REQUIRED_MODULES)
 
     def test_selftest_refuses_a_folder_with_existing_data(self):
         with tempfile.TemporaryDirectory(prefix="tde-selftest-") as base:
