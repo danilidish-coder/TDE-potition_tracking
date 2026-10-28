@@ -10,17 +10,23 @@ import time
 import unittest
 from unittest.mock import patch
 from PySide6.QtCore import QTimer
-from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QWidget
 ROOT = Path(__file__).resolve().parents[1]; sys.path.insert(0, str(ROOT / 'src'))
 from position_tracking_diagnostics import RuntimeDiagnostics, process_resources, start_runtime_diagnostics
 
 class RuntimeDiagnosticsRegression(unittest.TestCase):
+    @staticmethod
+    def pump():
+        QApplication.processEvents()
+        # Yield the Python GIL as the real Qt event loop does. A tight qWait
+        # loop can starve the Python diagnostics writer on Windows.
+        time.sleep(.01)
+
     def wait(self, predicate, seconds=3):
         deadline = time.monotonic() + seconds
         while time.monotonic() < deadline:
             if predicate(): return
-            QTest.qWait(10)
+            self.pump()
         self.fail('diagnostic event not observed')
 
     def test_gui_stall_and_recovery_capture_stack_without_personal_content(self):
@@ -53,7 +59,7 @@ class RuntimeDiagnosticsRegression(unittest.TestCase):
                 deadline = time.monotonic() + .4
                 while time.monotonic() < deadline:
                     d.heartbeat({'offline':123}, {'network':1})
-                    QTest.qWait(10)
+                    self.pump()
             finally:d.stop(wait=True)
             events = [json.loads(line) for line in d.path.read_text().splitlines()]
             stalls = [event for event in events if event['event']=='worker_stall']
@@ -70,7 +76,7 @@ class RuntimeDiagnosticsRegression(unittest.TestCase):
                     self.wait(lambda:d.available)
                     deadline = time.monotonic() + 5
                     while probe.call_count < 30 and time.monotonic() < deadline:
-                        d.heartbeat(); QTest.qWait(10)
+                        d.heartbeat(); self.pump()
                 finally:d.stop(wait=True)
                 # Drive actual writes, not an assumed scheduler throughput in
                 # a fixed 400ms window. All real resource probes still execute.
