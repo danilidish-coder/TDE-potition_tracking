@@ -1,4 +1,43 @@
-# Issue #10 — Phase D2 authorization checkpoint, 28 October 2026
+# Issue #10 — Phase D2 declared-operator WIP checkpoint, 28 October 2026
+
+## Latest continuation — user-approved simple access; WIP, NOT VERIFIED
+
+Starting checkpoint `85dff853bcdb8a5a9308b8a8f7e54a0993de25aa`, same feature
+branch and approved ancestor 4340c418. Guide v2.1, live Drive registry,
+CURRENT_APPROVED.json on main and Issue #10 were read successfully. The newest
+explicit user decision supersedes the strong-authentication requirement below:
+officer AGMS is declared attribution, not certified identity; no new password,
+domain/SSPI/Kerberos or authorization service is required. Existing individual
+statistics PIN remains unchanged. Free access is not represented as secure role
+enforcement. The old five failing denial tests and their FAIL evidence remain
+historical; separation from current mandatory integrity gates is NOT DONE yet.
+
+Recovery audit found eight pending source files (five modified, three new).
+No reset/clean/restore/rebase was used and no prior work was discarded.
+WIP adds `position_tracking_officer.py`, `_officer_ledger.py`, `_officer_store.py`:
+declared-actor command service, append-only central audit records, SQL document
+receipts, correction heads and staged reuse of existing shift/message methods.
+Existing START/END acceptance now has an optional audit insertion in the same
+SQL transaction. Central lookup can read the published personnel revision.
+These changes are partial and **NOT a completed D2 implementation**.
+
+Current verification: Python compilation PASS; D1 targeted separation 11/11
+PASS after the first edits. Recovery test was started but its execution handle
+was lost on interruption: **result NOT VERIFIED**, not claimed PASS. New D2
+backend, crash/race/audit/roster tests, GUI wiring and Windows/Linux CI are
+**NOT RUN for this WIP**. Existing historical source CI 40723755684 remains
+FAIL for the now-superseded authentication property, as recorded below.
+
+Next step after saving this WIP: finish and test the central officer GUI,
+immutable correction/remote-action receipts and central personnel publication;
+retain all B/C/D1 gates, document historical-test separation, then execute full
+Windows/Linux source CI. Checkpoint commits are not application acceptance.
+No EXE, main, CURRENT_APPROVED.json, shortcuts, real data or offline queues
+were changed. Real SMB remains NOT RUN. Do not start D3.
+
+---
+
+# Historical D2 strong-authentication stop — superseded requirement
 
 ## Phase D2 continuation from b5eeb92 — BLOCKED: verified authority missing
 

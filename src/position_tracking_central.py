@@ -70,9 +70,14 @@ class CentralOperator:
         active = store.get_active(agms) if agms else None
         if active:
             return self._active_person(active), active
-        people = PersonnelRepository.load(self.personnel)
+        people = self.people(store)
         person = next((person for person in people if person.agms == agms), None)
         return person, active
+
+    def people(self, store):
+        rows = store._position_rows("SELECT payload FROM officer_documents WHERE document_key='personnel'")
+        path = store.root / json.loads(rows[0]['payload'])['path'] if rows else self.personnel
+        return PersonnelRepository.load(path)
 
     @staticmethod
     def _active_person(active):
@@ -106,7 +111,7 @@ class CentralOperator:
             if request.kind == "START":
                 if request.position not in {str(i) for i in range(1, 15)}:
                     raise ValueError("Επιλέξτε φυσική θέση 1 έως 14.")
-                people = PersonnelRepository.load(self.personnel)
+                people = self.people(store)
                 person = next((person for person in people if person.agms == request.agms), None)
                 if not person:
                     raise ValueError("Ο ΑΓΜΣ δεν βρέθηκε στην κεντρική λίστα προσωπικού.")

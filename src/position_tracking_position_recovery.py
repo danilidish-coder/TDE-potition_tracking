@@ -135,7 +135,9 @@ class PositionRecoveryMixin:
                         db.execute("INSERT INTO meta VALUES ('position_events_index_v1', '1')")
                     self._init_position_claims(db, rebuild=not migrated)
                     self._init_handovers(db)
+                    self._init_officer_ledger(db)
             self._handover_ready = True
+            self._officer_ledger_ready = True
             self._recover_position_operations_locked()
 
     def _index_legacy_position_events(self, db):

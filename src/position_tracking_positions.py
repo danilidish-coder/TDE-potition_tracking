@@ -14,6 +14,10 @@ from position_tracking_handoff import close_previous_windows_user_positions
 
 class PositionStoreMixin:
     def _effective_start_timestamp(self, event_id: str, timestamp: str) -> str:
+        if getattr(self, '_officer_ledger_ready', False):
+            rows = self._position_rows('SELECT timestamp FROM officer_start_heads WHERE start_id=?', (event_id,))
+            if rows:
+                return rows[0]['timestamp']
         path = self.corrections / f"{_safe_name(event_id)}.json"
         if not path.is_file():
             return timestamp

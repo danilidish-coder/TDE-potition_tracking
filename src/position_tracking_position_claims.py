@@ -64,6 +64,7 @@ class PositionClaimsMixin:
                         db.execute("UPDATE position_operations SET state='ABORTED',settled=1 WHERE event_id=?",
                                    (event_id,))
                         return False
+                self._record_position_officer_action(db, event)
                 db.execute("UPDATE position_operations SET state='COMMITTED' WHERE event_id=? AND attempt=?",
                            (event_id, attempt))
                 return True
