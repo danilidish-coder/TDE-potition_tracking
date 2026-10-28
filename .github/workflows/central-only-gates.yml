@@ -2,7 +2,7 @@ name: Central-only candidate source gates
 
 on:
   push:
-    branches: [feature/central-only-simple-20261027]
+    branches: [feature/central-only-simple-20261027, fix/v127-issue11-20261029]
     paths: ["src/**", "tests/**", "requirements.txt", ".github/workflows/central-only-gates.yml"]
   workflow_dispatch:
     inputs:
