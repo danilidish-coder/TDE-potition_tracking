@@ -1,6 +1,103 @@
-# Issue #10 — STOP after stale-worker integrity proof
+# Issue #10 — WIP CHECKPOINT, 28 October 2026
 
-**OVERALL FAIL / NOT READY.** This is the current checkpoint. It supersedes the
+**STOPPED AT USER REQUEST / APPLICATION NOT COMPLETE / WINDOWS GATE FAIL.**
+No programming, new tests, builds or further feature work was started for this
+checkpoint. The sections below the historical divider retain earlier evidence;
+this section is the current state.
+
+## Latest saved source and branch
+
+- Branch: `feature/central-only-simple-20261027`, repository
+  `danilidish-coder/TDE-potition_tracking`.
+- Latest source commit: **`184567e3f0ef34cee11ce40b5728ea26fdbaa87a`**.
+- Preceding fixes: `25fd91902cbf54c5afa58ff8f3b9367fb57aa6ff`
+  (transactional claims/fencing) and
+  `fe144b3ee727595e4af3a2a2151a007d93483d9f` (Qt shutdown).
+- Approved baseline remains ancestor
+  `4340c41865328cd893e6dc23fcdcedfefa7f9bf2`.
+- All application changes were already committed at source SHA above. The WIP
+  commit containing this section preserves the handoff documentation only; its
+  exact SHA is reported after push and can be read with
+  `git log -1 --format=%H -- docs/ISSUE_10_STALE_WORKER_STOP_20261027.md`.
+
+## Implemented since the previous STOP
+
+1. Added `position_tracking_position_claims.py`: central SQLite live claims,
+   unique physical booth/AGMS constraints, and per-attempt tokens. Conditional
+   commits/aborts prevent a superseded worker from borrowing a retry's token,
+   regaining authority or rolling back a committed operation.
+2. Active position queries use the central accepted claim, rather than treating
+   an overwritten/deleted JSON projection as authoritative. Superseded raw bytes
+   remain available as evidence, marked ABORTED and excluded from work reports.
+   Original operation IDs/times remain stable across retries.
+3. Recovery revalidates the original END time against the effective START,
+   including old aborted bytes delivered after a subsequent START correction.
+4. Removed QWidget-bound work from the read worker. Shutdown stops new work and
+   destroys native widgets on the GUI thread while QApplication still exists.
+   Qt test fixtures use that same explicit deferred deletion. The subprocess
+   check now covers repeated exits and exit with a blocked share read.
+5. The original two stale-worker test methods and their assertions are unchanged
+   from `340eeb3` (AST comparison verified). Four additional fencing cases and
+   one additional END-time recovery case were added; no timeout was extended.
+
+## PASS / FAIL / NOT RUN at source 184567e
+
+CI run: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40570239152
+
+| Check | Result |
+| --- | --- |
+| Original stale-worker assertions, plus four new cases | PASS, 6/6 in Linux and Windows focused gates |
+| Original END interruption gate | PASS, 4/4 in both focused gates |
+| Central recovery | PASS, 25/25 in both focused gates |
+| Central service/worker | PASS, 11/11 in both focused gates |
+| Local Qt 6.12 UI checks | PASS, 6/6, process exit 0 |
+| Local portable runner | PASS, 56 scripts, zero failures in the completed previous execution |
+| Linux CI job `122422193134` | PASS, including focused and full source regressions |
+| Windows CI job `122422192745` | FAIL in focused Qt UI checks, 3/6 cases failing |
+| Full Windows regression step | NOT RUN: preceding focused step failed |
+| Windows EXE build, run `40570238840` | SKIPPED intentionally, not a build PASS |
+| Packaged EXE, real SMB interruption/restart, physical 15-terminal acceptance | NOT RUN |
+
+The local runner output was observed before this checkpoint, not rerun now.
+Its temporary JSON under `/tmp` is no longer present in the current environment;
+the CI run/job identities above provide the remote evidence. No new test run
+was launched to recreate temporary files.
+
+## Remaining failures / exact next task
+
+Windows UI failures in job `122422192745`:
+
+- `test_blocked_write_is_still_owned_after_ui_timeout`
+- `test_exit_and_windows_account_change_preserve_central_active_position`
+- `test_real_central_start_end_from_buttons`
+
+All fail waiting for `end_btn.isEnabled()` with **"Qt state did not settle"**.
+The cause is NOT YET DIAGNOSED. Do not assume this is merely slow Windows and do
+not extend timeouts or weaken assertions. The former subprocess shutdown-crash
+case passes in this run; the overall Windows gate still fails. Further Issue #10
+feature development remains paused until the Windows gate is genuinely green.
+
+Exact continuation instruction:
+
+> Stay on feature/central-only-simple-20261027 in TDE-potition_tracking. Read
+> docs/ISSUE_10_STALE_WORKER_STOP_20261027.md first and verify source ancestry from
+> 184567e3f0ef34cee11ce40b5728ea26fdbaa87a and approved baseline 4340c41865328cd893e6dc23fcdcedfefa7f9bf2.
+> Diagnose the three Windows Qt-state failures using run 40570239152, job
+> 122422192745. Inspect actual worker outcomes, central claims and UI polling;
+> do not increase timeouts or weaken tests. Make minimal fixes and repeat the
+> focused gates and Windows/Linux regressions. Only after both platforms pass
+> continue Issue #10. Do not merge main, modify CURRENT_APPROVED.json, build or
+> replace the approved EXE, or access production data/queues.
+
+No main, approved manifest, release EXE, production data, shortcuts or deployed
+queues were changed. The candidate remains source-only and incomplete. No work
+was discarded. Commit/push this checkpoint and verify its exact remote SHA.
+
+---
+
+# Historical STOP after stale-worker integrity proof
+
+**HISTORICAL FAIL / NOT READY.** This earlier checkpoint superseded the
 readiness conclusions in the earlier recovery and preview notes, while retaining
 their actual, scoped PASS evidence. No assertion was suppressed or relaxed.
 
