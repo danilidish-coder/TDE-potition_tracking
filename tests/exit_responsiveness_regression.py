@@ -62,12 +62,16 @@ class ExitResponsiveness(unittest.TestCase):
                     self.assertLess(elapsed, .25, 'Confirmed exit blocked the Qt thread on shared I/O')
                     if not pending:
                         deadline = time.monotonic() + 2
-                        while not entered.is_set() and time.monotonic() < deadline: QTest.qWait(10)
+                        while not entered.is_set() and time.monotonic() < deadline:
+                            app.processEvents()
+                            time.sleep(.01)
                         self.assertTrue(entered.is_set())
                         if map_pending:self.assertTrue(w._map_mutation_future.done(), 'Exit overtook an in-flight map END')
                         w._start_confirmed_exit('duplicate-command')
                     deadline = time.monotonic() + 4
-                    while time.monotonic() < deadline and not quit_app.called and not errors.called: QTest.qWait(20)
+                    while time.monotonic() < deadline and not quit_app.called and not errors.called:
+                        app.processEvents()
+                        time.sleep(.02)
                     if failure or pending:
                         self.assertFalse(quit_app.called); self.assertTrue(errors.called)
                         self.assertFalse(w._force_exit); self.assertEqual(ack, [])

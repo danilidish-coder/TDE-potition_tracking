@@ -34,8 +34,9 @@ class ActualUIWorkflow(unittest.TestCase):
             def wait(predicate, seconds=12):
                 end=time.monotonic()+seconds
                 while time.monotonic()<end:
+                    app.processEvents()
                     if predicate():return
-                    QTest.qWait(10)
+                    time.sleep(.01)  # Yield the GIL to Python/SQLite workers on Windows.
                 latest=windows[-1] if windows else None
                 state={}
                 if latest is not None:
