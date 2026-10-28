@@ -1,4 +1,41 @@
-# Issue #10 — WIP CHECKPOINT, 28 October 2026
+# Issue #10 — Windows GUI diagnosis, 28 October 2026
+
+## Current continuation from 81ccc3a (supersedes the WIP below)
+
+Application remains incomplete; no EXE or production change. Application source
+is still `184567e3f0ef34cee11ce40b5728ea26fdbaa87a`. This continuation changes
+only `tests/central_operator_ui_regression.py`:
+
+- Diagnostic commit `8f9b95536df453f8b5608ff45dd76af9f37e88be`, run
+  `40654847842`, Windows job `122703285275`, reproduces the three failures with
+  worker state. START was centrally CONFIRMED, action future finished, and the
+  read either was still in SQLite or already held the correct active START.
+  GUI state was still dirty. There was no central write rejection or data loss.
+- Fix `902c4ca3b9e093674322faec5965c7b6d637f34a` yields the Python GIL explicitly
+  with `time.sleep(0.005)` between `processEvents` calls. The Windows tight
+  `QTest.qWait(5)` loop starved the Python/SQLite worker compared with the real
+  QApplication event loop. No application code, predicate, state assertion or
+  5-second deadline was changed. Failure diagnostics remain for future evidence.
+- Local PySide6 6.12: all 6 UI cases PASS in 4.801 seconds, normal process exit.
+- Run `40655231061`, exact test revision `902c4ca`: focused stale-worker 6/6,
+  END 4/4, recovery 25/25, service 11/11 and GUI 6/6 PASS on both platforms.
+- Linux job `122704530746`: full source CI PASS.
+- Windows job `122704530486`: full source CI IN PROGRESS at this documentation
+  update. It is not yet marked PASS. Do not advance Issue #10 features before
+  the full Windows result is known and any real failure is diagnosed.
+- EXE build run `40655231033`: SKIPPED intentionally. Packaged EXE, physical SMB
+  interruption/restart and 15 physical stations: NOT RUN.
+
+Exact next step: read the final result/logs of run `40655231061`, Windows job
+`122704530486`, without rerunning successful gates. If it fails, isolate the
+first failing script and fix its actual cause without extending timeouts or
+weakening assertions. Only after both full platform gates pass may the next
+small Issue #10 change begin. Preserve branch
+`feature/central-only-simple-20261027`, approved source ancestry and production.
+
+---
+
+# Previous WIP CHECKPOINT, 28 October 2026
 
 **STOPPED AT USER REQUEST / APPLICATION NOT COMPLETE / WINDOWS GATE FAIL.**
 No programming, new tests, builds or further feature work was started for this
