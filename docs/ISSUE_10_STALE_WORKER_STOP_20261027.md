@@ -1,4 +1,56 @@
-# Issue #10 — Phase D1 checkpoint, 28 October 2026
+# Issue #10 — Phase D2 authorization checkpoint, 28 October 2026
+
+## Phase D2 continuation from b5eeb92 — BLOCKED: verified authority missing
+
+Branch `feature/central-only-simple-20261027`; actual clean starting HEAD
+`b5eeb92e5f1394211eb1d50b98c0909f5c0cbb54`, approved ancestor
+`4340c41865328cd893e6dc23fcdcedfefa7f9bf2` verified. D1 run `40707038963`
+remains accepted evidence (60/60 PASS per OS); no previous diagnosis repeated.
+The active guide v2.1, live Drive registry (now records D1), GitHub Issue #10
+and CURRENT_APPROVED.json on main were all read successfully. Production
+identity still matches 4340c418 and its approved EXE. CURRENT_APPROVED.json is
+absent from this historical feature branch as documented, and was not copied.
+No Drive write was attempted; the prior blocked proposal is historical.
+
+**Security STOP:** no verified officer authentication/authorization mechanism
+was found. Typed AGMS, caller-supplied PersonnelRecord/sender and USERNAME are
+accepted as labels by the existing legacy business functions. No trusted
+identity/role or protected server boundary is configured in this environment.
+Do not treat the legacy panel as an authorized D2 panel or activate privileged
+features using an injected test identity, embedded PIN or editable role file.
+
+New `tests/central_officer_authorization_regression.py`: **0 PASS / 5 FAIL**
+locally, all real missing-authorization failures in synthetic temporary data.
+Direct bypass accepts SHIFT_START, MEMBER_EXCLUDE, SHIFT_FINALIZE,
+OFFICIAL_MESSAGE and REMOTE_END. The REMOTE_END case removes the synthetic
+live claim and commits an END attributed to a caller-supplied officer without
+authentication. Expected behavior remains PermissionError before any mutation.
+Tests are not skipped/xfail and assertions/timeouts are not weakened.
+
+No application source changed. D2 functional implementation/activation is
+**NOT IMPLEMENTED / BLOCKED**. Source is still D1 b4cf202. Authorized officer
+actions, protected audit, remote START/END UI, central roster update/visibility
+and authenticated multi-station handling are **NOT RUN**; tests must not use
+an allow-all mock as proof of real authorization. Real SMB and EXE remain NOT RUN.
+
+Minimal safe design and exact evidence paths:
+`docs/ISSUE_10_D2_AUTHORIZATION_BLOCKER_20261028.md`.
+It reuses the existing transactional engine behind one trusted central command
+boundary, with server-verified individual Windows identity/role and service-only
+canonical writes. Client-only checks cannot protect client-writable data. The
+actual isolated Windows identity/group/ACL setup is UNKNOWN and must be verified
+before implementation is resumed. This is not permission to deploy a service.
+
+Next exact step: commit/push this security stop and execute the required existing
+Windows/Linux source workflow. The full runner discovers the new strict test;
+the D2 authorization gate must remain FAIL until genuinely fixed. Record the
+run/job IDs, full-suite counts and immutable evidence here. Then STOP for
+independent review of the identity boundary. Do not start D3 or build an EXE.
+Main, CURRENT_APPROVED.json, approved EXE, shortcuts and real data are untouched.
+
+---
+
+# Previous Phase D1 checkpoint — source PASS
 
 ## Phase D1 continuation from d6969b1 — Windows/Linux source PASS; STOP after D1
 
