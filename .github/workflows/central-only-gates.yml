@@ -90,7 +90,10 @@ jobs:
       - name: Frozen operator and officer startup smoke
         shell: pwsh
         run: |
-          $exe = (Resolve-Path dist/TDE_Katagrafi_Theseon_TRIAL.exe).Path
+          $sandbox = Join-Path (Get-Location) 'dist/TDE_TRIAL_SANDBOX'
+          New-Item -ItemType Directory -Path (Join-Path $sandbox '.tde_runtime') -Force | Out-Null
+          Copy-Item dist/TDE_Katagrafi_Theseon_TRIAL.exe (Join-Path $sandbox 'TDE_Katagrafi_Theseon_TRIAL.exe')
+          $exe = (Resolve-Path (Join-Path $sandbox 'TDE_Katagrafi_Theseon_TRIAL.exe')).Path
           foreach ($argument in @('', '--central-officer')) {
             if ($argument) { $p = Start-Process $exe -ArgumentList $argument -PassThru }
             else { $p = Start-Process $exe -PassThru }
