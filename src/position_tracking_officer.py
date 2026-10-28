@@ -54,8 +54,7 @@ class CentralOfficer(CentralOperator):
         roster = store.document('personnel')
         return dict(officer=officer, people=people, shift=shift, active=active,
                     roster_revision=roster['revision'] if roster else '',
-                    reports=store.search_finalized_shifts(limit=20), clients=store.online_clients(),
-                    history=store.officer_history())
+                    reports=store.search_finalized_shifts(limit=20), clients=store.online_clients())
 
     def check(self, request):
         row = self._store().officer_action(request.action_id)
@@ -81,6 +80,7 @@ class CentralOfficer(CentralOperator):
             reason = values.get('reason', '').strip()
             intent = dict(action_id=request.action_id, action=request.action,
                           declared_officer=store._person_payload(officer), identity='DECLARED_NOT_AUTHENTICATED',
+                          personnel_revision=store._personnel_revision,
                           recorded_at=request.recorded_at, reason=reason, intent=request.intent)
             store.command = intent
             if request.action in ('REMOTE_START', 'REMOTE_END', 'CORRECT_START'):
@@ -136,16 +136,20 @@ class CentralOfficer(CentralOperator):
 
     def _import(self, store, request, intent):
         store._event_path({'event_id': request.action_id, 'timestamp': request.recorded_at})
-        path = store.root / 'personnel_revisions' / (request.action_id + '.xlsx')
+        digest = hashlib.sha256(request.workbook).hexdigest()
+        path = store.root / 'personnel_revisions' / (digest + '.xlsx')
         path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists():
             if path.read_bytes() != request.workbook:
                 raise BusyError('Διαφορετικό αρχείο με ίδιο αναγνωριστικό.')
         else:
-            # O_EXCL: even a late writer cannot replace a published workbook.
+            # Publish only complete bytes. Content-addressed paths keep a late
+            # different import from overwriting an accepted roster revision.
             import os
-            with path.open('xb') as file:
+            temp = path.with_name(path.name + '.' + uuid.uuid4().hex + '.tmp')
+            with temp.open('xb') as file:
                 file.write(request.workbook); file.flush(); os.fsync(file.fileno())
+            os.replace(temp, path)
         people = PersonnelRepository.load(path)
         data = dict(path=str(path.relative_to(store.root)), people=len(people),
                     sha256=hashlib.sha256(request.workbook).hexdigest())
@@ -158,10 +162,24 @@ class CentralOfficer(CentralOperator):
         shift = store.get_shift(shift_id) if shift_id else store.current_report_shift()
         if not shift:
             raise ValueError('Δεν υπάρχει διαθέσιμη αναφορά.')
-        return create_shift_pdf(store, shift, {p.agms: p for p in state['people']})
+        return create_shift_pdf(store, shift, {p.agms: p for p in state['people']},
+                                target=store.reports / ('REPORT_' + uuid.uuid4().hex + '.pdf'))
 
     @staticmethod
     def preview_personnel(path):
         path = Path(path)
-        people = PersonnelRepository.load(path)
-        return path.read_bytes(), len(people)
+        data = path.read_bytes()
+        people = PersonnelRepository.load(data)
+        return data, len(people)
+
+    def personal_report(self, officer_agms, person_agms):
+        from position_tracking_pdf import create_personnel_history_pdf
+        self.snapshot(officer_agms)
+        store = self._store()
+        rows = store.search_personnel_sessions(person_query=person_agms)
+        return create_personnel_history_pdf(rows, 'ΑΓΜΣ: ' + person_agms,
+                    target=store.reports / ('PERSON_' + uuid.uuid4().hex + '.pdf'))
+
+    def history(self, officer_agms):
+        self.snapshot(officer_agms)
+        return self._store().officer_history()

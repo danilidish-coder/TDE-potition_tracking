@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import unicodedata
 import zipfile
+from io import BytesIO
 from xml.etree import ElementTree as ET
 
 from position_tracking_common import _clean
@@ -77,10 +78,10 @@ class PersonnelRepository:
 
     @classmethod
     def _read_sheets(cls, path: str | Path) -> list[list[dict[int, str]]]:
-        p = Path(path)
-        if not p.is_file():
+        p = BytesIO(path) if isinstance(path, bytes) else Path(path)
+        if not isinstance(path, bytes) and not p.is_file():
             raise ValueError("Δεν βρέθηκε το αρχείο Excel.")
-        if p.suffix.lower() not in {".xlsx", ".xlsm"}:
+        if not isinstance(path, bytes) and p.suffix.lower() not in {".xlsx", ".xlsm"}:
             raise ValueError("Υποστηρίζονται αρχεία Excel .xlsx ή .xlsm.")
         try:
             with zipfile.ZipFile(p, "r") as z:

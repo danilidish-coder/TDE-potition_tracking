@@ -25,6 +25,7 @@ class OfficerLedgerMixin:
 
     @staticmethod
     def _insert_officer_action(db, receipt):
+        receipt['accepted_at'] = datetime.now().isoformat(timespec='microseconds')
         db.execute('INSERT INTO officer_actions VALUES (?,?)',
                    (receipt['action_id'], json.dumps(receipt, ensure_ascii=False)))
 

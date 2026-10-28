@@ -75,9 +75,29 @@ class CentralOperator:
         return person, active
 
     def people(self, store):
-        rows = store._position_rows("SELECT payload FROM officer_documents WHERE document_key='personnel'")
+        rows = store._position_rows("SELECT revision,payload FROM officer_documents WHERE document_key='personnel'")
         path = store.root / json.loads(rows[0]['payload'])['path'] if rows else self.personnel
+        store._personnel_revision = rows[0]['revision'] if rows else 'LEGACY_CENTRAL_WORKBOOK'
+        if rows:
+            import hashlib
+            data = path.read_bytes()
+            if hashlib.sha256(data).hexdigest() != json.loads(rows[0]['payload'])['sha256']:
+                raise OSError('Ασυμφωνία κεντρικής έκδοσης προσωπικού.')
+            return PersonnelRepository.load(data)
         return PersonnelRepository.load(path)
+
+    def communication(self, client_id, acknowledge=''):
+        store = self._store()
+        store.write_client_heartbeat(client_id)
+        if acknowledge:
+            store.acknowledge_message(acknowledge, client_id)
+        messages = {m['message_id']: m for m in store.pending_messages(client_id)}
+        for row in store._position_rows("SELECT payload FROM officer_documents WHERE document_key LIKE 'message:%'"):
+            message = json.loads(row['payload'])
+            ack = store.comm_acks / message['message_id'] / (client_id + '.json')
+            if client_id in message['targets'] and not ack.exists():
+                messages[message['message_id']] = message
+        return sorted(messages.values(), key=lambda m: m['created_at'])
 
     @staticmethod
     def _active_person(active):
