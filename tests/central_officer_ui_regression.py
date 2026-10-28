@@ -203,5 +203,13 @@ raise SystemExit(app.launch(['tde','--central-officer'],services))
         self.assertEqual(result.returncode,0,result.stderr)
 
 
+    def test_historical_action_requires_selected_report(self):
+        self.assertIsNone(self.window.reports.currentData() or None)
+        with patch.object(QMessageBox,'warning') as warning:
+            self.window.historical_btn.click()
+        self.assertEqual(warning.call_count,1)
+        self.assertEqual(OfficerStore(self.root).officer_history(),[])
+
+
 if __name__ == '__main__':
     unittest.main()

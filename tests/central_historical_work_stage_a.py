@@ -102,5 +102,12 @@ class HistoricalWorkStageA(unittest.TestCase):
         self.assertEqual(len(self.store.historical_for_shift(self.shift_id)),1)
 
 
+    def test_future_end_cannot_be_recorded_as_completed_work(self):
+        now=datetime.now()
+        with self.assertRaisesRegex(ValueError,"ολοκληρωθεί"):
+            self.add(start_at=now,end_at=now+timedelta(minutes=10))
+        self.assertEqual(self.store.historical_for_shift(self.shift_id),[])
+
+
 if __name__=="__main__":
     unittest.main()

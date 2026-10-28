@@ -123,6 +123,8 @@ class HistoricalWorkMixin:
             raise ValueError("Η ιστορική καταχώριση απαιτεί αιτιολογία.")
         if not isinstance(start_at, datetime) or not isinstance(end_at, datetime) or end_at <= start_at:
             raise ValueError("Η ΛΗΞΗ πρέπει να είναι μεταγενέστερη της ΕΝΑΡΞΗΣ.")
+        if end_at > datetime.now():
+            raise ValueError('Η ιστορική εργασία πρέπει ήδη να έχει ολοκληρωθεί.')
         stamp_start = start_at.isoformat(timespec="seconds")
         stamp_end = end_at.isoformat(timespec="seconds")
         action_id = _clean(intent.get("action_id"))

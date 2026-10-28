@@ -65,3 +65,49 @@ jobs:
           path: artifact/regressions
           if-no-files-found: ignore
           retention-days: 14
+
+  trial-exe:
+    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[trial-exe]') }}
+    needs: source-gates
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Build isolated candidate (not approved production)
+        shell: pwsh
+        run: |
+          python tools/generate_network_icon.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --icon build_assets/position_tracking_network.ico --name TDE_Katagrafi_Theseon_TRIAL src/position_tracking_trial.py
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate build failed' }
+          if (-not (Test-Path dist/TDE_Katagrafi_Theseon_TRIAL.exe)) { throw 'Missing EXE' }
+      - name: Frozen operator and officer startup smoke
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path dist/TDE_Katagrafi_Theseon_TRIAL.exe).Path
+          foreach ($argument in @('', '--central-officer')) {
+            if ($argument) { $p = Start-Process $exe -ArgumentList $argument -PassThru }
+            else { $p = Start-Process $exe -PassThru }
+            Start-Sleep -Seconds 7
+            if ($p.HasExited) { throw "Trial startup failed: $argument" }
+            taskkill /PID $p.Id /T /F
+            if ($LASTEXITCODE -ne 0) { throw "Trial cleanup failed: $argument" }
+            if (-not $p.WaitForExit(15000)) { throw 'Trial process still running' }
+          }
+          $file = Get-Item $exe
+          Write-Host "TRIAL_SOURCE_SHA=${{ github.sha }}"
+          Write-Host "TRIAL_EXE_SHA256=$((Get-FileHash $exe -Algorithm SHA256).Hash)"
+          Write-Host "TRIAL_EXE_BYTES=$($file.Length)"
+      - name: Upload isolated trial executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: TDE-TRIAL-${{ github.sha }}-${{ github.run_id }}
+          path: dist/TDE_Katagrafi_Theseon_TRIAL.exe
+          if-no-files-found: error
+          retention-days: 7
