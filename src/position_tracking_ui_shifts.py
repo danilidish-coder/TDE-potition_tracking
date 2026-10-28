@@ -1,13 +1,41 @@
 """Officer shift preview, membership approval and asynchronous shift status."""
 from __future__ import annotations
 import json
+from functools import partial
 from datetime import datetime
 from position_tracking_common import _clean
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QDialog, QListWidget, QListWidgetItem
+from position_tracking_worker import SingleFlightWorker
 
 
 class ShiftControllerMixin:
+    def _run_shift_job(self, task, completed):
+        """One officer request; no shared-folder I/O in the Qt callback."""
+        previous = getattr(self, '_shift_closure_future', None)
+        if getattr(self, '_shift_ui_pending', False) or (previous is not None and not previous.done()):
+            return False
+        if not hasattr(self, '_shift_action_worker'):
+            self._shift_action_worker = SingleFlightWorker('TDE-shift-action')
+        future = self._shift_action_worker.submit(task)
+        self._shift_closure_future = future
+        self._shift_ui_pending = True
+        timer = QTimer(self)
+        def poll():
+            if not future.done():
+                return
+            timer.stop(); timer.deleteLater()
+            self._shift_ui_pending = False
+            try:
+                result = future.result()
+            except Exception as exc:
+                QMessageBox.critical(self, 'Δεν επιβεβαιώθηκε η ενέργεια βάρδιας',
+                    f'{exc}\nΕλέγξτε την κεντρική κατάσταση πριν επαναλάβετε.')
+            else:
+                completed(result)
+        timer.timeout.connect(poll); timer.start(100)
+        return True
+
     def _preview_list_dialog(self, title: str, intro: str, agms_list: list[str], allow_exclude: bool) -> tuple[bool,list[str],list[str]]:
         dlg=QDialog(self); dlg.setWindowTitle(title); dlg.resize(620,480)
         lay=QVBoxLayout(dlg); lay.setContentsMargins(20,18,20,18); lay.setSpacing(10)
@@ -44,9 +72,9 @@ class ShiftControllerMixin:
         p=self._officer_selected()
         if not p:
             QMessageBox.warning(self,"Έλεγχος","Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."); return
-        if self.store.current_shift():
-            QMessageBox.warning(self,"Βάρδια","Υπάρχει ήδη ενεργή βάρδια."); return
-        active=self.store.active_all()
+        self._run_shift_job(self.store.active_all, partial(self._preview_start_shift, p))
+
+    def _preview_start_shift(self, p, active):
         agms=[]
         for item in active:
             a=_clean(item.get("agms"))
@@ -57,19 +85,20 @@ class ShiftControllerMixin:
             agms, True
         )
         if not ok: return
-        try:
-            shift=self.store.start_officer_shift(p,initial_approved=approved,initial_excluded=excluded)
+        def started(shift):
             self._last_shift_signature=""
             self._refresh_shift_status()
             QMessageBox.information(self,"Βάρδια",f"Η βάρδια ξεκίνησε στις {shift['start_at'].replace('T',' ')}.")
-        except Exception as exc:
-            QMessageBox.critical(self,"Βάρδια",str(exc))
+        self._run_shift_job(partial(self.store.start_officer_shift, p,
+            initial_approved=approved, initial_excluded=excluded), started)
 
 
     def _resolve_pending_members(self) -> bool:
         if not self.store or self._pending_prompt_active:
             return False
-        shift=self.store.sync_active_shift()
+        return self._run_shift_job(self.store.sync_active_shift, self._prompt_pending_members)
+
+    def _prompt_pending_members(self, shift):
         pending=list(shift.get("pending",[])) if shift else []
         if not pending:
             return True
@@ -86,7 +115,9 @@ class ShiftControllerMixin:
                     QMessageBox.Yes
                 )
                 if answer == QMessageBox.Yes:
-                    self.store.set_shift_member_state(agms, "APPROVED")
+                    self._run_shift_job(partial(self.store.set_shift_member_state, agms, 'APPROVED', shift['shift_id']),
+                                        lambda result: self._refresh_shift_status())
+                    return
                 else:
                     confirm_exclusion = QMessageBox.question(
                         self,
@@ -96,7 +127,9 @@ class ShiftControllerMixin:
                         QMessageBox.No
                     )
                     if confirm_exclusion == QMessageBox.Yes:
-                        self.store.set_shift_member_state(agms, "EXCLUDED")
+                        self._run_shift_job(partial(self.store.set_shift_member_state, agms, 'EXCLUDED', shift['shift_id']),
+                                            lambda result: self._refresh_shift_status())
+                        return
         finally:
             self._pending_prompt_active=False
         self._refresh_shift_status()

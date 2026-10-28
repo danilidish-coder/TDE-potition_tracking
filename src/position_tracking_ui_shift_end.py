@@ -1,4 +1,4 @@
-"""Shift completion modal with guarded single and bulk END actions."""
+"""Shift completion is separate from explicit, individually guarded position END."""
 from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from position_tracking_common import _clean
@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QMessageBox, QPushButton, QVB
 
 class ShiftEndDialogMixin:
     def _confirm_and_end_officer_shift(self, officer: PersonnelRecord) -> bool:
-        """Per-person END and group END inside shift close; live map unchanged."""
+        """Complete the roster independently; explicit per-person END stays separate."""
         if not self.store:
             return False
         previous = getattr(self, "_shift_closure_future", None)
@@ -22,12 +22,12 @@ class ShiftEndDialogMixin:
             return False
 
         dlg = QDialog(self)
-        dlg.setWindowTitle("ΛΗΞΗ ΒΑΡΔΙΑΣ — ΕΚΚΡΕΜΕΙΣ ΘΕΣΕΙΣ")
+        dlg.setWindowTitle("ΛΗΞΗ ΒΑΡΔΙΑΣ")
         dlg.resize(920, 670)
         lay = QVBoxLayout(dlg)
         lay.setContentsMargins(20, 18, 20, 18)
         lay.setSpacing(12)
-        heading = QLabel("ΑΣΤΥΝΟΜΙΚΟΙ ΠΟΥ ΔΕΝ ΕΧΟΥΝ ΚΑΝΕΙ ΛΗΞΗ")
+        heading = QLabel("ΟΛΟΚΛΗΡΩΣΗ ΒΑΡΔΙΑΣ ΑΞΥΠ")
         heading.setStyleSheet("font-size:17px;font-weight:800")
         lay.addWidget(heading)
         status = QLabel("Έλεγχος ενεργών θέσεων…")
@@ -44,10 +44,9 @@ class ShiftEndDialogMixin:
         lay.addWidget(excluded_note)
         footer = QHBoxLayout()
         refresh_btn = QPushButton("ΑΝΑΝΕΩΣΗ")
-        group_btn = QPushButton("ΟΜΑΔΙΚΗ ΛΗΞΗ")
         finalize_btn = QPushButton("ΟΛΟΚΛΗΡΩΣΗ ΒΑΡΔΙΑΣ")
         cancel_btn = QPushButton("ΚΛΕΙΣΙΜΟ")
-        for button in (refresh_btn, group_btn, finalize_btn, cancel_btn):
+        for button in (refresh_btn, finalize_btn, cancel_btn):
             button.setMinimumHeight(42)
             footer.addWidget(button)
         lay.addLayout(footer)
@@ -73,7 +72,6 @@ class ShiftEndDialogMixin:
         def set_busy(message: str):
             status.setText(message)
             refresh_btn.setEnabled(False)
-            group_btn.setEnabled(False)
             finalize_btn.setEnabled(False)
             for button in state["row_buttons"]:
                 button.setEnabled(False)
@@ -119,52 +117,21 @@ class ShiftEndDialogMixin:
                 ),
             )
 
-        def finalize_shift(group: bool):
-            if state["future"] is not None or not state["shift"]:
+        def finalize_shift():
+            if state['future'] is not None or not state['shift']:
                 return
-            pending = bool(state["shift"].get("pending"))
-            if pending:
-                QMessageBox.warning(
-                    dlg, "Άτομα σε αναμονή",
-                    "Υπάρχουν άτομα σε ΑΝΑΜΟΝΗ. "
-                    "Ολοκληρώστε πρώτα την ΑΠΟΔΟΧΗ ή ΕΞΑΙΡΕΣΗ από τον πίνακα ΑΞΥΠ.",
-                )
+            if state['pending']:
+                QMessageBox.warning(dlg, 'Άτομα σε αναμονή',
+                    'Ολοκληρώστε πρώτα την ΑΠΟΔΟΧΗ ή ΕΞΑΙΡΕΣΗ από τον πίνακα ΑΞΥΠ.')
                 return
-            items = list(state["active"])
-            if not group and items:
-                return
-            if group and not items:
-                return
-            if group:
-                names = "\n".join(f"• {position_label(x)}" for x in items)
-                question = (
-                    "Να καταχωριστεί ΟΜΑΔΙΚΗ ΛΗΞΗ στους παρακάτω αστυνομικούς;\n\n"
-                    f"{names}\n\n"
-                    "Θα ολοκληρωθεί και η βάρδια. Οι ΕΞΑΙΡΕΜΕΝΟΙ δεν θα επηρεαστούν."
-                )
-            else:
-                question = (
-                    "Δεν υπάρχουν πλέον ανοικτές θέσεις στους ΑΠΟΔΕΚΤΟΥΣ.\n\n"
-                    "Να ολοκληρωθεί η βάρδια;"
-                )
-            confirm = QMessageBox.question(
-                dlg, "ΕΠΙΒΕΒΑΙΩΣΗ ΛΗΞΗΣ ΒΑΡΔΙΑΣ", question,
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-            )
+            confirm = QMessageBox.question(dlg, 'ΕΠΙΒΕΒΑΙΩΣΗ ΛΗΞΗΣ ΒΑΡΔΙΑΣ',
+                'Να ολοκληρωθεί η βάρδια;\n\nΟι φυσικές θέσεις παραμένουν ενεργές. '
+                'Δεν θα καταχωριστεί αυτόματη ΛΗΞΗ αστυνομικού.',
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
             if confirm != QMessageBox.Yes:
                 return
-            shift_id = _clean(state["shift"].get("shift_id"))
-            snapshot = {
-                _clean(x.get("agms")): _clean(x.get("event_id"))
-                for x in items
-            }
-            submit(
-                "finalize",
-                lambda: self.store.end_officer_shift(
-                    officer, expected_active_start_ids=snapshot,
-                    expected_shift_id=shift_id,
-                ),
-            )
+            shift_id = _clean(state['shift'].get('shift_id'))
+            submit('finalize', lambda: self.store.end_officer_shift(officer, expected_shift_id=shift_id))
 
         def render(shift: dict | None, active: list[dict]):
             positions_list.clear()
@@ -176,7 +143,6 @@ class ShiftEndDialogMixin:
                 status.setText("Δεν υπάρχει ενεργή βάρδια.")
                 pending_note.setText("")
                 excluded_note.setText("")
-                group_btn.setEnabled(False)
                 finalize_btn.setEnabled(False)
                 refresh_btn.setEnabled(True)
                 return
@@ -213,8 +179,8 @@ class ShiftEndDialogMixin:
                 state["row_buttons"].append(button)
             count = len(state["active"])
             status.setText(
-                f"Εκκρεμούν {count} λήξεις για την τρέχουσα βάρδια."
-                if count else "Όλοι οι ΑΠΟΔΕΚΤΟΙ έχουν κάνει ΛΗΞΗ."
+                f"Ανοικτές θέσεις αποδεκτών: {count}. Θα παραμείνουν ενεργές."
+                if count else "Δεν υπάρχουν ανοικτές θέσεις αποδεκτών."
             )
             if state["excluded"]:
                 excluded_note.setText(
@@ -225,8 +191,7 @@ class ShiftEndDialogMixin:
                 excluded_note.setText("")
             enabled = not state["pending"]
             refresh_btn.setEnabled(True)
-            group_btn.setEnabled(enabled and count > 0)
-            finalize_btn.setEnabled(enabled and count == 0)
+            finalize_btn.setEnabled(enabled)
             for button in state["row_buttons"]:
                 button.setEnabled(enabled)
 
@@ -262,14 +227,12 @@ class ShiftEndDialogMixin:
                 QMessageBox.information(
                     dlg, "Η ΒΑΡΔΙΑ ΟΛΟΚΛΗΡΩΘΗΚΕ",
                     "Η βάρδια οριστικοποιήθηκε και αποθηκεύτηκε.\n"
-                    f"Αυτόματες λήξεις με την ολοκλήρωση: "
-                    f"{len(output.get('closed_active_agms', []))}.",
+                    "Οι φυσικές θέσεις δεν μεταβλήθηκαν.",
                 )
                 dlg.accept()
 
         refresh_btn.clicked.connect(reload)
-        group_btn.clicked.connect(lambda: finalize_shift(True))
-        finalize_btn.clicked.connect(lambda: finalize_shift(False))
+        finalize_btn.clicked.connect(finalize_shift)
         cancel_btn.clicked.connect(dlg.reject)
         timer = QTimer(dlg)
         timer.timeout.connect(poll)

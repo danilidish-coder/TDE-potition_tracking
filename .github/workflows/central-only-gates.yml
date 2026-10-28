@@ -37,6 +37,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python tests/central_shift_separation_regression.py
+          python tests/central_shift_ui_regression.py
           python tests/central_handover_regression.py
           python tests/central_handover_ui_regression.py
           python tests/central_stale_worker_regression.py

@@ -64,19 +64,8 @@ with tempfile.TemporaryDirectory() as tmp:
             raise AssertionError("Wrong/old START ID should not be ended")
     assert store.get_active(second.agms) is not None
 
-    # A new booth opening after officer preview must force a refresh.
+    # D1: physical START may change independently; finalization is shift-only.
     new_a = store.start(first, "4", "ΕΙΣΟΔΟΣ")
-    try:
-        store.end_officer_shift(
-            officer, expected_shift_id=shift_id,
-            expected_active_start_ids={second.agms: start_b["event_id"]},
-        )
-    except MOD.BusyError:
-        pass
-    else:
-        raise AssertionError("Unconfirmed new START was included in a group END")
-    assert store.get_active(first.agms)["event_id"] == new_a["event_id"]
-
     store.end_officer_shift_member(officer, first.agms, shift_id, new_a["event_id"])
     try:
         store.end_officer_shift(
@@ -93,10 +82,10 @@ with tempfile.TemporaryDirectory() as tmp:
         expected_active_start_ids={second.agms: start_b["event_id"]},
     )
     assert finalized["status"] == "FINALIZED"
-    assert finalized["closed_active_agms"] == [second.agms]
-    assert store.get_active(second.agms) is None
+    assert finalized["closed_active_agms"] == []
+    assert store.get_active(second.agms)["event_id"] == start_b["event_id"]
     assert store.get_active(excluded.agms) is not None
-    assert any(
+    assert not any(
         e["agms"] == second.agms
         and e.get("kind") == "END"
         and e.get("end_reason") == "SHIFT_FINALIZED_BY_OFFICER"
@@ -104,7 +93,7 @@ with tempfile.TemporaryDirectory() as tmp:
         for e in store.iter_all_events()
     )
 
-# UI guard: the new modal must contain per-row and bulk actions, while
+# D1 UI guard: shift completion has separate explicit per-row actions, while
 # the pre-existing live-map end control must remain in the same source.
 import inspect
 from position_tracking_ui_map import LiveMapDialog
@@ -117,7 +106,9 @@ labels = {n.args[0].value for n in ast.walk(ast.parse(source))
           if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
           and n.func.id == 'QPushButton' and n.args
           and isinstance(n.args[0], ast.Constant)}
-for required in ('ΛΗΞΗ', 'ΟΜΑΔΙΚΗ ΛΗΞΗ', 'ΟΛΟΚΛΗΡΩΣΗ ΒΑΡΔΙΑΣ', 'ΛΗΞΗ ΕΝΕΡΓΗΣ ΘΕΣΗΣ'):
+for required in ('ΛΗΞΗ', 'ΟΛΟΚΛΗΡΩΣΗ ΒΑΡΔΙΑΣ', 'ΛΗΞΗ ΕΝΕΡΓΗΣ ΘΕΣΗΣ'):
     assert required in labels, required
 
-print("SHIFT_END_ACTIONS_REGRESSION: PASS (single, group, stale start, wrong shift, excluded unaffected)")
+assert 'ΟΜΑΔΙΚΗ ΛΗΞΗ' not in labels, "Shift completion must not offer implicit group END"
+
+print("SHIFT_END_ACTIONS_REGRESSION: PASS (explicit single END, shift-only completion, stale start, wrong shift, live preservation)")

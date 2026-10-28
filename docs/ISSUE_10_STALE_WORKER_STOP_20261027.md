@@ -1,4 +1,81 @@
-# Issue #10 — Phase C handover checkpoint, 28 October 2026
+# Issue #10 — Phase D1 checkpoint, 28 October 2026
+
+## Phase D1 continuation from d6969b1 — platform source CI pending
+
+Branch `feature/central-only-simple-20261027`; clean starting checkpoint
+`d6969b1e62265857901621c23f4923185ebc6297`, approved ancestor
+`4340c41865328cd893e6dc23fcdcedfefa7f9bf2`.
+Read the active development guide v2.1 and live Drive app registry, GitHub
+Issue #10, repository DEVELOPMENT_RULES.md and CURRENT_APPROVED.json on main.
+The approved manifest is absent from this historical feature branch by design;
+it was read remotely without copying/changing it. Approved source/EXE identity
+is unchanged. Previous Phase C source run `40697620744` remains accepted evidence.
+
+Real isolated SMB availability check: **NOT RUN / unavailable**. No mounted
+CIFS/SMB share, configured private TCP destination, VPN or synthetic test-share
+credentials/endpoints were available in the managed environment. No service
+network was contacted or scanned. The source fault tests below are simulations,
+not a replacement for physical SMB interruption/restart acceptance, which remains
+mandatory before operational approval and does not block independent D1 work.
+
+Implemented D1 only:
+
+- `position_tracking_shifts.py`: officer shift completion no longer calls
+  physical END, no longer requires a matching live-position preview, and keeps
+  `closed_active_agms=[]` for compatibility. Wrong shift ID, pending-member
+  decisions and shift time-order validation remain enforced. Explicit guarded
+  `end_officer_shift_member` is separate and unchanged.
+- Membership can be decided before physical START. Officer-only discovery also
+  finds committed short work already explicitly ended before the next refresh.
+  Membership changes accept an expected shift ID, so late decisions cannot alter
+  the next shift. Exclusion/undo changes only membership, never work timestamps.
+- `position_tracking_positions.py`: physical START never calls shift sync or
+  waits on `__SHIFT_CONTROL__`, including legacy sync_shift=True callers.
+- `position_tracking_handoff.py`: central Windows identity-change compatibility
+  hook is a no-op; it cannot generate END or mutate/read central work. Historical
+  offline code/queues remain isolated and untouched; no queue is activated.
+- `position_tracking_event_queries.py`: existing shift session projection uses
+  durable events as of the report boundary, so later actual END/handover cannot
+  erase prior shift work. The report clip is not a physical END. No new historical
+  admission/report feature was started.
+- Existing GUI modules `position_tracking_ui_shifts.py`, `_ui_admin.py`,
+  `_ui_shift_end.py`, `_ui_lifecycle.py`: one owned worker without a waiting
+  queue runs shift reads/start/membership operations. The existing completion
+  modal allows open positions and clearly states they remain active; its implicit
+  bulk-END completion path was removed. Explicit single END remains separate.
+  No new officer panel, authorization design, D2 or packaged candidate was built.
+
+New targeted tests: `central_shift_separation_regression.py` **11/11 PASS**;
+real Qt `central_shift_ui_regression.py` **5/5 PASS** locally. Cover open-position
+shift changes, exclusion/undo, approval before START, short-work discovery,
+stale shift decisions, simultaneous physical writes while shift control or slow
+shift persistence is held, failed finalization, lost mirror ACK, later actual
+END/reopen, responsive GUI and YES/NO completion without physical END.
+
+Old auto-END expectations were replaced with stronger immutable START identity,
+timestamp, raw-event/no-new-END and history checks in shift_end_release/actions,
+network_resilience, windows_user_handoff, windows_handoff_module/replay_order and
+simulated_shared_host_shortcuts tests. Existing real END identity/time replay
+checks remain. No assertions were marked expected failures or skipped.
+
+First local full run: **59/60 scripts PASS, one FAIL** in ui_recovery_timing.
+Its fixture held the removed implicit Windows handoff lock. It now holds the
+actual central position-recovery lock, keeping the 13-second hold, >12-second
+elapsed assertion, >100 GUI heartbeats, 31-second ceiling and receipt checks.
+Targeted repeat: **PASS**, 18.074 seconds recovery and 361 heartbeats. This is
+documented adaptation to the approved removal of implicit END, not an increased
+timeout or weakened integrity check. Final full platform run: **NOT RUN yet**.
+
+Next exact step: push the D1 commits and inspect the single Windows/Linux source
+workflow. It runs D1 targeted tests first, then all previous START/END/handover
+gates and the complete suite. Diagnose failures without weakening checks. Save
+exact tested source SHA, run/job IDs and PASS/FAIL here, then **STOP after D1**.
+Do not begin D2 or build an EXE. Main, CURRENT_APPROVED.json, approved EXE,
+service shortcuts and real data remain untouched.
+
+---
+
+# Previous Phase C checkpoint — source PASS
 
 ## Phase C continuation from a9b8982 — source verification PASS
 

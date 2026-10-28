@@ -1,12 +1,22 @@
 """Officer administration, audit/backup actions and live-view navigation."""
 from __future__ import annotations
 import json
+from functools import partial
+from shiboken6 import isValid
 from datetime import datetime
 from position_tracking_common import _clean
 from position_tracking_ui_map import LiveMapDialog
 from position_tracking_theme import THEME_DARK, THEME_LIGHT, _theme_stylesheet
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QTextBrowser, QVBoxLayout, QInputDialog, QDialog, QListWidget
+
+
+def _open_shift_members(store):
+    try:
+        store.log_admin_action('OFFICER_DUTY_PANEL_OPENED')
+    except Exception:
+        pass
+    return store.sync_active_shift()
 
 
 class AdministrationMixin:
@@ -44,10 +54,6 @@ class AdministrationMixin:
     def _admin(self):
         if not self.store:
             QMessageBox.warning(self, "Έλεγχος", "Δεν είναι διαθέσιμο το .tde_runtime."); return
-        try:
-            self.store.log_admin_action("OFFICER_DUTY_PANEL_OPENED")
-        except Exception:
-            pass
         dlg = QDialog(self); dlg.setWindowTitle("ΑΞΙΩΜΑΤΙΚΟΣ ΥΠΗΡΕΣΙΑΣ"); dlg.resize(720, 620)
         t = THEME_DARK if _clean(self.config.theme).lower() == "dark" else THEME_LIGHT
         dlg.setStyleSheet(_theme_stylesheet(self.config.theme))
@@ -68,6 +74,8 @@ class AdministrationMixin:
         row2 = QHBoxLayout()
         start_shift = QPushButton("ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ"); end_shift = QPushButton("ΛΗΞΗ ΒΑΡΔΙΑΣ"); live = QPushButton("ΖΩΝΤΑΝΗ ΕΙΚΟΝΑ")
         start_shift.setMinimumHeight(48); end_shift.setMinimumHeight(48)
+        for button in (start_shift, end_shift, accept_btn, exclude_btn):
+            button.setEnabled(False)
         row2.addWidget(start_shift); row2.addWidget(end_shift); row2.addWidget(live); lay.addLayout(row2)
 
         def selected_officer():
@@ -77,8 +85,16 @@ class AdministrationMixin:
             p = selected_officer()
             officer_name.setText(_clean(f"{p.rank} {p.full_name}") if p else "—")
 
+        membership = {'shift_id': ''}
+
         def refresh_members():
-            shift = self.store.sync_active_shift() if self.store else None
+            if self.store and isValid(dlg):
+                self._run_shift_job(self.store.sync_active_shift, render_members)
+
+        def render_members(shift):
+            if not isValid(dlg):
+                return
+            membership['shift_id'] = shift['shift_id'] if shift else ''
             members.clear()
             if not shift:
                 status.setText("Δεν υπάρχει ενεργή βάρδια.")
@@ -112,21 +128,19 @@ class AdministrationMixin:
                 )
                 if confirm != QMessageBox.Yes:
                     return
-            try:
-                self.store.set_shift_member_state(item.data(Qt.UserRole), state); refresh_members()
-            except Exception as exc:
-                QMessageBox.critical(dlg, "Βάρδια", str(exc))
+            self._run_shift_job(partial(self.store.set_shift_member_state,
+                item.data(Qt.UserRole), state, membership['shift_id']), lambda result: refresh_members())
 
         def do_start():
             p = selected_officer()
             if not p:
                 QMessageBox.warning(dlg, "Έλεγχος", "Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ. Αξιωματικού Υπηρεσίας."); return
-            try:
-                shift = self.store.start_officer_shift(p)
+            def started(shift):
+                if not isValid(dlg):
+                    return
                 QMessageBox.information(dlg, "Βάρδια", f"Έναρξη βάρδιας {shift['start_at'].replace('T',' ')}.\nΕλέγξτε τους ΑΠΟΔΕΚΤΟΥΣ και εξαιρέστε όποιον ανήκει στην προηγούμενη βάρδια.")
                 refresh_members()
-            except Exception as exc:
-                QMessageBox.critical(dlg, "Βάρδια", str(exc))
+            self._run_shift_job(partial(self.store.start_officer_shift, p), started)
 
         def do_end():
             p = selected_officer()
@@ -142,7 +156,12 @@ class AdministrationMixin:
         accept_btn.clicked.connect(lambda: change_state("APPROVED")); exclude_btn.clicked.connect(lambda: change_state("EXCLUDED")); refresh_btn.clicked.connect(refresh_members)
         start_shift.clicked.connect(do_start); end_shift.clicked.connect(do_end); live.clicked.connect(self._live_map)
         timer = QTimer(dlg); timer.timeout.connect(refresh_members); timer.start(2500)
-        refresh_members(); dlg.exec()
+        self._run_shift_job(partial(_open_shift_members, self.store), render_members)
+        try:
+            dlg.exec()
+        finally:
+            timer.stop()
+            dlg.deleteLater()
 
 
     def _live_map(self):

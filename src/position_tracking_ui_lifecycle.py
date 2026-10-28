@@ -24,6 +24,9 @@ class WindowLifecycleMixin:
             return
         self._client_cleanup_started = True
         self._agms_query_serial = getattr(self, "_agms_query_serial", 0) + 1
+        worker = getattr(self, '_shift_action_worker', None)
+        if worker is not None:
+            worker.close()
         for name in ("shift_timer", "communication_timer", "offline_timer"):
             timer = getattr(self, name, None)
             if timer is not None:
