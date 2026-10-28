@@ -60,6 +60,9 @@ class RuntimeDiagnosticsRegression(unittest.TestCase):
                 while time.monotonic() < deadline:
                     d.heartbeat({'offline':123}, {'network':1})
                     self.pump()
+                # Observe the writer acknowledgment before shutdown; a delayed
+                # Windows scheduling slice must not masquerade as a lost stall.
+                self.wait(lambda: 'worker_stall' in d.path.read_text(), seconds=3)
             finally:d.stop(wait=True)
             events = [json.loads(line) for line in d.path.read_text().splitlines()]
             stalls = [event for event in events if event['event']=='worker_stall']

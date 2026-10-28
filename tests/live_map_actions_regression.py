@@ -104,14 +104,17 @@ class LiveMapActions(unittest.TestCase):
                 return original(*args,**kwargs)
             owner=QWidget();dialog.setParent(owner,dialog.windowFlags());dialog.show()
             try:
-                with patch.object(store,'end',side_effect=delayed),patch.object(QMessageBox,'question',return_value=QMessageBox.Yes),patch.object(QMessageBox,'information') as info:
+                with patch.object(store,'end',side_effect=delayed),patch.object(QMessageBox,'question',return_value=QMessageBox.Yes),patch.object(QMessageBox,'information') as info,patch.object(QMessageBox,'critical') as errors:
                     QTest.mouseClick(dialog.end_active_btn,Qt.LeftButton);self.wait(entered.is_set)
                     self.assertIs(owner._map_mutation_future,dialog._map_operation_future)
                     self.assertTrue(owner._position_activity_attempted)
                     dialog.reject();self.assertTrue(dialog.isVisible())
                     self.assertFalse(info.called);self.assertFalse(dialog.end_active_btn.isEnabled())
                     QTest.mouseClick(dialog.end_active_btn,Qt.LeftButton)
-                    release.set();self.wait(lambda:info.called)
+                    release.set()
+                    self.wait(lambda: info.called or errors.called, seconds=12)
+                    self.assertFalse(errors.called, 'Map END returned error: ' + str(errors.call_args))
+                    self.assertTrue(info.called, 'Confirmed END missing GUI acknowledgment')
                     self.assertEqual(len(calls),1)
                     self.assertEqual(calls[0]['expected_start_event_id'],started['event_id'])
                     dialog.reject();self.assertFalse(dialog.isVisible())

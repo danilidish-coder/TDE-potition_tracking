@@ -46,6 +46,10 @@ jobs:
           python tests/offline_single_machine_claim_stress.py
           python tests/central_officer_regression.py
           python tests/central_officer_ui_regression.py
+          python tests/architecture_regression.py
+          python tests/live_map_actions_regression.py
+          python tests/runtime_diagnostics_regression.py
+          python tests/trial_sandbox_regression.py
           python tests/central_shift_separation_regression.py
           python tests/central_shift_ui_regression.py
           python tests/central_handover_regression.py
