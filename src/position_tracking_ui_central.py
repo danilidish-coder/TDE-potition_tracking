@@ -1,5 +1,7 @@
 """Test-only Phase B operator screen; every shared-file operation runs in a worker."""
 import time
+from dataclasses import replace
+from datetime import datetime
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import (QComboBox, QFormLayout, QHBoxLayout, QLabel,
                               QLineEdit, QMainWindow, QMessageBox, QPushButton,
@@ -113,6 +115,10 @@ class CentralOperatorWindow(QMainWindow):
                 self.info.setText(UNCONFIRMED + "\nΠατήστε ΕΠΑΝΕΛΕΓΧΟΣ όταν αποκατασταθεί η πρόσβαση.")
             else:
                 self.info.setText(outcome.message)
+                if outcome.status == 'HANDOVER_REQUIRED':
+                    self._confirm_handover(outcome.event)
+                    self._buttons()
+                    return
                 if outcome.status != "UNKNOWN":
                     self._request = None
                     self._dirty = True
@@ -150,6 +156,22 @@ class CentralOperatorWindow(QMainWindow):
             self._read_future = self._read_worker.submit(
                 _load_selection, self.endpoint, self.services.app_dir, self._read_agms)
         self._buttons()
+
+    def _confirm_handover(self, previous):
+        answer = QMessageBox.question(self, 'Αντικατάσταση αστυνομικού',
+            f"Η ΘΕΣΗ {previous['position']} — {previous['direction']} είναι κατειλημμένη από "
+            f"{previous.get('full_name') or previous['agms']} (ΑΓΜΣ {previous['agms']}).\n\n"
+            f"Νέα καταχώριση: ΑΓΜΣ {self._request.agms} — {self._request.direction}.\n\n"
+            f"Να γίνει ΛΗΞΗ του προηγούμενου και ΕΝΑΡΞΗ του νέου στην ίδια χρονική στιγμή;",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if answer == QMessageBox.Yes:
+            self._request = replace(self._request, handover_start_id=previous['event_id'], when=datetime.now())
+            self._action_started = time.monotonic()
+            self._action_future = self._action_worker.submit(self.endpoint.execute, self._request)
+            self.info.setText('ΑΝΑΜΟΝΗ ΚΕΝΤΡΙΚΗΣ ΕΠΙΒΕΒΑΙΩΣΗΣ ΑΝΤΙΚΑΤΑΣΤΑΣΗΣ…')
+        else:
+            self._request = None
+            self.info.setText('Η αντικατάσταση ακυρώθηκε. Δεν άλλαξε η καταχώριση.')
 
     def _act(self, kind):
         if self._closing or self._request is not None or self._dirty or self._person is None:

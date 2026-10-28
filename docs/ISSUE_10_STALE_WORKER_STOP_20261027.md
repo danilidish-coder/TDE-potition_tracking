@@ -1,4 +1,62 @@
-# Issue #10 — Windows/Linux source gates PASS, 28 October 2026
+# Issue #10 — Phase C handover checkpoint, 28 October 2026
+
+## Phase C continuation from a9b8982 — source verification in progress
+
+Branch `feature/central-only-simple-20261027`; clean starting HEAD was
+`a9b898213eb543782114abd330bfe4ed96aeb6c5`, with approved merge-base
+`4340c41865328cd893e6dc23fcdcedfefa7f9bf2`. Prior 56/56 platform gates were
+accepted as evidence and their Windows diagnosis was not repeated.
+
+Implemented exclusively confirmed booth replacement:
+
+- Backend core commit `8efd285e53157d0cbcf437dc9f0692394557199d` adds
+  `position_tracking_position_handover.py`. One BEGIN IMMEDIATE transaction
+  validates the exact old START and new person's eligibility, inserts distinct
+  END/START IDs with the identical full timestamp, changes the unique live claim,
+  stores completed previous work and saves an immutable receipt with actor/reason.
+- JSON event files are recoverable mirrors for this transaction. The immutable
+  central receipt supplies both events and live/history state if mirror writes
+  fail. Recovery is bounded and never re-applies an old live claim.
+- Service returns HANDOVER_REQUIRED with the observed old START/name. GUI asks
+  YES/NO, defaults NO, displays booth and directions, and submits YES with the
+  exact observed START ID. NO makes no business-state write. A prior actual END
+  follows the ordinary START path without a replacement question.
+- Recheck retains the same operation identity after unknown ACK. Stale YES,
+  duplicate commands and late writers cannot replace newer occupants.
+- Existing event projections pre-index STARTs so same-second handover chains
+  retain all completed work. Active-map reads use one SQL claim snapshot so a
+  replacement between reads cannot hide both people. These are Phase C history/
+  consistency integrations, not new historical-report or officer functions.
+
+Local targeted evidence: backend 16/16 PASS; real Qt confirmation/recheck 5/5
+PASS; existing recovery 25/25, END 4/4, stale-worker 6/6, service 11/11 and module
+architecture 4/4 PASS. Network resilience and legacy identity checks PASS.
+An intermediate local full suite passed 58/58 before the final active-snapshot
+hardening; final source CI results must still be recorded. No timeout or prior
+safety assertion was weakened.
+
+New tests cover: NO leaves canonical tables/raw events byte-for-byte unchanged;
+ordinary START after actual END; YES timestamps/audit/history; same-ID retries;
+identity collision; 15 concurrent clients; rollback between END and START;
+process death inside SQL and after commit; lost commit ACK plus unavailable
+read-back; projection outage/recovery; delayed pre-commit and post-commit workers;
+same-second chains; coherent readers during and across the atomic transaction.
+
+Status: source-only candidate, NOT YET Phase C accepted until Windows/Linux CI
+is complete. Physical SMB interruption/restart, packaged EXE and 15 physical
+stations are NOT RUN. No new EXE build, main/manifest/release, real service data,
+shortcuts or deployed queues were changed. No officer or historical-entry feature
+was started. Preview remains opt-in (`--central-only`).
+
+Next exact step: inspect the Phase C source CI for the commit containing the
+service/GUI integration and this checkpoint; diagnose any failing gate without
+weakening assertions or increasing timeouts. Record exact source SHA, run/job
+IDs and outcomes here before declaring Phase C source verification complete.
+Do not proceed to officer/report features in this assignment.
+
+---
+
+# Previous Windows/Linux source gates PASS, 28 October 2026
 
 ## Current continuation from 81ccc3a (supersedes the WIP below)
 

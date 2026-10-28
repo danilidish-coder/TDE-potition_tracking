@@ -21,6 +21,7 @@ class PositionRequest:
     expected_start_id: str = ""
     operation_id: str = field(default_factory=lambda: uuid.uuid4().hex)
     when: datetime = field(default_factory=datetime.now)
+    handover_start_id: str = ''
 
 
 @dataclass(frozen=True)
@@ -92,12 +93,16 @@ class CentralOperator:
                 raise ValueError("Το αναγνωριστικό αφορά διαφορετική θέση ή κατεύθυνση.")
             if request.kind == "END" and event["start_event_id"] != request.expected_start_id:
                 raise ValueError("Το αναγνωριστικό αφορά διαφορετική ΕΝΑΡΞΗ.")
+            if request.handover_start_id and event.get('handover', {}).get('previous_start_id') != request.handover_start_id:
+                raise ValueError('Το αναγνωριστικό αφορά διαφορετική αντικατάσταση.')
             return PositionOutcome("CONFIRMED", event, "Η καταχώριση επιβεβαιώθηκε κεντρικά.")
         return PositionOutcome("NOT_COMMITTED", message="Δεν βρέθηκε επιβεβαιωμένη καταχώριση. Ελέγξτε την ενεργή θέση πριν από νέα ενέργεια.")
 
     def execute(self, request: PositionRequest):
         try:
             store = self._store()
+            if store._committed_position_operation(request.operation_id):
+                return self.check(request)
             if request.kind == "START":
                 if request.position not in {str(i) for i in range(1, 15)}:
                     raise ValueError("Επιλέξτε φυσική θέση 1 έως 14.")
@@ -105,8 +110,16 @@ class CentralOperator:
                 person = next((person for person in people if person.agms == request.agms), None)
                 if not person:
                     raise ValueError("Ο ΑΓΜΣ δεν βρέθηκε στην κεντρική λίστα προσωπικού.")
-                event = store.start(person, request.position, request.direction,
-                                    when=request.when, event_id=request.operation_id, sync_shift=False)
+                if request.handover_start_id:
+                    event = store.handover(person, request.position, request.direction,
+                                           request.handover_start_id, request.operation_id, when=request.when)
+                else:
+                    claims = store._position_rows('SELECT agms FROM position_live WHERE position=?', (request.position,))
+                    occupied = store._claim_event(claims[0]['agms']) if claims else None
+                    if occupied and occupied['agms'] != person.agms:
+                        return PositionOutcome('HANDOVER_REQUIRED', occupied, 'Απαιτείται επιβεβαίωση αντικατάστασης.')
+                    event = store.start(person, request.position, request.direction,
+                                        when=request.when, event_id=request.operation_id, sync_shift=False)
             elif request.kind == "END":
                 if not request.expected_start_id:
                     raise ValueError("Ελέγξτε πρώτα την πραγματική ενεργή ΕΝΑΡΞΗ.")
