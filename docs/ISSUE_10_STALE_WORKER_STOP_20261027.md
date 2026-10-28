@@ -1,6 +1,6 @@
 # Issue #10 — Phase D1 checkpoint, 28 October 2026
 
-## Phase D1 continuation from d6969b1 — platform source CI pending
+## Phase D1 continuation from d6969b1 — Windows/Linux source PASS; STOP after D1
 
 Branch `feature/central-only-simple-20261027`; clean starting checkpoint
 `d6969b1e62265857901621c23f4923185ebc6297`, approved ancestor
@@ -10,6 +10,18 @@ Issue #10, repository DEVELOPMENT_RULES.md and CURRENT_APPROVED.json on main.
 The approved manifest is absent from this historical feature branch by design;
 it was read remotely without copying/changing it. Approved source/EXE identity
 is unchanged. Previous Phase C source run `40697620744` remains accepted evidence.
+
+D1 core commit: `1858dc02e3520632fd836f08d585343ea3228ce0`.
+D1 GUI/test integration and exact CI source:
+`b4cf2020e97d7fdf1ff58671e01a06a264a77ce2`.
+Source workflow: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40707038963
+Linux job `122881839593`: focused tests and full **60/60 scripts PASS**.
+Windows job `122881840033`: focused tests and full **60/60 scripts PASS**.
+Run `40707038963` is completed **SUCCESS**, zero failed scripts on either OS.
+Focused D1 11 backend + 5 real Qt tests PASS on each platform, followed by all
+previous START/END/handover gates. Exact log excerpts and source identity:
+`docs/validation/central-only-20261028/phase-d1-b4cf202.json`.
+EXE workflow `40707038918`: **SKIPPED intentionally**.
 
 Real isolated SMB availability check: **NOT RUN / unavailable**. No mounted
 CIFS/SMB share, configured private TCP destination, VPN or synthetic test-share
@@ -64,14 +76,33 @@ actual central position-recovery lock, keeping the 13-second hold, >12-second
 elapsed assertion, >100 GUI heartbeats, 31-second ceiling and receipt checks.
 Targeted repeat: **PASS**, 18.074 seconds recovery and 361 heartbeats. This is
 documented adaptation to the approved removal of implicit END, not an increased
-timeout or weakened integrity check. Final full platform run: **NOT RUN yet**.
+timeout or weakened integrity check. Final Linux and Windows full runs: **PASS**.
 
-Next exact step: push the D1 commits and inspect the single Windows/Linux source
-workflow. It runs D1 targeted tests first, then all previous START/END/handover
-gates and the complete suite. Diagnose failures without weakening checks. Save
-exact tested source SHA, run/job IDs and PASS/FAIL here, then **STOP after D1**.
-Do not begin D2 or build an EXE. Main, CURRENT_APPROVED.json, approved EXE,
-service shortcuts and real data remain untouched.
+Status: **D1 SOURCE VERIFICATION PASS / STOPPED AFTER D1**. No open failing source
+test or demonstrated integrity defect remains in these scenarios. The candidate
+is not operationally approved. The central preview is still opt-in
+`--central-only`; final default entry/packaging and the remaining Issue #10
+features are unfinished. Do not begin D2 without a new explicit instruction.
+Do not build an EXE. Main, CURRENT_APPROVED.json, approved EXE, service shortcuts
+and real data remain untouched.
+
+Drive registry update was **BLOCKED** by automatic approval review (destination
+ownership and exact-payload authorization not verified). No update was applied;
+readback still starts with Phase C. Proposed exact text is retained for approval
+in `docs/validation/central-only-20261028/D1_REGISTRY_UPDATE_PROPOSED_EL.txt`.
+This affects external documentation only, not the successful D1 source gates.
+
+Next step: await a new user instruction for D2. Real isolated SMB handover/drop/
+restart acceptance remains NOT RUN and mandatory before operational approval.
+The Drive registry proposal requires approval before another write attempt.
+Do not repeat completed source diagnosis. Exact resume command, from repo root:
+
+```bash
+git switch feature/central-only-simple-20261027 && git status --short --branch && git rev-parse HEAD && git merge-base --is-ancestor b4cf2020e97d7fdf1ff58671e01a06a264a77ce2 HEAD && sed -n '1,125p' docs/ISSUE_10_STALE_WORKER_STOP_20261027.md
+```
+
+The commit containing this final section only adds checkpoint/log/proposed
+registry documentation after the exact CI-tested b4cf202 source/test revision.
 
 ---
 
