@@ -48,7 +48,10 @@ class OperatorUI(unittest.TestCase):
         deadline = time.monotonic() + timeout
         while not predicate() and time.monotonic() < deadline:
             self.app.processEvents()
-            QTest.qWait(5)
+            # Unlike QApplication.exec(), a tight qWait/processEvents loop can
+            # retain the GIL on Windows while the Python/SQLite reader needs it.
+            # Yield explicitly; keep the same deadline and all state assertions.
+            time.sleep(0.005)
         if not predicate():
             import traceback
             state = {}
