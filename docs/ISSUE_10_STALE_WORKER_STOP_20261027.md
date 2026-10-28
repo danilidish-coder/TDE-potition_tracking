@@ -28,11 +28,17 @@ Implemented exclusively confirmed booth replacement:
   replacement between reads cannot hide both people. These are Phase C history/
   consistency integrations, not new historical-report or officer functions.
 
+Service/GUI source commit: `3101a57dac951546c0f4f70f6c5509b8cdeabde7`.
+Source CI: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40660029478
+Linux job `122720454755`: PASS, focused gates and full 58-script suite.
+Windows job `122720454349`: focused gates PASS; full suite still running at this
+checkpoint update. EXE workflow `40660029897`: SKIPPED intentionally.
+
 Local targeted evidence: backend 16/16 PASS; real Qt confirmation/recheck 5/5
 PASS; existing recovery 25/25, END 4/4, stale-worker 6/6, service 11/11 and module
 architecture 4/4 PASS. Network resilience and legacy identity checks PASS.
-An intermediate local full suite passed 58/58 before the final active-snapshot
-hardening; final source CI results must still be recorded. No timeout or prior
+The final local full suite also passed 58/58 after the active-snapshot
+hardening. The final Windows source CI result must still be recorded. No timeout or prior
 safety assertion was weakened.
 
 New tests cover: NO leaves canonical tables/raw events byte-for-byte unchanged;
