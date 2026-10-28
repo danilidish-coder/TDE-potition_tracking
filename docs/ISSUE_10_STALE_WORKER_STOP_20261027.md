@@ -27,6 +27,18 @@ live claim and commits an END attributed to a caller-supplied officer without
 authentication. Expected behavior remains PermissionError before any mutation.
 Tests are not skipped/xfail and assertions/timeouts are not weakened.
 
+Security test/design commit: `9ee55c9ded932a83f5260f8e5fc11f011255fc18`.
+Source run: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40723755684
+Linux job `122941363509`: focused B/C/D1 gates PASS; full **60 scripts PASS,
+1 script FAIL**, all five failures in the new officer authorization script.
+Windows job `122941364356`: focused B/C/D1 gates PASS; full **60 scripts PASS,
+1 script FAIL**, the same five missing-authorization cases. Run `40723755684`
+completed **FAILURE** on both OS. All 60 prior scripts still PASS; this is not a
+START/END/handover or D1 regression. It is the newly exposed D2 security failure,
+which remains blocking and is not marked expected. Exact immutable job-log
+evidence: `docs/validation/central-only-20261028/phase-d2-9ee55c9.json`.
+EXE workflow `40723755789`: **SKIPPED intentionally**.
+
 No application source changed. D2 functional implementation/activation is
 **NOT IMPLEMENTED / BLOCKED**. Source is still D1 b4cf202. Authorized officer
 actions, protected audit, remote START/END UI, central roster update/visibility
@@ -41,12 +53,28 @@ canonical writes. Client-only checks cannot protect client-writable data. The
 actual isolated Windows identity/group/ACL setup is UNKNOWN and must be verified
 before implementation is resumed. This is not permission to deploy a service.
 
-Next exact step: commit/push this security stop and execute the required existing
-Windows/Linux source workflow. The full runner discovers the new strict test;
-the D2 authorization gate must remain FAIL until genuinely fixed. Record the
-run/job IDs, full-suite counts and immutable evidence here. Then STOP for
-independent review of the identity boundary. Do not start D3 or build an EXE.
-Main, CURRENT_APPROVED.json, approved EXE, shortcuts and real data are untouched.
+**STOPPED for independent review of the identity boundary. D2 NOT COMPLETE.**
+The current source has a demonstrated unauthorized-mutation path; it is not an
+officer-authorized candidate. New changes comprise the strict test, design and
+checkpoint/log evidence only. No new panel or privileged feature was activated.
+
+Next step: identify and verify the isolated Windows test host's actual identity
+authority, individual officer group/accounts and canonical data ownership/ACLs.
+Review the minimal trusted adapter design before implementing it. Do not infer
+these from AGMS, USERNAME, CI runner administrator status or a supplied boolean.
+Then fix the five denial cases and add genuine authenticated positive/revocation,
+confirmation, roster-revision and multi-station checks before full platform CI.
+Do not start D3 or build an EXE. Main, CURRENT_APPROVED.json, approved EXE,
+shortcuts and real data are untouched. No external registry write was attempted.
+
+Exact resume command, from repository root:
+
+```bash
+git switch feature/central-only-simple-20261027 && git status --short --branch && git rev-parse HEAD && git merge-base --is-ancestor 9ee55c9ded932a83f5260f8e5fc11f011255fc18 HEAD && sed -n '1,100p' docs/ISSUE_10_STALE_WORKER_STOP_20261027.md && cat docs/ISSUE_10_D2_AUTHORIZATION_BLOCKER_20261028.md
+```
+
+The commit containing this final section adds documentation/evidence only after
+the tested 9ee55c9 diagnostic commit; the actual application source remains b4cf202.
 
 ---
 
