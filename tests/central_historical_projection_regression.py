@@ -34,3 +34,18 @@ class HistoryReportProjection(HistoricalWorkStageA):
         self.assertEqual(create_shift_pdf(self.store,self.store.get_shift(self.shift_id),target=path),path)
         self.assertTrue(path.read_bytes().startswith(b"%PDF"))
         self.assertEqual(self.store.active_all(),before)
+
+    def test_five_live_approved_positions_remain_five_report_rows(self):
+        from position_tracking_personnel import PersonnelRecord
+        shift = self.store.get_shift(self.shift_id)
+        people=[PersonnelRecord(str(999010+i),'TEST','LIVE',str(i)) for i in range(5)]
+        shift['approved']=[p.agms for p in people]
+        self.store._store_shift_snapshot(shift)
+        for i,person in enumerate(people):
+            self.store.start(person,str(i+1),'ΕΙΣΟΔΟΣ',when=self.base+timedelta(minutes=i))
+        rows=self.store.shift_sessions_v2(shift)
+        self.assertEqual(len(rows),5)
+        self.assertEqual(len(self.store.active_all()),5)
+        report=build_roster_shift_text(self.store,shift)
+        for i in range(1,6):
+            self.assertIn('ΘΕΣΗ '+str(i),report)

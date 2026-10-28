@@ -5,7 +5,7 @@ import json
 import time
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QFormLayout, QHBoxLayout,
-    QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QPlainTextEdit,
+    QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QPlainTextEdit, QDialogButtonBox,
     QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget, QInputDialog)
 from position_tracking_constants import STATISTICS_PIN_SHA256
 from position_tracking_central import UNCONFIRMED
@@ -78,6 +78,8 @@ class CentralOfficerWindow(QMainWindow):
         self.reports = QComboBox(); reports_layout.addWidget(self.reports)
         row = QHBoxLayout(); reports_layout.addLayout(row)
         self.report_btn = self.button(row, 'ΑΝΑΦΟΡΑ ΕΡΓΑΣΙΑΣ', self.report)
+        self.historical_btn = self.button(row, 'ΠΡΟΣΘΗΚΗ ΕΡΓΑΣΙΑΣ', self.historical)
+        self.search_reports_btn = self.button(row, 'ΑΝΑΖΗΤΗΣΗ ΒΑΡΔΙΑΣ', self.search_reports)
         self.stats_btn = self.button(row, 'ΑΤΟΜΙΚΑ ΣΤΑΤΙΣΤΙΚΑ', self.statistics)
         self.history_btn = self.button(row, 'ΙΣΤΟΡΙΚΟ ΑΛΛΑΓΩΝ', self.history)
         self.recipient = QComboBox(); reports_layout.addWidget(self.recipient)
@@ -154,6 +156,12 @@ class CentralOfficerWindow(QMainWindow):
                 data, count = result
                 self.change('PERSONNEL_IMPORT', workbook=data, expected_revision=self._state['roster_revision'],
                             description=f'Ενημέρωση της κοινής λίστας με {count} άτομα;')
+            elif kind == 'search_reports':
+                self.reports.clear()
+                self.reports.addItem('Επιλέξτε αναφορά', '')
+                for shift in result:
+                    self.reports.addItem(shift['start_at'], shift['shift_id'])
+                self.info.setText('Βρέθηκαν αναφορές: ' + str(len(result)))
             elif kind == 'history':
                 dlg = QDialog(self); dlg.setWindowTitle('Κεντρικό ιστορικό δηλωμένων χειρισμών')
                 lay = QVBoxLayout(dlg); text = QPlainTextEdit(); text.setReadOnly(True)
@@ -254,6 +262,68 @@ class CentralOfficerWindow(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(self, 'Κεντρική ενημέρωση προσωπικού', '', 'Excel (*.xlsx *.xlsm)')
         if path:
             self.submit('preview', self.endpoint.preview_personnel, path)
+
+    def history_values(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle('Ολοκληρωμένη ιστορική εργασία')
+        form = QFormLayout(dialog)
+        agms = QLineEdit(self.target.text().strip())
+        booth = QComboBox(); booth.addItems([str(i) for i in range(1,15)])
+        way = QComboBox(); way.addItems(['ΕΙΣΟΔΟΣ','ΕΞΟΔΟΣ'])
+        started = QLineEdit(); started.setPlaceholderText('YYYY-MM-DD HH:MM:SS')
+        ended = QLineEdit(); ended.setPlaceholderText('YYYY-MM-DD HH:MM:SS')
+        reason = QPlainTextEdit(); reason.setMaximumHeight(75)
+        for title, widget in [('ΑΓΜΣ',agms),('Θέση',booth),('Κατεύθυνση',way),
+                              ('ΕΝΑΡΞΗ',started),('ΛΗΞΗ',ended),('Αιτιολογία',reason)]:
+            form.addRow(title,widget)
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(dialog.accept); buttons.rejected.connect(dialog.reject)
+        form.addRow(buttons)
+        if dialog.exec() != QDialog.Accepted:
+            dialog.deleteLater()
+            return None
+        values = dict(agms=agms.text().strip(),position=booth.currentText(),
+                      direction=way.currentText(),reason=reason.toPlainText().strip(),
+                      start_at=started.text().strip(),end_at=ended.text().strip())
+        dialog.deleteLater()
+        return values
+
+    def historical(self):
+        if not self._state or self._future is not None or self._request:
+            return
+        identifier = self.reports.currentData() or (self._state.get('shift') or {}).get('shift_id')
+        if not identifier:
+            QMessageBox.warning(self, 'Αναφορά', 'Επιλέξτε αναφορά βάρδιας.')
+            return
+        values = self.history_values()
+        if values is None:
+            return
+        try:
+            start = datetime.fromisoformat(values['start_at'])
+            end = datetime.fromisoformat(values['end_at'])
+            if end <= start:
+                raise ValueError()
+        except ValueError:
+            QMessageBox.warning(self, 'Έλεγχος', 'Ελέγξτε τις πραγματικές ημερομηνίες και ώρες.')
+            return
+        values.update(shift_id=str(identifier),start_at=start.isoformat(timespec='seconds'),
+                      end_at=end.isoformat(timespec='seconds'))
+        self.change('HISTORICAL_ADD',
+                    description='Προσθήκη ολοκληρωμένης εργασίας στην αναφορά '+str(identifier)+';',
+                    **values)
+
+    def search_reports(self):
+        day, ok = QInputDialog.getText(self, 'Αναζήτηση βάρδιας',
+                                        'Ημερομηνία έναρξης βάρδιας (YYYY-MM-DD)')
+        if not ok:
+            return
+        try:
+            value = datetime.fromisoformat(day.strip()).date().isoformat()
+        except ValueError:
+            QMessageBox.warning(self, 'Έλεγχος', 'Μη έγκυρη ημερομηνία.')
+            return
+        self.submit('search_reports', self.endpoint.find_reports,
+                    self.officer.text().strip(), value)
 
     def report(self):
         self.submit('report', open_report, self.endpoint, self.officer.text().strip(), self.reports.currentData() or '', self.services.open_path)

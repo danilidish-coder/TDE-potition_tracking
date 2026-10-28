@@ -105,6 +105,16 @@ class CentralOfficer(CentralOperator):
                         values['expected_start_id'], values['expected_timestamp'], intent)
                 if not store.officer_action(request.action_id):
                     raise BusyError('Η ενέργεια δεν μεταβάλλει πλέον την επιλεγμένη καταχώριση. Επανελέγξτε.')
+            elif request.action == 'HISTORICAL_ADD':
+                person = people.get(values['agms'])
+                if not person:
+                    raise ValueError('Ο αστυνομικός δεν υπάρχει στην κεντρική λίστα.')
+                store.add_historical_completed(
+                    shift_id=values['shift_id'], person=person,
+                    position=values['position'], direction=values['direction'],
+                    start_at=datetime.fromisoformat(values['start_at']),
+                    end_at=datetime.fromisoformat(values['end_at']),
+                    reason=reason, intent=intent)
             elif request.action == 'SHIFT_START':
                 result = store.start_officer_shift(officer)
                 store.finish_document(result)
@@ -164,6 +174,12 @@ class CentralOfficer(CentralOperator):
             raise ValueError('Δεν υπάρχει διαθέσιμη αναφορά.')
         return create_shift_pdf(store, shift, {p.agms: p for p in state['people']},
                                 target=store.reports / ('REPORT_' + uuid.uuid4().hex + '.pdf'))
+
+    def find_reports(self, officer_agms, day_text):
+        self.snapshot(officer_agms)
+        chosen = datetime.fromisoformat(day_text).date()
+        return self._store().search_finalized_shifts(
+            date_from=chosen, date_to=chosen, limit=100)
 
     @staticmethod
     def preview_personnel(path):

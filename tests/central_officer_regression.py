@@ -264,5 +264,24 @@ class OfficerContract(unittest.TestCase):
         self.assertFalse(runner.retired_property_failure(1, proof.replace('failures=5','failures=4, errors=1')))
 
 
+    def test_completed_history_uses_confirmed_officer_command_not_live_events(self):
+        base=self.base
+        shift=dict(shift_id='synthetic-historical-report',version=2,status='FINALIZED',
+                   start_at=(base-timedelta(hours=1)).isoformat(),
+                   end_at=(base+timedelta(hours=1)).isoformat(),
+                   approved=['999001'],excluded=[],pending=[])
+        self.store()._store_shift_snapshot(shift)
+        request=self.command('HISTORICAL_ADD',shift_id=shift['shift_id'],agms='999002',
+             position='1',direction='ΕΙΣΟΔΟΣ',start_at=base.isoformat(),
+             end_at=(base+timedelta(minutes=10)).isoformat(),
+             reason='Forgotten real historical work')
+        result=self.endpoint.execute(request)
+        self.assertEqual(result.status,'CONFIRMED',result.message)
+        self.assertEqual(self.endpoint.execute(request).event,result.event)
+        self.assertEqual(len(self.store().historical_for_shift(shift['shift_id'])),1)
+        self.assertEqual(self.store().active_all(),[])
+        self.assertEqual(self.store().search_personnel_sessions(person_query='999002')[0]['historical'],True)
+
+
 if __name__ == '__main__':
     unittest.main()
