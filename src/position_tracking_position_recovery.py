@@ -136,6 +136,7 @@ class PositionRecoveryMixin:
                     self._init_position_claims(db, rebuild=not migrated)
                     self._init_handovers(db)
                     self._init_officer_ledger(db)
+                    self._init_historical_work(db)
             self._handover_ready = True
             self._officer_ledger_ready = True
             self._recover_position_operations_locked()

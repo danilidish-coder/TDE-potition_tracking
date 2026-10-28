@@ -10,20 +10,19 @@ from position_tracking_store_io import BusyError
 
 
 class HistoricalWorkMixin:
-    def _init_historical_work(self):
-        with self._shift_db_write_lock(), self._shift_db_connect() as db:
-            db.execute("""CREATE TABLE IF NOT EXISTS historical_work (
-                action_id TEXT PRIMARY KEY, shift_id TEXT NOT NULL,
-                agms TEXT NOT NULL, person_search TEXT NOT NULL,
-                position TEXT NOT NULL, direction TEXT NOT NULL,
-                start_at TEXT NOT NULL, end_at TEXT NOT NULL,
-                payload TEXT NOT NULL)""")
-            db.execute("CREATE INDEX IF NOT EXISTS historical_by_shift ON historical_work(shift_id)")
-            db.execute("CREATE INDEX IF NOT EXISTS historical_by_person ON historical_work(agms,start_at)")
-            for op in ("UPDATE", "DELETE"):
-                db.execute(f"""CREATE TRIGGER IF NOT EXISTS historical_work_no_{op.lower()}
-                    BEFORE {op} ON historical_work BEGIN
-                    SELECT RAISE(ABORT,'immutable historical work'); END""")
+    def _init_historical_work(self, db):
+        db.execute("""CREATE TABLE IF NOT EXISTS historical_work (
+            action_id TEXT PRIMARY KEY, shift_id TEXT NOT NULL,
+            agms TEXT NOT NULL, person_search TEXT NOT NULL,
+            position TEXT NOT NULL, direction TEXT NOT NULL,
+            start_at TEXT NOT NULL, end_at TEXT NOT NULL,
+            payload TEXT NOT NULL)""")
+        db.execute("CREATE INDEX IF NOT EXISTS historical_by_shift ON historical_work(shift_id)")
+        db.execute("CREATE INDEX IF NOT EXISTS historical_by_person ON historical_work(agms,start_at)")
+        for op in ("UPDATE", "DELETE"):
+            db.execute(f"""CREATE TRIGGER IF NOT EXISTS historical_work_no_{op.lower()}
+                BEFORE {op} ON historical_work BEGIN
+                SELECT RAISE(ABORT,'immutable historical work'); END""")
 
     def historical_for_shift(self, shift_id):
         with self._shift_db_connect() as db:

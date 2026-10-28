@@ -60,7 +60,6 @@ class SharedEventStore(HistoricalWorkMixin, OfficerLedgerMixin, PositionHandover
             p.mkdir(parents=True, exist_ok=True)
         self._init_shift_db()
         self._init_position_recovery()
-        self._init_historical_work()
         # Recover END events left unindexed after a process or SQLite interruption.
         try:
             self.reconcile_pending_sessions()
