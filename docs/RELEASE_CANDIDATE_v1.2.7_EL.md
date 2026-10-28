@@ -1,18 +1,23 @@
 # ΥΠΟΨΗΦΙΑ ΕΚΔΟΣΗ v1.2.7 — ΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ
 Ημερομηνία απόφασης: 2026-10-28 (Ελλάδα)
-Κατάσταση: ΥΠΟ ΑΝΑΠΤΥΞΗ / ΔΟΚΙΜΑΣΤΙΚΗ. ΟΧΙ ΕΓΚΕΚΡΙΜΕΝΗ, ΟΧΙ ΕΓΚΑΤΕΣΤΗΜΕΝΗ.
+Κατάσταση: ΔΟΚΙΜΑΣΤΙΚΟ EXE ΤΕΧΝΙΚΑ ΚΑΤΑΣΚΕΥΑΣΜΕΝΟ / ΠΑΡΑΔΟΘΗΚΕ ΓΙΑ ΔΟΚΙΜΗ. ΟΧΙ ΕΓΚΕΚΡΙΜΕΝΗ, ΟΧΙ ΕΓΚΑΤΕΣΤΗΜΕΝΗ.
 Απόφαση χρήστη: ονομασία v1.2.7 και αυστηρός διαχωρισμός από την εγκεκριμένη v1.2.6.
 
 ## v1.2.7 — τρέχουσα υποψήφια
 - Repository: danilidish-coder/TDE-potition_tracking
 - Απομονωμένο branch: feature/central-only-simple-20261027 (ΟΧΙ main).
-- Τελευταίο ελεγμένο συγκεκριμένο source checkpoint της υποψήφιας: bd599fd4e2147c75fed12208fc806117d5a2057d.
+- Επαληθευμένο source commit του δοκιμαστικού EXE: 4c16f8e24387b1b0d1c4d578242ab03a7b84ca0d. Μεταγενέστερα docs-only commits δεν αλλάζουν το περιεχόμενο αυτού του EXE.
 - Windows CI run 40764487136: source-gates FAILURE (Full source regressions), trial-exe SKIPPED. Προηγούμενο commit bdad6b67f0ce1a5b04c0f3b665106bc17636c9d0 πέρασε 64/64 υποχρεωτικά scripts στο Windows run 40760052465, αλλά αυτό ΔΕΝ εγκρίνει το νεότερο source.
-- EXE v1.2.7: ΔΕΝ ΥΠΑΡΧΕΙ ακόμη επαληθευμένο παραδοτέο.
-- Τελικό source commit του EXE: ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ.
-- GitHub Actions run build, binary SHA256, bytes, URL: ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ / δεν έχει παραχθεί.
+- ΔΟΚΙΜΑΣΤΙΚΟ EXE v1.2.7: TDE_Katagrafi_Theseon_TRIAL.exe (εσωτερικό όνομα στο GitHub ZIP), ίδια πραγματικά bytes με το διανεμόμενο ως TDE_Katagrafi_Theseon_v1.2.7_TRIAL.exe.
+- EXE SHA256: e302b82d9c06ce0e1673367de74c56792fa4840d8798c1c103ad55b542561430. EXE bytes: 52245654.
+- Windows GitHub Actions: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40766791150 (source-gates SUCCESS, 65/65 υποχρεωτικά scripts PASS; 1 μη υποχρεωτικό ιστορικό script 5 FAIL, αποδεκτός περιορισμός χωρίς ισχυρή ταυτοποίηση ΑΞΥΠ).
+- Trial-exe job SUCCESS: PyInstaller Windows EXE build και packaged frozen startup σε περιβάλλον χειριστή και ΑΞΥΠ PASS. Πραγματική ολοκλήρωση επιχειρησιακών λειτουργιών στο frozen EXE NOT RUN.
+- GitHub artifact ID 12851257427, https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40766791150/artifacts/12851257427 , προσωρινό GitHub retention έως 04/11/2026.
+- ZIP bytes: 51914590, ZIP SHA256: b7f00217a84f4497cbb2308015e01c64a35fe2c63133b45d76c4e5ab3e33d3db.
+- Drive ZIP: https://drive.google.com/file/d/1ZS7gcA-YNjKxFO9hEiSkVQUmYQxGYj-k/view , φάκελος δοκιμής https://drive.google.com/drive/folders/12xiAFPQZvbCySV7CxtOnR8sQE177shLC .
+- ΕΠΑΛΗΘΕΥΣΗ ΜΕΤΑ ΤΗ ΛΗΨΗ: ZIP GitHub και ZIP Drive ίδιο SHA256 b7f002... και ίδια bytes 51914590. Αποσυμπιεσμένο EXE εντός και των δύο ZIP: SHA256 e302b82d... και 52245654 bytes. Δεν τεκμαίρεται επιτόπια έγκριση.
 - Αποδοχή πραγματικών Windows/SMB/πολλών φυσικών σταθμών: NOT RUN.
-- Μελλοντικό προτεινόμενο σαφές όνομα EXE: TDE_Katagrafi_Theseon_v1.2.7_TRIAL.exe. Δεν ισχυριζόμαστε ότι έχει κατασκευαστεί ή μετονομαστεί.
+- Το ZIP του GitHub περιέχει το αρχικό TDE_Katagrafi_Theseon_TRIAL.exe. Το εξαγόμενο και επαληθευμένο για άμεση λήψη αρχείο ονομάστηκε TDE_Katagrafi_Theseon_v1.2.7_TRIAL.exe χωρίς μεταβολή περιεχομένου.
 
 ## v1.2.6 — προστατευμένη εγκεκριμένη παραγωγική βάση
 - Αποκλειστική τρέχουσα πηγή: CURRENT_APPROVED.json στο main, μέχρι νέα ρητή έγκριση.
@@ -29,7 +34,7 @@
 4. Κάθε νέο candidate build v1.2.7 απαιτεί δικό του συγκεκριμένο manifest με commit, run, SHA256, bytes και αποτελέσματα. Δεν αντιγράφουμε στοιχεία προηγούμενου EXE.
 
 ## Άμεσο τεχνικό βήμα
-Διάγνωση της αποτυχίας Full source regressions του run 40764487136, στοχευμένη διόρθωση στο απομονωμένο branch, επανέλεγχος Windows source-gates και μόνο τότε ξεχωριστό trial EXE. ΟΧΙ αλλαγή παραγωγής.
+Ολοκληρώθηκαν source gates 65/65 PASS και sandbox trial EXE build + δύο startup smoke PASS στο run 40766791150. ΕΠΟΜΕΝΟ: πραγματική δοκιμή μόνο στο TDE_TRIAL_SANDBOX με δοκιμαστικά δεδομένα, operator START/END, panel ΑΞΥΠ, παλιές βάρδιες/ιστορικά, αναφορές, σύγχρονη πρόσβαση, διακοπή/επανεκκίνηση SMB. Καταγραφή PASS/FAIL/NOT RUN. Το frozen end-to-end και 15 πραγματικοί σταθμοί παραμένουν NOT RUN. Μετά από ρητή αποδοχή trial απαιτείται production candidate (διαφορετικό EXE), δικές του δοκιμές και έγκριση. ΟΧΙ αλλαγή παραγωγής.
 
 ## Υποχρεωτικό όριο trial έναντι παραγωγικής v1.2.7 (έλεγχος 28/10/2026)
 - Το δοκιμαστικό entry `src/position_tracking_trial.py` απαιτεί φυσικό φάκελο με όνομα `TDE_TRIAL_SANDBOX` και απορρίπτει `central_root` εκτός του sandbox. Είναι σκόπιμη ασφαλιστική δικλίδα, ΟΧΙ τελικό EXE έτοιμο για τον παραγωγικό φάκελο.
