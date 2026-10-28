@@ -1,6 +1,6 @@
 # Issue #10 — Phase C handover checkpoint, 28 October 2026
 
-## Phase C continuation from a9b8982 — source verification in progress
+## Phase C continuation from a9b8982 — source verification PASS
 
 Branch `feature/central-only-simple-20261027`; clean starting HEAD was
 `a9b898213eb543782114abd330bfe4ed96aeb6c5`, with approved merge-base
@@ -37,15 +37,28 @@ recorded 22/30 required real resource probes within its unchanged 5-second bound
 Its tight QTest.qWait loop can starve the Python diagnostics writer on Windows.
 The fixture now pumps Qt and explicitly yields the Python GIL, with unchanged
 deadlines, real resource probes, minimum count and file/record assertions.
-Local diagnostics 5/5 PASS in 1.464 seconds; repeat platform gates pending.
+Local diagnostics 5/5 PASS in 1.464 seconds; repeat platform gates now PASS below.
 Failure evidence: `docs/validation/central-only-20261028/phase-c-3101a57.json`.
 EXE workflow `40660029897`: SKIPPED intentionally.
+
+Latest verified source/test commit: `e325229b5547346caff027d9fb3f3f10eb97e948`.
+Repeat source run: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40697620744
+Linux job `122848497381`: focused gates and full 58/58 scripts PASS.
+Windows job `122848496917`: focused gates and full 58/58 scripts PASS.
+The run is completed SUCCESS. Both platforms passed handover backend 16/16,
+handover Qt GUI 5/5, stale-worker 6/6, END 4/4, recovery 25/25, service 11/11 and
+existing operator GUI 6/6 in the focused step, followed by the full 58-script
+suite with zero failures. Windows diagnostics regression also PASS.
+Final exact job-log evidence:
+`docs/validation/central-only-20261028/phase-c-e325229.json`.
+EXE workflow `40697620977`: SKIPPED intentionally. Application source is still
+`3101a57dac951546c0f4f70f6c5509b8cdeabde7`; the repeat changes only the test pump.
 
 Local targeted evidence: backend 16/16 PASS; real Qt confirmation/recheck 5/5
 PASS; existing recovery 25/25, END 4/4, stale-worker 6/6, service 11/11 and module
 architecture 4/4 PASS. Network resilience and legacy identity checks PASS.
 The final local full suite also passed 58/58 after the active-snapshot
-hardening. The final repeated Windows/Linux source CI result must be recorded. No timeout or prior
+hardening. Final repeated Windows/Linux source CI is PASS. No timeout or prior
 safety assertion was weakened.
 
 New tests cover: NO leaves canonical tables/raw events byte-for-byte unchanged;
@@ -55,17 +68,51 @@ process death inside SQL and after commit; lost commit ACK plus unavailable
 read-back; projection outage/recovery; delayed pre-commit and post-commit workers;
 same-second chains; coherent readers during and across the atomic transaction.
 
-Status: source-only candidate, NOT YET Phase C accepted until Windows/Linux CI
-is complete. Physical SMB interruption/restart, packaged EXE and 15 physical
-stations are NOT RUN. No new EXE build, main/manifest/release, real service data,
+Changed source modules/functions:
+
+- `src/position_tracking_position_handover.py`: `handover`, `_commit_handover`,
+  immutable receipt validation and bounded mirror recovery.
+- `src/position_tracking_store.py`: composes the handover capability.
+- `src/position_tracking_position_recovery.py`: initializes handover schema and
+  recovers/validates canonical receipt evidence.
+- `src/position_tracking_positions.py`: `active_all` reads one coherent SQL
+  claim snapshot while retaining legacy corruption checks and workstation labels.
+- `src/position_tracking_event_queries.py`: merges canonical handover events and
+  pairs same-second sessions using pre-indexed START identities.
+- `src/position_tracking_central.py`: immutable confirmation identity and
+  `CentralOperator.execute/check` handover/preflight/idempotency routing.
+- `src/position_tracking_ui_central.py`: default-NO confirmation and `_poll`
+  integration; existing single-flight action/recheck worker owns the request.
+
+New tests: `tests/central_handover_regression.py` and
+`tests/central_handover_ui_regression.py`. Source workflow
+`.github/workflows/central-only-gates.yml` runs both first on Windows/Linux.
+`tests/runtime_diagnostics_regression.py` only fixes its event pump as explained
+above; no diagnostics application behavior, timeout or safety check changed.
+
+Status: Phase C SOURCE VERIFICATION PASS; source-only candidate. No open source
+failure or demonstrated data-integrity defect remains in the exercised scenarios.
+Physical SMB interruption/restart, packaged EXE and 15 physical stations are
+NOT RUN. No new EXE build, main/manifest/release, real service data,
 shortcuts or deployed queues were changed. No officer or historical-entry feature
 was started. Preview remains opt-in (`--central-only`).
 
-Next exact step: inspect the Phase C source CI for the commit containing the
-service/GUI integration and this checkpoint; diagnose any failing gate without
-weakening assertions or increasing timeouts. Record exact source SHA, run/job
-IDs and outcomes here before declaring Phase C source verification complete.
-Do not proceed to officer/report features in this assignment.
+Next step: preserve this verified candidate and perform Phase C acceptance on
+an isolated real SMB test share with synthetic personnel before any packaged or
+production acceptance. That environment is not available in this workspace.
+The complete application/Issue #10 is still unfinished. Do not proceed to
+officer/report features in this assignment. Do not repeat the completed source
+diagnosis or build an EXE on the strength of these source gates alone.
+
+Exact resume command (from the repository root):
+
+```bash
+git switch feature/central-only-simple-20261027 && git status --short --branch && git rev-parse HEAD && git merge-base --is-ancestor e325229b5547346caff027d9fb3f3f10eb97e948 HEAD && sed -n '1,155p' docs/ISSUE_10_STALE_WORKER_STOP_20261027.md
+```
+
+Continue from the commit containing this final documentation checkpoint (its
+exact SHA is returned by the command and final handoff). Its only changes after
+the CI-tested e325229 source/test revision are this checkpoint and log evidence.
 
 ---
 

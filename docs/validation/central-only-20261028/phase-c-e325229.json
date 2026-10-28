@@ -1,0 +1,66 @@
+{
+  "tested_commit": "e325229b5547346caff027d9fb3f3f10eb97e948",
+  "application_source": "3101a57dac951546c0f4f70f6c5509b8cdeabde7",
+  "branch": "feature/central-only-simple-20261027",
+  "approved_base": "4340c41865328cd893e6dc23fcdcedfefa7f9bf2",
+  "run_id": 40697620744,
+  "run_url": "https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40697620744",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "platform": "Windows",
+      "job": 122848496917,
+      "conclusion": "success",
+      "evidence": [
+        "2026-10-28T13:35:11.2949071Z Ran 16 tests in 10.863s",
+        "2026-10-28T13:35:17.6078187Z Ran 5 tests in 5.378s",
+        "2026-10-28T13:35:21.3127462Z Ran 6 tests in 3.540s",
+        "2026-10-28T13:35:23.5812193Z Ran 4 tests in 2.144s",
+        "2026-10-28T13:35:42.0561321Z Ran 25 tests in 18.315s",
+        "2026-10-28T13:35:47.3425491Z Ran 11 tests in 4.989s",
+        "2026-10-28T13:35:55.1276761Z Ran 6 tests in 7.305s",
+        "2026-10-28T13:39:18.0536991Z runtime_diagnostics_regression.py: PASS",
+        "2026-10-28T13:42:29.0930392Z Scripts: 58; failed: 0"
+      ]
+    },
+    {
+      "platform": "Linux",
+      "job": 122848497381,
+      "conclusion": "success",
+      "evidence": [
+        "2026-10-28T13:34:35.5286516Z Ran 16 tests in 2.062s",
+        "2026-10-28T13:34:39.1335101Z Ran 5 tests in 2.839s",
+        "2026-10-28T13:34:39.3695460Z Ran 6 tests in 0.116s",
+        "2026-10-28T13:34:39.5291530Z Ran 4 tests in 0.074s",
+        "2026-10-28T13:34:42.7542159Z Ran 25 tests in 3.114s",
+        "2026-10-28T13:34:43.1662122Z Ran 11 tests in 0.222s",
+        "2026-10-28T13:34:48.4308708Z Ran 6 tests in 4.924s",
+        "2026-10-28T13:35:44.1774321Z runtime_diagnostics_regression.py: PASS",
+        "2026-10-28T13:36:31.1878256Z Scripts: 58; failed: 0"
+      ]
+    }
+  ],
+  "local_full_suite": {
+    "scripts": 58,
+    "failed": 0,
+    "source": "3101a57dac951546c0f4f70f6c5509b8cdeabde7"
+  },
+  "local_diagnostics_after_fixture_fix": {
+    "tests": 5,
+    "failed": 0,
+    "seconds": 1.464
+  },
+  "prior_run": {
+    "run_id": 40660029478,
+    "linux": "58/58 PASS",
+    "windows": "57/58 PASS, one diagnostics fixture FAIL; retained in phase-c-3101a57.json"
+  },
+  "exe_workflow": {
+    "run_id": 40697620977,
+    "conclusion": "skipped"
+  },
+  "physical_smb_and_15_terminals": "NOT RUN",
+  "packaged_exe": "NOT RUN",
+  "production_data": "NOT TOUCHED",
+  "offline_queues": "NOT ENABLED"
+}
