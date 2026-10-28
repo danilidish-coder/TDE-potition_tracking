@@ -1,0 +1,67 @@
+{
+  "tested_commit": "ea21db10834dad9ae58bf48afd75a24ec5ce3cfc",
+  "run_id": 40748148719,
+  "run_url": "https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40748148719",
+  "conclusion": "failure",
+  "not_cancelled": true,
+  "jobs": [
+    {
+      "platform": "Windows",
+      "job": 123027323273,
+      "conclusion": "failure",
+      "mandatory_scripts": {
+        "passed": 61,
+        "failed": 1
+      },
+      "evidence": [
+        "2026-10-28T18:47:15.2631174Z Ran 17 tests in 15.871s",
+        "2026-10-28T18:47:27.9820152Z Ran 9 tests in 11.127s",
+        "2026-10-28T18:47:37.2742823Z Ran 11 tests in 9.084s",
+        "2026-10-28T18:47:41.7584697Z Ran 5 tests in 4.204s",
+        "2026-10-28T18:47:54.2286996Z Ran 16 tests in 12.326s",
+        "2026-10-28T18:48:00.4622992Z Ran 5 tests in 5.785s",
+        "2026-10-28T18:48:04.8801051Z Ran 6 tests in 4.263s",
+        "2026-10-28T18:48:08.0200649Z Ran 4 tests in 3.018s",
+        "2026-10-28T18:48:29.0041620Z Ran 25 tests in 20.820s",
+        "2026-10-28T18:48:34.8194205Z Ran 11 tests in 5.529s",
+        "2026-10-28T18:48:43.0743268Z Ran 6 tests in 7.797s",
+        "2026-10-28T18:49:16.8136787Z Ran 5 tests in 2.458s",
+        "2026-10-28T18:52:52.4533135Z offline_single_machine_claim_stress.py: FAIL",
+        "2026-10-28T18:52:52.4557709Z sqlite3.OperationalError: database is locked",
+        "2026-10-28T18:57:17.6701102Z Scripts: 62; failed: 1",
+        "2026-10-28T18:57:17.6701647Z Historical scripts: 1; failed: 1 (not a required property)"
+      ]
+    },
+    {
+      "platform": "Linux",
+      "job": 123027322844,
+      "conclusion": "success",
+      "mandatory_scripts": {
+        "passed": 62,
+        "failed": 0
+      },
+      "evidence": [
+        "2026-10-28T18:46:37.4616389Z Ran 17 tests in 2.550s",
+        "2026-10-28T18:46:43.1592515Z Ran 9 tests in 4.981s",
+        "2026-10-28T18:46:43.8352247Z Ran 11 tests in 0.529s",
+        "2026-10-28T18:46:45.6504609Z Ran 5 tests in 1.590s",
+        "2026-10-28T18:46:48.4405260Z Ran 16 tests in 2.687s",
+        "2026-10-28T18:46:51.4617878Z Ran 5 tests in 2.695s",
+        "2026-10-28T18:46:51.8429692Z Ran 6 tests in 0.260s",
+        "2026-10-28T18:46:52.1071203Z Ran 4 tests in 0.179s",
+        "2026-10-28T18:46:56.5304645Z Ran 25 tests in 4.310s",
+        "2026-10-28T18:46:57.1789958Z Ran 11 tests in 0.446s",
+        "2026-10-28T18:47:02.4585422Z Ran 6 tests in 4.923s",
+        "2026-10-28T18:47:13.7775179Z Ran 5 tests in 0.162s",
+        "2026-10-28T18:49:03.7207373Z Scripts: 62; failed: 0",
+        "2026-10-28T18:49:03.7208143Z Historical scripts: 1; failed: 1 (not a required property)"
+      ]
+    }
+  ],
+  "historical_identity": {
+    "tests": 5,
+    "result": "FAIL; retained nonmandatory property under explicit user decision"
+  },
+  "failure": "Legacy OfflineJournal concurrent schema initialization raises sqlite3.OperationalError: database is locked at CREATE TABLE operations. Mandatory failure; not waived.",
+  "next_policy": "Windows mandatory automatic; Linux optional manual include_linux boolean. Original run completed before workflow change."
+}

@@ -1,6 +1,89 @@
 # Issue #10 — Phase D2 declared-operator WIP checkpoint, 28 October 2026
 
-## Latest continuation — user-approved simple access; WIP, NOT VERIFIED
+## Latest continuation — D2 source ready; Windows repair/mandatory CI pending
+
+Newest user policy: Windows is the only mandatory automatic platform. Linux is
+optional via workflow_dispatch include_linux=true; default and push run Windows
+only. Workflow-only commit `eab8b85af34ed4cc22c693d9bd348eab6133a1ae` changes one
+file, 7 insertions/1 deletion; no test assertion or full Windows step changed.
+Static YAML/input/matrix policy checks PASS for push, manual false and manual true.
+Real manual Linux dispatch is NOT RUN: the workflow is absent on main, the
+connected GitHub tool exposes no dispatch action and CLI authentication is not
+usable here. No main change or interactive login is attempted. The opt-in
+declaration is valid; actual manual trigger availability is not claimed tested.
+
+Original run 40748148719 was NOT cancelled and completed before this workflow
+change: Linux job 123027322844 SUCCESS, 62/62 mandatory scripts; Windows job
+123027323273 FAILURE, 61/62 mandatory scripts. All D2/B/C/D1 focused gates PASS.
+The sole required failure was offline_single_machine_claim_stress.py, concurrent
+legacy OfflineJournal constructor CREATE TABLE raising database is locked.
+Both platforms retain the five historical identity FAIL cases separately.
+Exact evidence: docs/validation/central-only-20261028/d2-ea21db1-first-platform-gates.json.
+
+Minimal independent repair: BEGIN IMMEDIATE before legacy schema DDL, acquiring
+the write reservation before any schema read-to-write upgrade. The existing
+2-second busy timeout and all queue rows/IDs/timestamps remain unchanged. This
+does not activate offline behavior in either central entry. Local targeted
+claim stress PASS (96 threads, 12 processes, 200 reopens), durability 5/5 PASS.
+The same unchanged claim test now runs first in the focused CI gate for prompt
+Windows feedback. Next required evidence is the complete Windows suite under
+the new one-platform automatic workflow. No timeout/assertion is weakened.
+
+Execution-count benefit: automatic source platform jobs change from 2 to 1
+per relevant push (one fewer, 50% fewer platform executions). Workflow run count
+is still one; wall-clock time is not promised to halve because prior jobs ran
+in parallel. An explicit manual include_linux=true still runs both platforms.
+
+### D2 implementation and first validation
+
+Saved source/test revision: `ea21db10834dad9ae58bf48afd75a24ec5ce3cfc`.
+Backend/audit validation commit: `5c0b39f70395ba1a267c7a820109f93c57714eeb`.
+Recovered WIP was preserved/pushed as `8f1cfd2801f84d2f1f04eb9eac62e5b47c3698e8`
+before continuation. That WIP deliberately did not request CI and was never
+claimed complete; the final source CI below runs all mandatory gates normally.
+
+Current source workflow: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40748148719
+Final platform outcomes are PENDING. EXE workflow `40748149129`: SKIPPED.
+Local targeted backend: **17/17 PASS**; real Qt officer panel: **9/9 PASS**,
+including source-mode launch/exit, confirmations, UNKNOWN recheck, PDF output,
+central roster visibility and message delivery/acknowledgement. Existing recovery
+25/25 and architecture 4/4 PASS. First complete local run: **62 mandatory scripts
+PASS, zero mandatory failures**; historical identity script still **5 FAIL**.
+
+Implemented source-only `--central-officer` entry, separate from the lean
+`--central-only` operator. The central panel covers shifts, approval/exclusion/
+undo, central personnel revision publication, active table/existing booth plan,
+explicit remote START/END, active-start correction, existing report/PIN-statistics
+engines, official messages and on-demand central action history. No second
+position engine, offline queue or workstation roster/profile copy was added.
+
+Declared officer AGMS/name is resolved from the central list for each command.
+Physical changes require reason and confirmation. Their immutable receipt
+(actor, list revision, requested/accepted time, action ID, target ID, before/after,
+reason/result) commits with the position/correction state in SQLite. History
+cannot be updated/deleted by application SQL. New corrections retain each old
+and new value without rewriting START bytes. Document/roster publications use
+canonical SQL receipts and compare-and-swap revisions; central JSONs are repairable
+mirrors. Full detail: `docs/ISSUE_10_D2_DECLARED_OPERATOR_20261028.md`.
+
+The exact historical five denial tests are unchanged and still executed. Their
+actual FAIL output/exit code is retained with required=false under the explicit
+new requirement. The runner verifies their source hash and treats unexpected
+runtime/errors/timeouts as mandatory failure, rather than broadly ignoring errors.
+All prior B/C/D1 integrity/function gates remain mandatory and unchanged.
+
+Accepted security limit: AGMS is declared attribution, **not certified identity**;
+free access does not enforce officer roles or prevent another person declaring a
+known AGMS. The existing statistics PIN is unchanged. No new authentication
+service, shared password or domain setup is introduced. Old strong-authentication
+blocker sections below are historical, superseded by the user's latest decision.
+
+Next step: inspect exact Windows/Linux results for ea21db1, diagnose any mandatory
+failure without weakening assertions/timeouts, record log evidence and update the
+live registry if supported. Stop after D2; do not start D3. Real SMB and packaged
+EXE remain NOT RUN. No production source/EXE/manifest/shortcuts/data changed.
+
+### Recovery history before these source commits
 
 Starting checkpoint `85dff853bcdb8a5a9308b8a8f7e54a0993de25aa`, same feature
 branch and approved ancestor 4340c418. Guide v2.1, live Drive registry,

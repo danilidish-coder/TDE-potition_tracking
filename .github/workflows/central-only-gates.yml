@@ -43,6 +43,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python tests/offline_single_machine_claim_stress.py
           python tests/central_officer_regression.py
           python tests/central_officer_ui_regression.py
           python tests/central_shift_separation_regression.py

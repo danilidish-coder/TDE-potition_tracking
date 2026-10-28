@@ -1,5 +1,12 @@
 # Issue #10 D2 — authorization blocker and minimal safe design
 
+**HISTORICAL / SUPERSEDED:** the user's later explicit 28 October decision no
+longer requires strong officer authentication. Preserve this diagnosis and its
+five FAIL cases as evidence of the accepted security limit. Current requirements
+and implementation: `ISSUE_10_D2_DECLARED_OPERATOR_20261028.md` and the latest
+section of `ISSUE_10_STALE_WORKER_STOP_20261027.md`. This document is not the
+current implementation plan and does not require a new authorization service.
+
 ## Decision: BLOCKED; no privileged panel activated
 
 Audit starts at `b5eeb92e5f1394211eb1d50b98c0909f5c0cbb54` on

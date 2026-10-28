@@ -27,6 +27,10 @@ class OfflineJournal:
         self.root.mkdir(parents=True, exist_ok=True)
         self.path = self.root / "position_outbox.sqlite3"
         with self._db() as db:
+            # Acquire the write reservation before schema reads/DDL. Concurrent
+            # Windows constructors must not race read-to-write lock upgrades.
+            # Keep the existing 2-second busy budget; preserve all queue rows.
+            db.execute('BEGIN IMMEDIATE')
             db.execute("""CREATE TABLE IF NOT EXISTS operations (
                 id TEXT PRIMARY KEY, kind TEXT NOT NULL, agms TEXT NOT NULL,
                 position TEXT NOT NULL, direction TEXT NOT NULL,
