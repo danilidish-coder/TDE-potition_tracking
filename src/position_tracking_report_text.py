@@ -73,7 +73,14 @@ def build_roster_shift_text(store: ShiftSessionSource, shift: dict, people_by_ag
     sessions = store.shift_sessions_v2(shift) if int(shift.get("version", 1)) >= 2 else store.roster_sessions(
         datetime.fromisoformat(shift["start_at"]), shift.get("agms", []), int(shift.get("lookback_minutes", 30)), int(shift.get("max_window_hours", 12))
     )
+    if int(shift.get("version", 1)) < 2 and hasattr(store, "historical_session_items"):
+        sessions += store.historical_session_items(shift["shift_id"])
     roster = [_clean(x) for x in (shift.get("approved", []) if int(shift.get("version", 1)) >= 2 else shift.get("agms", [])) if _clean(x)]
+    for item in sessions:
+        agms = _clean(item["start"].get("agms"))
+        if item["start"].get("historical") and agms not in roster:
+            roster.append(agms)
+
     by_agms: dict[str, list[dict]] = {a: [] for a in roster}
     for item in sessions:
         by_agms.setdefault(_clean(item["start"].get("agms")), []).append(item)
@@ -101,7 +108,8 @@ def build_roster_shift_text(store: ShiftSessionSource, shift: dict, people_by_ag
         for item in items:
             st = item["start"]; sdt = item["start_dt"]; edt = item["end_dt"]
             end_text = edt.strftime("%H:%M") if edt else "ΑΝΟΙΚΤΗ"
-            lines.append(f"  ΘΕΣΗ {st.get('position','')}   {sdt:%H:%M} - {end_text}")
+            marker = " (ΙΣΤΟΡΙΚΗ ΚΑΤΑΧΩΡΙΣΗ)" if st.get("historical") else ""
+            lines.append(f"  ΘΕΣΗ {st.get('position','')}   {sdt:%H:%M} - {end_text}{marker}")
         lines.append("")
     officer = shift.get("start_officer") or {}
     officer_name = _clean(f"{officer.get('rank','')} {officer.get('full_name','')}")

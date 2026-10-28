@@ -23,7 +23,14 @@ def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[
         int(shift.get("lookback_minutes", 30)),
         int(shift.get("max_window_hours", 12)),
     )
+    if int(shift.get("version", 1)) < 2 and hasattr(store, "historical_session_items"):
+        sessions += store.historical_session_items(shift["shift_id"])
     roster = [_clean(x) for x in (shift.get("approved", []) if int(shift.get("version", 1)) >= 2 else shift.get("agms", [])) if _clean(x)]
+    for item in sessions:
+        agms = _clean(item["start"].get("agms"))
+        if item["start"].get("historical") and agms not in roster:
+            roster.append(agms)
+
     by_agms: dict[str, list[dict]] = {a: [] for a in roster}
     for item in sessions:
         by_agms.setdefault(_clean(item["start"].get("agms")), []).append(item)
@@ -73,6 +80,8 @@ def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[
             if direction:
                 details += f"   {direction}"
             details += f"   {sdt:%H:%M} - {end_text}"
+            if st.get("historical"):
+                details += "   (ΙΣΤΟΡΙΚΗ ΚΑΤΑΧΩΡΙΣΗ)"
             body_parts.append(f"<div class='row'>{_escape_html(details)}</div>")
 
     officer = shift.get("start_officer") or shift.get("end_officer") or {}
