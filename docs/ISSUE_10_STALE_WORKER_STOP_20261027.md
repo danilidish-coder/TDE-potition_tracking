@@ -20,9 +20,16 @@ only `tests/central_operator_ui_regression.py`:
 - Run `40655231061`, exact test revision `902c4ca`: focused stale-worker 6/6,
   END 4/4, recovery 25/25, service 11/11 and GUI 6/6 PASS on both platforms.
 - Linux job `122704530746`: full source CI PASS.
-- Windows job `122704530486`: full source CI IN PROGRESS at this documentation
-  update. It is not yet marked PASS. Do not advance Issue #10 features before
-  the full Windows result is known and any real failure is diagnosed.
+- Windows job `122704530486`: full source CI completed with 54/56 scripts PASS.
+  Failures were legacy `exit_responsiveness_regression.py` and
+  `ui_workflow_regression.py`, which also pumped Qt using tight qWait loops.
+  Their assertions/deadlines were retained; revision
+  `e688cc79b9bb0f2df6a4ca0cbb5b270d985420a9` explicitly yields the GIL in those
+  loops too. The offline code itself was not changed or revived.
+- Local targeted validation of e688cc7: legacy exit 6/6 PASS (4.536 seconds),
+  legacy workflow 1/1 PASS (4.105 seconds, 62 GUI heartbeats during recovery).
+- Final verification run `40656531869` for e688cc7 is IN PROGRESS. Until its
+  complete Windows/Linux results are known, do not advance Issue #10 features.
 - EXE build run `40655231033`: SKIPPED intentionally. Packaged EXE, physical SMB
   interruption/restart and 15 physical stations: NOT RUN.
 
