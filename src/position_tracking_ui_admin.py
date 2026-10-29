@@ -4,7 +4,7 @@ import json
 from functools import partial
 from shiboken6 import isValid
 from datetime import datetime
-from position_tracking_common import _clean
+from position_tracking_common import _clean, format_when
 from position_tracking_ui_map import LiveMapDialog
 from position_tracking_theme import THEME_DARK, THEME_LIGHT, _theme_stylesheet
 from PySide6.QtCore import Qt, QTimer
@@ -138,7 +138,7 @@ class AdministrationMixin:
             def started(shift):
                 if not isValid(dlg):
                     return
-                QMessageBox.information(dlg, "Βάρδια", f"Έναρξη βάρδιας {shift['start_at'].replace('T',' ')}.\nΕλέγξτε τους ΑΠΟΔΕΚΤΟΥΣ και εξαιρέστε όποιον ανήκει στην προηγούμενη βάρδια.")
+                QMessageBox.information(dlg, "Βάρδια", f"Έναρξη βάρδιας {format_when(shift['start_at'])}.\nΕλέγξτε τους ΑΠΟΔΕΚΤΟΥΣ και εξαιρέστε όποιον ανήκει στην προηγούμενη βάρδια.")
                 refresh_members()
             self._run_shift_job(partial(self.store.start_officer_shift, p), started)
 
@@ -186,6 +186,6 @@ class AdministrationMixin:
         active = self.store.active_all()
         if not active:
             QMessageBox.information(self,"Στιγμιαία εικόνα","Δεν υπάρχουν ανοικτές θέσεις."); return
-        lines = [f"{x.get('rank','')} {x.get('full_name','')} — Θ. {x.get('position','')} {x.get('direction','')} — από {x.get('timestamp','').replace('T',' ')}" for x in active]
+        lines = [f"{x.get('rank','')} {x.get('full_name','')} — Θ. {x.get('position','')} {x.get('direction','')} — από {format_when(x.get('timestamp',''))}" for x in active]
         QMessageBox.information(self,"Στιγμιαία εικόνα","\n".join(lines))
 

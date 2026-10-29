@@ -1,6 +1,8 @@
 """Reuse shift/message engine, staging document writes into one audited SQL commit."""
 from copy import deepcopy
+from datetime import datetime, timedelta
 import json
+from position_tracking_common import _clean
 from position_tracking_store import SharedEventStore
 from position_tracking_store_io import BusyError
 
@@ -99,3 +101,70 @@ class OfficerStore(SharedEventStore):
                                            (row['document_key'], row['revision']))
             except OSError:
                 break  # SQL receipt remains canonical; central mirror repair only.
+
+    def correct_shift_time(self, shift_id, which, new_when, reason, officer, reference, confirm_old=False):
+        """Διόρθωση ώρας έναρξης/λήξης βάρδιας εκ των υστέρων.
+
+        Αλλάζει μόνο τα όρια της βάρδιας (αναφορά και λίστα προσωπικού). Οι
+        πραγματικές θέσεις, ΕΝΑΡΞΕΙΣ και ΛΗΞΕΙΣ δεν αγγίζονται. Κρατά το
+        ιστορικό των διορθώσεων μέσα στη βάρδια και στην απόδειξη ΑΞΥΠ.
+        """
+        if which not in ('start_at', 'end_at'):
+            raise ValueError('Μη έγκυρη ώρα βάρδιας.')
+        document = self.document('shift')
+        current = json.loads(document['payload']) if document else None
+        is_current = bool(current) and _clean(current.get('shift_id')) == _clean(shift_id)
+        before = current if is_current else self.get_shift(shift_id)
+        if not before:
+            raise ValueError('Δεν βρέθηκε η βάρδια.')
+        if which == 'end_at' and _clean(before.get('status')).upper() != 'FINALIZED':
+            raise ValueError('Η βάρδια δεν έχει λήξει ακόμη. Χρησιμοποιήστε ΛΗΞΗ ΒΑΡΔΙΑΣ.')
+        if new_when > reference + timedelta(minutes=2):
+            raise ValueError('Η ώρα δεν μπορεί να είναι μελλοντική.')
+        if reference - new_when > timedelta(hours=24) and not confirm_old and which == 'end_at':
+            raise ValueError('Η ώρα είναι πάνω από 24 ώρες πίσω και χρειάζεται ρητή επιβεβαίωση.')
+        old_text = _clean(before.get(which))
+        start = new_when if which == 'start_at' else datetime.fromisoformat(before['start_at'])
+        end_text = _clean(before.get('end_at'))
+        end = new_when if which == 'end_at' else (datetime.fromisoformat(end_text) if end_text else None)
+        if end is not None and end <= start:
+            raise ValueError('Η λήξη της βάρδιας πρέπει να έπεται της έναρξης.')
+        if new_when.isoformat(timespec='seconds') == old_text:
+            raise ValueError('Η νέα ώρα είναι ίδια με την υπάρχουσα.')
+        after = deepcopy(before)
+        after[which] = new_when.isoformat(timespec='seconds')
+        after.setdefault('time_corrections', []).append(dict(
+            which=which, previous=old_text, corrected=after[which], reason=_clean(reason),
+            officer_agms=officer.agms, officer=self._person_payload(officer),
+            recorded_at=reference.isoformat(timespec='seconds')))
+        after['updated_at'] = datetime.now().isoformat(timespec='seconds')
+        if which == 'start_at' and _clean(after.get('status')).upper() == 'ACTIVE':
+            known = {_clean(x) for key in ('approved', 'excluded', 'pending') for x in after.get(key, [])}
+            for row in self._position_rows(
+                    "SELECT DISTINCT agms FROM position_operations WHERE kind='START' AND state='COMMITTED' "
+                    "AND json_extract(payload,'$.timestamp')>=?", (after['start_at'],)):
+                if row['agms'] not in known:
+                    after.setdefault('pending', []).append(row['agms']); known.add(row['agms'])
+        if is_current:
+            self.observed_revision = document['revision']
+            self.staged = ('shift', deepcopy(after), self._current_shift_path())
+            return dict(kind='CURRENT', shift=after, before=before)
+        return dict(kind='ARCHIVED', shift=after, before=before)
+
+    def publish_shift_correction(self, before, after, intent):
+        """Διόρθωση παλαιότερης (όχι τρέχουσας) βάρδιας μαζί με την απόδειξη ΑΞΥΠ."""
+        with self._shift_db_write_lock(), self._shift_db_connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            old = db.execute('SELECT payload FROM officer_actions WHERE action_id=?', (intent['action_id'],)).fetchone()
+            if old:
+                receipt = json.loads(old['payload'])
+                if receipt['intent'] != intent['intent']:
+                    raise BusyError('Το αναγνωριστικό αφορά άλλη ενέργεια.')
+                return receipt
+            row = db.execute('SELECT data_json FROM shifts WHERE shift_id=?', (after['shift_id'],)).fetchone()
+            if not row or json.loads(row['data_json']) != before:
+                raise BusyError('Η βάρδια άλλαξε. Απαιτείται επανέλεγχος.')
+            receipt = {**intent, 'record_id': after['shift_id'], 'before': before, 'after': after, 'result': after}
+            self._insert_officer_action(db, receipt)
+            self._upsert_shift_con(db, after)
+        return receipt

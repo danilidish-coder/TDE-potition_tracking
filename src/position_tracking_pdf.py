@@ -6,7 +6,8 @@ import tempfile
 from position_tracking_common import _clean
 from position_tracking_personnel import PersonnelRecord
 from position_tracking_report_text import (ShiftSessionSource as SharedEventStore, _escape_html, _format_seconds,
-                                           begin_report_read, read_problem_notice)
+                                           begin_report_read, read_problem_notice, session_marker,
+                                           shift_correction_note)
 
 def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[str, PersonnelRecord] | None = None, target: str | Path | None = None) -> Path:
     """Create the shift report directly as an A4 PDF, without Word."""
@@ -54,6 +55,8 @@ def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[
             f"{start_at:%d/%m/%Y %H:%M}" + (f" - {end_at:%d/%m/%Y %H:%M}" if end_at else " - ΣΕ ΕΞΕΛΙΞΗ")
         ) + "</div>",
     ]
+    if shift_correction_note(shift):
+        body_parts.append("<div class='period'>" + _escape_html(shift_correction_note(shift)) + "</div>")
 
     notice = read_problem_notice(store)
     if notice:
@@ -86,8 +89,7 @@ def create_shift_pdf(store: SharedEventStore, shift: dict, people_by_agms: dict[
             if direction:
                 details += f"   {direction}"
             details += f"   {sdt:%H:%M} - {end_text}"
-            if st.get("historical"):
-                details += "   (ΙΣΤΟΡΙΚΗ ΚΑΤΑΧΩΡΙΣΗ)"
+            details += session_marker(item)
             body_parts.append(f"<div class='row'>{_escape_html(details)}</div>")
 
     officer = shift.get("start_officer") or shift.get("end_officer") or {}

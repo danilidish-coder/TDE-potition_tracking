@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (QComboBox, QFormLayout, QHBoxLayout, QLabel,
                               QVBoxLayout, QWidget)
 
 from position_tracking_central import CentralOperator, PositionRequest, UNCONFIRMED
+from position_tracking_common import format_when
 from position_tracking_constants import CENTRAL_REVISION, CENTRAL_VERSION
 from position_tracking_ui_assets import ArrowComboBox
 from position_tracking_ui_central_look import apply_look, build_header, new_card
@@ -239,7 +240,7 @@ class CentralOperatorWindow(QMainWindow):
                     self.person_name.setText(person.display if person else "—")
                     if active:
                         self.active_status.setText(
-                            f"ΕΝΕΡΓΗ: ΘΕΣΗ {active['position']} — {active['direction']} — από {active['timestamp'].replace('T', ' ')}")
+                            f"ΕΝΕΡΓΗ: ΘΕΣΗ {active['position']} — {active['direction']} — από {format_when(active['timestamp'])}")
                     else:
                         many = getattr(endpoint, "ambiguous", ())
                         if person:

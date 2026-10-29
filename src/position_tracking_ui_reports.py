@@ -1,7 +1,7 @@
 """Current report actions and finalized-shift archive search dialog."""
 from __future__ import annotations
 from datetime import datetime
-from position_tracking_common import _clean
+from position_tracking_common import _clean, format_when
 from position_tracking_pdf import create_shift_pdf
 from position_tracking_settings import _open_path
 from PySide6.QtCore import Qt, QDate
@@ -105,7 +105,7 @@ class ReportDialogsMixin:
                 end_at = datetime.fromisoformat(_clean(shift.get("end_at")))
                 period = f"{start_at:%d/%m/%Y %H:%M} – {end_at:%d/%m/%Y %H:%M}"
             except Exception:
-                period = _clean(shift.get("start_at")).replace("T", " ")
+                period = format_when(shift.get("start_at"))
             officer = shift.get("start_officer") or shift.get("end_officer") or {}
             officer_name = _clean(
                 f"{officer.get('rank','')} {officer.get('surname','')} {officer.get('given_name','')}"

@@ -32,10 +32,10 @@ class CentralEntry(unittest.TestCase):
         self.assertNotIn("position_tracking_ui_main", imported)
 
     def test_version_resource_and_title_agree(self):
-        info = (ROOT / "tools" / "windows_version_info_central_v127.txt").read_text(encoding="utf-8")
-        self.assertEqual(CENTRAL_VERSION, "1.2.7")
-        self.assertIn("ProductVersion', '1.2.7'", info)
-        self.assertIn("filevers=(1,2,7,0)", info)
+        info = (ROOT / "tools" / "windows_version_info_central_v128.txt").read_text(encoding="utf-8")
+        self.assertEqual(CENTRAL_VERSION, "1.2.8")
+        self.assertIn("ProductVersion', '1.2.8'", info)
+        self.assertIn("filevers=(1,2,8,0)", info)
         for name in ("position_tracking_ui_central.py", "position_tracking_ui_officer.py"):
             self.assertIn("{CENTRAL_VERSION}", (SRC / name).read_text(encoding="utf-8"))
 

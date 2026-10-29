@@ -56,16 +56,21 @@ class OfficerUI(unittest.TestCase):
     def settle(self):
         self.wait(lambda:self.window._future is None and self.window._request is None)
 
+    @staticmethod
+    def chosen(moment=None, reason='Explicit synthetic officer reason'):
+        return dict(moment=moment or datetime.now().replace(second=0, microsecond=0), reason=reason, confirm_old=False)
+
     def physical(self, action):
         self.window.target.setText('999002')
-        with patch.object(QInputDialog, 'getText', return_value=('Explicit synthetic officer reason', True)), \
+        with patch('position_tracking_ui_officer.ask_moment', return_value=self.chosen()), \
                 patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes):
             self.window.physical(action)
-        self.settle()
+            self.settle()
 
     def test_no_confirmation_leaves_shift_positions_and_audit_unchanged(self):
         before = OfficerStore(self.root).officer_history()
-        with patch.object(QMessageBox, 'question', return_value=QMessageBox.No):
+        with patch('position_tracking_ui_officer.ask_moment', return_value=self.chosen()), \
+                patch.object(QMessageBox, 'question', return_value=QMessageBox.No):
             self.window.start_shift.click()
         self.assertIsNone(OfficerStore(self.root).current_shift())
         self.assertEqual(OfficerStore(self.root).officer_history(), before)
@@ -74,12 +79,13 @@ class OfficerUI(unittest.TestCase):
     def test_remote_start_correction_and_end_keep_complete_declared_history(self):
         self.physical('REMOTE_START')
         before = OfficerStore(self.root).get_active('999002')
-        new_time = (datetime.fromisoformat(before['timestamp']) - timedelta(minutes=1)).isoformat()
-        with patch.object(QInputDialog, 'getText', side_effect=[(new_time,True), ('Correct actual start',True)]) as prompts, \
+        new_moment = (datetime.fromisoformat(before['timestamp']) - timedelta(minutes=1)).replace(second=0, microsecond=0)
+        new_time = new_moment.isoformat(timespec='seconds')
+        with patch('position_tracking_ui_officer.ask_moment', return_value=self.chosen(new_moment, 'Correct actual start')) as prompts, \
                 patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes) as confirm:
             self.window.physical('CORRECT_START')
-        self.settle()
-        self.assertEqual(prompts.call_count, 2)  # Actual time and reason; never a second officer AGMS.
+            self.settle()
+        self.assertEqual(prompts.call_count, 1)  # One dialog: actual time and reason; never a second officer AGMS.
         self.assertIn('TARGET', confirm.call_args.args[2])
         self.physical('REMOTE_END')
         store = OfficerStore(self.root)
@@ -101,6 +107,7 @@ class OfficerUI(unittest.TestCase):
             return execute(request)
         beats = []; timer = QTimer(self.window); timer.timeout.connect(lambda:beats.append(1)); timer.start(10)
         with patch.object(self.window.endpoint, 'execute', slow), \
+                patch('position_tracking_ui_officer.ask_moment', side_effect=lambda *a, **k: self.chosen()), \
                 patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes):
             try:
                 self.window.start_shift.click(); self.wait(entered.is_set)
@@ -122,7 +129,7 @@ class OfficerUI(unittest.TestCase):
         self.window.target.setText('999002')
         with patch.object(OfficerStore, '_commit_position_attempt', lose), \
                 patch.object(self.window.endpoint, 'check', side_effect=OSError('synthetic readback outage')), \
-                patch.object(QInputDialog, 'getText', return_value=('Explicit synthetic reason',True)), \
+                patch('position_tracking_ui_officer.ask_moment', return_value=self.chosen(reason='Explicit synthetic reason')), \
                 patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes):
             self.window.physical('REMOTE_START')
             self.wait(lambda:self.window._future is None)
@@ -148,7 +155,8 @@ class OfficerUI(unittest.TestCase):
 
     def test_shift_close_with_active_position_and_existing_pdf_engine(self):
         self.physical('REMOTE_START')
-        with patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes):
+        with patch('position_tracking_ui_officer.ask_moment', side_effect=lambda *a, **k: self.chosen()), \
+                patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes):
             self.window.start_shift.click(); self.settle()
             self.window.end_shift.click(); self.settle()
         self.assertIsNotNone(OfficerStore(self.root).get_active('999002'))

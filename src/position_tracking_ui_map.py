@@ -5,7 +5,7 @@ from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen
 from PySide6.QtWidgets import QApplication, QComboBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QVBoxLayout, QWidget, QInputDialog, QDialog
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from position_tracking_common import _clean
+from position_tracking_common import _clean, format_when
 from position_tracking_personnel import PersonnelRecord
 from position_tracking_store import SharedEventStore
 
@@ -239,7 +239,7 @@ class LiveMapDialog(QDialog):
         name = _clean(f'{person.rank} {person.surname} {person.given_name}') or f'ΑΓΜΣ {agms}'
         pos = _clean(active.get('position'))
         direction = _clean(active.get('direction'))
-        started = _clean(active.get('timestamp')).replace('T', ' ')
+        started = format_when(active.get('timestamp'))
         confirm = QMessageBox.question(self, 'Επιβεβαίωση λήξης ενεργής θέσης', f'{name}\nΘέση {pos} — {direction}\nΈναρξη: {started}\n\nΝα καταχωριστεί ΛΗΞΗ από τον Αξιωματικό Υπηρεσίας;', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if confirm != QMessageBox.Yes:
             return
@@ -252,7 +252,7 @@ class LiveMapDialog(QDialog):
             self.store.log_admin_action('ACTIVE_POSITION_ENDED_BY_OFFICER', {'officer_agms': officer.agms, 'officer_name': officer.full_name, 'target_agms': agms, 'target_name': person.full_name, 'position': pos, 'direction': direction, 'start_at': _clean(active.get('timestamp')), 'end_at': _clean(event.get('timestamp'))})
             return event
         def confirmed(event):
-            QMessageBox.information(self, 'Λήξη ενεργής θέσης', f"Η θέση του {name} έκλεισε στις {_clean(event.get('timestamp')).replace('T', ' ')}.")
+            QMessageBox.information(self, 'Λήξη ενεργής θέσης', f"Η θέση του {name} έκλεισε στις {format_when(event.get('timestamp'))}.")
         self._map_io(work, confirmed, is_write=True)
 
     def _map_io(self, work, confirmed, *, is_write=False):
@@ -354,7 +354,7 @@ class LiveMapDialog(QDialog):
         for x in items:
             pos = _clean(x.get('position'))
             if pos not in BoothMapWidget.BOOTH_POS:
-                other.append(f"{x.get('rank', '')} {x.get('full_name', '')} — {pos} — {x.get('direction', '')} — από {_clean(x.get('timestamp')).replace('T', ' ')}")
+                other.append(f"{x.get('rank', '')} {x.get('full_name', '')} — {pos} — {x.get('direction', '')} — από {format_when(x.get('timestamp'))}")
         self.other.setText('Άλλες ενεργές θέσεις: ' + (' | '.join(other) if other else 'καμία'))
         self.updated.setText('Ενημέρωση: ' + datetime.now().strftime('%H:%M:%S'))
 

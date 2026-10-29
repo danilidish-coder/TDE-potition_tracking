@@ -1,7 +1,7 @@
 """Shift completion is separate from explicit, individually guarded position END."""
 from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
-from position_tracking_common import _clean
+from position_tracking_common import _clean, format_when
 from position_tracking_personnel import PersonnelRecord
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget, QDialog, QListWidget, QListWidgetItem
@@ -66,7 +66,7 @@ class ShiftEndDialogMixin:
             return (
                 f"{full_name(item)}  |  ΘΕΣΗ {_clean(item.get('position'))}"
                 f" — {_clean(item.get('direction'))}  |  "
-                f"ΕΝΑΡΞΗ {_clean(item.get('timestamp')).replace('T', ' ')}"
+                f"ΕΝΑΡΞΗ {format_when(item.get('timestamp'))}"
             )
 
         def set_busy(message: str):

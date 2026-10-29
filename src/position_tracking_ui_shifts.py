@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from functools import partial
 from datetime import datetime
-from position_tracking_common import _clean
+from position_tracking_common import _clean, format_when
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QDialog, QListWidget, QListWidgetItem
 from position_tracking_worker import SingleFlightWorker
@@ -88,7 +88,7 @@ class ShiftControllerMixin:
         def started(shift):
             self._last_shift_signature=""
             self._refresh_shift_status()
-            QMessageBox.information(self,"Βάρδια",f"Η βάρδια ξεκίνησε στις {shift['start_at'].replace('T',' ')}.")
+            QMessageBox.information(self,"Βάρδια",f"Η βάρδια ξεκίνησε στις {format_when(shift['start_at'])}.")
         self._run_shift_job(partial(self.store.start_officer_shift, p,
             initial_approved=approved, initial_excluded=excluded), started)
 
@@ -198,7 +198,7 @@ class ShiftControllerMixin:
                         ended_dt = datetime.fromisoformat(ended)
                         ended_text = f"{ended_dt:%d/%m/%Y %H:%M}"
                     except Exception:
-                        ended_text = ended.replace("T", " ") if ended else "—"
+                        ended_text = format_when(ended) or "—"
                     self.shift_status.setText(
                         f"Η προηγούμενη βάρδια έληξε {ended_text}.\\n"
                         "Η αναφορά της παραμένει ΤΡΕΧΟΥΣΑ μέχρι την έναρξη της επόμενης."

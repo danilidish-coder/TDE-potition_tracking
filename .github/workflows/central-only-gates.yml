@@ -132,7 +132,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 30
     env:
-      EXE_NAME: TDE_Katagrafi_Theseon_v1.2.7b
+      EXE_NAME: TDE_Katagrafi_Theseon_v1.2.8
     steps:
       - uses: actions/checkout@v4
         with:
@@ -146,7 +146,7 @@ jobs:
         shell: pwsh
         run: |
           python tools/generate_network_icon.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --icon build_assets/position_tracking_network.ico --version-file tools/windows_version_info_central_v127.txt --name $env:EXE_NAME src/position_tracking_central_main.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --icon build_assets/position_tracking_network.ico --version-file tools/windows_version_info_central_v128.txt --name $env:EXE_NAME src/position_tracking_central_main.py
           if ($LASTEXITCODE -ne 0) { throw 'Candidate build failed' }
           if (-not (Test-Path "dist/$($env:EXE_NAME).exe")) { throw 'Missing EXE' }
       - name: Frozen functional self-test on synthetic data
@@ -179,9 +179,9 @@ jobs:
             for ($i = 0; $i -lt 50 -and -not $found; $i++) {
               Start-Sleep -Milliseconds 500
               if ($p.HasExited) { throw "Window process exited early: $mode (exit $($p.ExitCode))" }
-              $found = Get-Process | Where-Object { $_.MainWindowTitle -like '*v1.2.7*' } | Select-Object -First 1
+              $found = Get-Process | Where-Object { $_.MainWindowTitle -like '*v1.2.8*' } | Select-Object -First 1
             }
-            if (-not $found) { throw "No v1.2.7 window appeared: $mode" }
+            if (-not $found) { throw "No v1.2.8 window appeared: $mode" }
             Write-Host "WINDOW_OK mode=$mode title=$($found.MainWindowTitle)"
             Write-Host "::notice title=window-$mode::title=$($found.MainWindowTitle)"
             taskkill /IM "$($env:EXE_NAME).exe" /T /F | Out-Null
@@ -197,7 +197,7 @@ jobs:
           New-Item -ItemType Directory -Path candidate -Force | Out-Null
           Copy-Item $exe candidate/
           $manifest = [ordered]@{
-            product = 'TDE Katagrafi Theseon'; version = 'v1.2.7b'; entry = 'src/position_tracking_central_main.py'
+            product = 'TDE Katagrafi Theseon'; version = 'v1.2.8'; entry = 'src/position_tracking_central_main.py'
             status = 'CANDIDATE - NOT APPROVED (awaiting user acceptance of this exact SHA256)'
             file = "$($env:EXE_NAME).exe"; sha256 = $hash; bytes = $file.Length
             source_commit = '${{ github.sha }}'; branch = '${{ github.ref_name }}'
@@ -215,7 +215,7 @@ jobs:
       - name: Upload candidate (private artifact, 90 days)
         uses: actions/upload-artifact@v4
         with:
-          name: TDE-CANDIDATE-v1.2.7-${{ github.sha }}-${{ github.run_id }}
+          name: TDE-CANDIDATE-v1.2.8-${{ github.sha }}-${{ github.run_id }}
           path: candidate/*
           if-no-files-found: error
           retention-days: 90

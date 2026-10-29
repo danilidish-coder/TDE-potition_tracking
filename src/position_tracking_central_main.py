@@ -1,4 +1,4 @@
-"""Entry point of the central-only application (v1.2.7 candidate).
+"""Entry point of the central-only application (v1.2.8 candidate).
 
 Unlike position_tracking_trial.py there is NO sandbox folder guard: the program
 is meant to sit in the real shared folder, exactly like earlier releases, and

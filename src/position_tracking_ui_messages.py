@@ -1,6 +1,6 @@
 """Operator message dialogs, target selection and confirmed remote close requests."""
 from __future__ import annotations
-from position_tracking_common import _clean
+from position_tracking_common import _clean, format_when
 from position_tracking_store import SharedEventStore
 from position_tracking_ui_assets import ArrowComboBox
 from PySide6.QtCore import Qt
@@ -91,7 +91,7 @@ class MessageDialogsMixin:
             for msg in self.store.recent_sent_messages(20):
                 targets = [_clean(x) for x in msg.get("targets", []) if _clean(x)]
                 acks = msg.get("acknowledgements", [])
-                created = _clean(msg.get("created_at")).replace("T", " ")
+                created = format_when(msg.get("created_at"))
                 target_label = _clean(msg.get("target_label")) or "—"
                 body = _clean(msg.get("text"))
                 if len(body) > 90:

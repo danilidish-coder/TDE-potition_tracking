@@ -19,6 +19,39 @@ GREEK_MONTH_GENITIVE = {
 
 
 
+def _officer_chose_time(event: dict | None, action: str) -> bool:
+    """Η ώρα της ΕΝΑΡΞΗΣ/ΛΗΞΗΣ ορίστηκε από τον ΑΞΥΠ και διαφέρει από την ώρα καταχώρισης."""
+    declared = (event or {}).get("declared_action") or {}
+    if declared.get("action") != action:
+        return False
+    try:
+        chosen = datetime.fromisoformat(_clean(((declared.get("intent") or {}).get("values") or {}).get("when")))
+        recorded = datetime.fromisoformat(_clean(declared.get("recorded_at")))
+    except ValueError:
+        return False
+    return abs((recorded - chosen).total_seconds()) > 60
+
+
+def session_marker(item: dict) -> str:
+    """Ένδειξη στην αναφορά: ιστορική καταχώριση ή ώρα που διορθώθηκε/ορίστηκε από τον ΑΞΥΠ."""
+    start, end = item.get("start") or {}, item.get("end") or {}
+    if start.get("historical"):
+        return " (ΙΣΤΟΡΙΚΗ ΚΑΤΑΧΩΡΙΣΗ)"
+    if start.get("original_timestamp") or _officer_chose_time(start, "REMOTE_START") \
+            or _officer_chose_time(end, "REMOTE_END"):
+        return " (ΔΙΟΡΘΩΜΕΝΗ)"
+    return ""
+
+
+def shift_correction_note(shift: dict) -> str:
+    """Γραμμή που δηλώνει ότι η ώρα έναρξης ή λήξης της βάρδιας διορθώθηκε εκ των υστέρων."""
+    kinds = {c.get("which") for c in shift.get("time_corrections", [])}
+    if not kinds:
+        return ""
+    names = [label for key, label in (("start_at", "έναρξης"), ("end_at", "λήξης")) if key in kinds]
+    return "Διορθωμένη ώρα " + " και ".join(names) + " βάρδιας (ΔΙΟΡΘΩΜΕΝΗ)"
+
+
 def begin_report_read(store) -> None:
     """Forget earlier read problems before gathering the data of one report."""
     clear = getattr(store, "clear_read_problems", None)
@@ -113,6 +146,7 @@ def build_roster_shift_text(store: ShiftSessionSource, shift: dict, people_by_ag
         "Τ.Δ.Ε. ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ",
         "ΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ ΒΑΡΔΙΑΣ",
         f"Βάρδια: {start_at:%d/%m/%Y %H:%M}" + (f" - {end_at:%d/%m/%Y %H:%M}" if end_at else " - ΣΕ ΕΞΕΛΙΞΗ"),
+        *([shift_correction_note(shift)] if shift_correction_note(shift) else []),
         "",
     ]
     notice = read_problem_notice(store)
@@ -133,7 +167,7 @@ def build_roster_shift_text(store: ShiftSessionSource, shift: dict, people_by_ag
         for item in items:
             st = item["start"]; sdt = item["start_dt"]; edt = item["end_dt"]
             end_text = edt.strftime("%H:%M") if edt else "ΑΝΟΙΚΤΗ"
-            marker = " (ΙΣΤΟΡΙΚΗ ΚΑΤΑΧΩΡΙΣΗ)" if st.get("historical") else ""
+            marker = session_marker(item)
             lines.append(f"  ΘΕΣΗ {st.get('position','')}   {sdt:%H:%M} - {end_text}{marker}")
         lines.append("")
     officer = shift.get("start_officer") or {}

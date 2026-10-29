@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import socket
 from position_tracking_windows_session import _windows_session_is_active
-from position_tracking_common import _clean
+from position_tracking_common import _clean, format_when
 from position_tracking_store import SharedEventStore
 from position_tracking_report_text import _escape_html
 from PySide6.QtCore import Qt
@@ -108,7 +108,7 @@ class CommunicationMixin:
             sender_name = _clean(
                 f"{sender.get('rank','')} {sender.get('surname','')} {sender.get('given_name','')}"
             ) or _clean(sender.get("full_name")) or _clean(sender.get("user")) or "Αξιωματικός Υπηρεσίας"
-            created = _clean(message.get("created_at")).replace("T", " ")
+            created = format_when(message.get("created_at"))
             text_value = _clean(message.get("text"))
 
             self.showNormal()

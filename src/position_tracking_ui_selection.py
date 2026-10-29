@@ -1,7 +1,7 @@
 """Personnel selection and asynchronous active-position button state."""
 from __future__ import annotations
 import time
-from position_tracking_common import _clean
+from position_tracking_common import _clean, format_when
 from position_tracking_personnel import PersonnelRecord
 from PySide6.QtCore import QTimer
 
@@ -96,7 +96,7 @@ class PersonnelSelectionMixin:
             if self._position_operation_future is not None:
                 return
             if active:
-                ts = _clean(active.get("timestamp", "")).replace("T", " ")
+                ts = format_when(active.get("timestamp", ""))
                 self.active_status.setText(
                     f"ΕΝΕΡΓΗ: ΘΕΣΗ {active.get('position','')} — "
                     f"{active.get('direction','')} — από {ts}"

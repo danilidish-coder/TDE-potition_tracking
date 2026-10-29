@@ -1,19 +1,21 @@
 """Central officer screen with declared AGMS and one owned network job."""
-from datetime import datetime
+from datetime import datetime, timedelta
 import hashlib
 import json
 import time
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QFormLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QComboBox, QDateTimeEdit, QDialog, QFileDialog, QFormLayout, QHBoxLayout,
     QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QPlainTextEdit, QDialogButtonBox,
     QHeaderView, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget, QInputDialog)
+from position_tracking_common import format_when, parse_day
 from position_tracking_constants import CENTRAL_REVISION, CENTRAL_VERSION, STATISTICS_PIN_SHA256
 from position_tracking_central import UNCONFIRMED
-from position_tracking_officer import CentralOfficer, OfficerRequest
+from position_tracking_officer import CentralOfficer, OfficerRequest, describe_history
 from position_tracking_personnel import PersonnelRepository
 from position_tracking_ui_map import BoothMapWidget
 from position_tracking_ui_assets import ArrowComboBox
 from position_tracking_ui_central_look import apply_look, build_header, new_card
+from position_tracking_ui_when import ask_moment, from_qt, to_qt
 from position_tracking_worker import SingleFlightWorker
 
 
@@ -38,6 +40,7 @@ class CentralOfficerWindow(QMainWindow):
         self._future = None
         self._worker = SingleFlightWorker('TDE-officer')
         self._closing = False
+        self._pending = None
         self.setWindowTitle(f'Κεντρικό πάνελ ΑΞΥΠ v{CENTRAL_VERSION}{CENTRAL_REVISION}')
         self.resize(1180, 900)
         self.setMinimumSize(980, 700)
@@ -63,8 +66,7 @@ class CentralOfficerWindow(QMainWindow):
         shift_page = QWidget(); shift_layout = QVBoxLayout(shift_page); tabs.addTab(shift_page, 'Βάρδια / προσωπικό')
         self.shift_status = QLabel('—'); self.shift_status.setObjectName('statusBox'); self.shift_status.setAlignment(Qt.AlignCenter); shift_layout.addWidget(self.shift_status)
         row = QHBoxLayout(); shift_layout.addLayout(row)
-        self.start_shift = self.button(row, 'ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ', lambda: self.change('SHIFT_START',
-            description='Να ξεκινήσει νέα βάρδια; Οι πραγματικές θέσεις δεν θα μεταβληθούν.'))
+        self.start_shift = self.button(row, 'ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ', self.begin_shift)
         self.end_shift = self.button(row, 'ΛΗΞΗ ΒΑΡΔΙΑΣ', self.end_current_shift)
         self.end_shift.setObjectName('endButton'); self.start_shift.setObjectName('startButton')
         self.import_btn = self.button(row, 'ΚΕΝΤΡΙΚΗ ΛΙΣΤΑ ΠΡΟΣΩΠΙΚΟΥ', self.import_people)
@@ -93,6 +95,7 @@ class CentralOfficerWindow(QMainWindow):
         self.search_reports_btn = self.button(row, 'ΑΝΑΖΗΤΗΣΗ ΒΑΡΔΙΑΣ', self.search_reports)
         self.stats_btn = self.button(row, 'ΑΤΟΜΙΚΑ ΣΤΑΤΙΣΤΙΚΑ', self.statistics)
         self.history_btn = self.button(row, 'ΙΣΤΟΡΙΚΟ ΑΛΛΑΓΩΝ', self.history)
+        self.shift_time_btn = self.button(row, 'ΔΙΟΡΘΩΣΗ ΩΡΑΣ ΒΑΡΔΙΑΣ', self.correct_shift_time)
         self.recipient = QComboBox(); reports_layout.addWidget(self.recipient)
         self.message = QPlainTextEdit(); self.message.setPlaceholderText('Υπηρεσιακό μήνυμα'); reports_layout.addWidget(self.message)
         row = QHBoxLayout(); reports_layout.addLayout(row)
@@ -159,6 +162,8 @@ class CentralOfficerWindow(QMainWindow):
         except Exception as error:
             if kind == 'load':
                 self._state = None
+            if kind == 'check':
+                self._pending = None
             self.info.setText(UNCONFIRMED + '\n' + str(error))
         else:
             if kind == 'load':
@@ -175,16 +180,25 @@ class CentralOfficerWindow(QMainWindow):
                 self.reports.clear()
                 self.reports.addItem('Επιλέξτε αναφορά', '')
                 for shift in result:
-                    self.reports.addItem(shift['start_at'], shift['shift_id'])
+                    self.reports.addItem(self.shift_label(shift), shift['shift_id'])
                 self.info.setText('Βρέθηκαν αναφορές: ' + str(len(result)))
+            elif kind == 'check':
+                self.after_check(result)
             elif kind == 'history':
                 dlg = QDialog(self); dlg.setWindowTitle('Κεντρικό ιστορικό δηλωμένων χειρισμών')
                 lay = QVBoxLayout(dlg); text = QPlainTextEdit(); text.setReadOnly(True)
-                text.setPlainText(json.dumps(result, ensure_ascii=False, indent=2)); lay.addWidget(text)
+                text.setPlainText(describe_history(result)); lay.addWidget(text)
                 dlg.resize(900, 650); dlg.exec(); dlg.deleteLater()
             else:
                 self.info.setText('Δημιουργήθηκε η αναφορά: ' + str(result))
         self.buttons()
+
+    @staticmethod
+    def shift_label(shift):
+        label = format_when(shift.get('start_at'))
+        if shift.get('end_at'):
+            label += ' – ' + format_when(shift['end_at'])
+        return label
 
     def render(self):
         state = self._state
@@ -193,7 +207,7 @@ class CentralOfficerWindow(QMainWindow):
             # Typed by name: from here on every request carries the AGMS.
             self.officer.blockSignals(True); self.officer.setText(state['officer'].agms); self.officer.blockSignals(False)
         shift = state['shift']
-        self.shift_status.setText('Βάρδια: ' + (shift['start_at'] if shift else 'Δεν υπάρχει ενεργή βάρδια'))
+        self.shift_status.setText('Βάρδια από ' + format_when(shift['start_at']) if shift else 'Δεν υπάρχει ενεργή βάρδια')
         self.members.setRowCount(len(state['people']))
         for row, person in enumerate(state['people']):
             status = next((label for key, label in [('approved','ΑΠΟΔΕΚΤΟΣ'),('excluded','ΕΞΑΙΡΕΣΗ'),('pending','ΑΝΑΜΟΝΗ')]
@@ -203,14 +217,16 @@ class CentralOfficerWindow(QMainWindow):
         self.active_table.setRowCount(len(state['active']))
         for row, active in enumerate(state['active']):
             for col, key in enumerate(['agms','full_name','position','direction','timestamp']):
-                self.active_table.setItem(row, col, QTableWidgetItem(active[key]))
+                self.active_table.setItem(row, col, QTableWidgetItem(format_when(active[key]) if key == 'timestamp' else active[key]))
         self.booths.set_active(state['active'])
         self.reports.clear(); self.reports.addItem('Τρέχουσα αναφορά', '')
         for shift in state['reports']:
-            self.reports.addItem(shift['start_at'], shift['shift_id'])
+            self.reports.addItem(self.shift_label(shift), shift['shift_id'])
         self.recipient.clear(); self.recipient.addItem('Όλοι οι ενεργοί σταθμοί', '')
+        labels = state.get('station_labels', {})
         for client in state['clients']:
-            self.recipient.addItem(client.get('computer', '') + ' / ' + client['client_id'], client['client_id'])
+            self.recipient.addItem(labels.get(client['client_id']) or (client.get('computer', '') + ' / ' + client['client_id']),
+                                   client['client_id'])
         self.info.setText('Κεντρικά δεδομένα επαληθεύτηκαν.')
 
     def change(self, action, description='', workbook=b'', **values):
@@ -223,10 +239,101 @@ class CentralOfficerWindow(QMainWindow):
         self._request = OfficerRequest(action, self.officer.text().strip(), json.dumps(values), True, workbook=workbook)
         self.submit('mutation', self.endpoint.execute, self._request)
 
+    def begin_shift(self):
+        if not self._state or self._state['shift']:
+            return
+        state = self._state
+        now = datetime.now().replace(second=0, microsecond=0)
+
+        def info(moment):
+            if datetime.now() - moment > timedelta(hours=24):
+                return 'Η ώρα είναι πάνω από 24 ώρες πίσω: δεν εμφανίζονται οι παλαιότερες ΕΝΑΡΞΕΙΣ.'
+            since = moment.isoformat(timespec='seconds')
+            starts = [s for s in state.get('recent_starts', []) if s['timestamp'] >= since]
+            if not starts:
+                return 'Κανείς δεν έχει κάνει ΕΝΑΡΞΗ από αυτή την ώρα.'
+            names = sorted({s['full_name'] or s['agms'] for s in starts})
+            return (f'ΕΝΑΡΞΗ από αυτή την ώρα έχουν κάνει {len(names)} άτομα: ' + ', '.join(names[:8])
+                    + ('…' if len(names) > 8 else '') + '\nΌσοι ΔΕΝ είναι ακόμη ενεργοί θα μπουν σε ΑΝΑΜΟΝΗ για απόφαση.')
+
+        answer = ask_moment(self, 'ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ', 'Ώρα έναρξης βάρδιας (προτείνεται η τρέχουσα):', now, info=info)
+        if not answer:
+            return
+        moment = answer['moment']
+        previous = next((r for r in state['reports'] if r.get('end_at')), None)
+        if previous and previous['end_at'] > moment.isoformat(timespec='seconds'):
+            if QMessageBox.question(self, 'Επικάλυψη βαρδιών',
+                    f"Η προηγούμενη βάρδια έληξε στις {format_when(previous['end_at'])}, μετά την ώρα που επιλέξατε.\n"
+                    'Να συνεχίσω;', QMessageBox.Yes | QMessageBox.No, QMessageBox.No) != QMessageBox.Yes:
+                return
+        self.change('SHIFT_START', when=moment.isoformat(timespec='seconds'), confirm_old=answer['confirm_old'],
+                    description=f'Να ξεκινήσει νέα βάρδια στις {format_when(moment)};\n'
+                                'Οι πραγματικές θέσεις δεν θα μεταβληθούν.')
+
     def end_current_shift(self):
         if self._state and self._state['shift']:
-            self.change('SHIFT_END', expected_shift_id=self._state['shift']['shift_id'],
-                description='Να ολοκληρωθεί η βάρδια; Οι φυσικές θέσεις παραμένουν ενεργές.')
+            shift = self._state['shift']
+            now = datetime.now().replace(second=0, microsecond=0)
+            start = datetime.fromisoformat(shift['start_at'])
+            answer = ask_moment(self, 'ΛΗΞΗ ΒΑΡΔΙΑΣ', 'Ώρα λήξης βάρδιας (προτείνεται η τρέχουσα):', now,
+                                minimum=start.replace(second=0), minimum_text='Η λήξη προηγείται της έναρξης της βάρδιας ('
+                                + format_when(start) + ').')
+            if not answer:
+                return
+            self.change('SHIFT_END', expected_shift_id=shift['shift_id'], when=answer['moment'].isoformat(timespec='seconds'),
+                confirm_old=answer['confirm_old'],
+                description=f"Να ολοκληρωθεί η βάρδια στις {format_when(answer['moment'])};\n"
+                            'Οι φυσικές θέσεις παραμένουν ενεργές.')
+
+    def correct_shift_time(self):
+        """Διόρθωση ώρας έναρξης ή λήξης βάρδιας εκ των υστέρων (τρέχουσα ή επιλεγμένη αναφορά)."""
+        if not self._state or self._future is not None or self._request:
+            return
+        shift = self._state['shift']
+        identifier = self.reports.currentData() or (shift or {}).get('shift_id') or \
+            (self._state['reports'][0]['shift_id'] if self._state['reports'] else '')
+        if not identifier:
+            QMessageBox.warning(self, 'Βάρδια', 'Δεν υπάρχει βάρδια για διόρθωση.')
+            return
+        target = shift if shift and shift['shift_id'] == identifier else next(
+            (r for r in self._state['reports'] if r['shift_id'] == identifier), None)
+        if not target:
+            QMessageBox.warning(self, 'Βάρδια', 'Επιλέξτε βάρδια από τη λίστα αναφορών.')
+            return
+        finished = bool(target.get('end_at'))
+        options = ['Ώρα έναρξης'] + (['Ώρα λήξης'] if finished else [])
+        choice = options[0]
+        if len(options) > 1:
+            choice, ok = QInputDialog.getItem(self, 'Διόρθωση ώρας βάρδιας', 'Ποια ώρα διορθώνεται;', options, 0, False)
+            if not ok:
+                return
+        which = 'start_at' if choice == options[0] else 'end_at'
+        current = datetime.fromisoformat(target[which])
+        answer = ask_moment(self, 'Διόρθωση ώρας βάρδιας',
+                            f"{choice} βάρδιας: τώρα {format_when(current)}. Νέα ώρα:", current, reason=True)
+        if not answer:
+            return
+        values = dict(shift_id=str(identifier), which=which, new_time=answer['moment'].isoformat(timespec='seconds'),
+                      reason=answer['reason'], confirm_old=answer['confirm_old'])
+        self._pending = dict(action='SHIFT_TIME_CORRECT', values=values,
+            description=f"Διόρθωση ώρας {choice.lower()} βάρδιας\nΠροηγούμενη: {format_when(current)}\n"
+                        f"Νέα: {format_when(answer['moment'])}\nΑιτιολογία: {answer['reason']}\n"
+                        'Οι πραγματικές θέσεις δεν αλλάζουν.')
+        self.submit('check', self.endpoint.shift_correction_preview, self.officer.text().strip(),
+                    values['shift_id'], which, values['new_time'])
+
+    def after_check(self, result):
+        """Συνέχεια μετά τον έλεγχο προειδοποιήσεων (ώρα βάρδιας ή απομακρυσμένη ΕΝΑΡΞΗ/ΛΗΞΗ)."""
+        pending, self._pending = self._pending, None
+        if not pending:
+            return
+        if result['errors']:
+            QMessageBox.warning(self, 'Έλεγχος', '\n'.join(result['errors']))
+            return
+        description = pending['description']
+        if result['warnings']:
+            description += '\n\nΠΡΟΣΟΧΗ:\n- ' + '\n- '.join(result['warnings']) + '\n\nΝα συνεχίσω;'
+        self.change(pending['action'], description=description, **pending['values'])
 
     def member(self, state):
         row = self.members.currentRow()
@@ -251,32 +358,49 @@ class CentralOfficerWindow(QMainWindow):
             QMessageBox.warning(self, 'Έλεγχος', 'Επιλέξτε έναν αστυνομικό της κεντρικής λίστας (ΑΓΜΣ ή επώνυμο και όνομα).'); return
         agms = person.agms
         active = next((a for a in self._state['active'] if a['agms'] == agms), None)
-        values = dict(agms=agms, when=datetime.now().isoformat(timespec='seconds'))
+        values = dict(agms=agms)
         if action == 'REMOTE_START':
             values.update(position=self.position.currentText(), direction=self.direction.currentText())
+            if active:
+                QMessageBox.warning(self, 'Έλεγχος', 'Ο αστυνομικός έχει ήδη ανοικτή θέση. Πρώτα ΛΗΞΗ.'); return
         elif not active:
             QMessageBox.warning(self, 'Έλεγχος', 'Δεν υπάρχει επιβεβαιωμένη ενεργή θέση.'); return
         else:
             values['expected_start_id'] = active['event_id']
+            if action == 'CORRECT_START':
+                values['expected_timestamp'] = active['timestamp']
+        now = datetime.now().replace(second=0, microsecond=0)
         if action == 'CORRECT_START':
-            value, ok = QInputDialog.getText(self, 'Πραγματική ώρα', 'Νέα ημερομηνία και ώρα (YYYY-MM-DD HH:MM:SS)',
-                                            text=active['timestamp'].replace('T',' '))
-            if not ok: return
-            try: values['new_time'] = datetime.fromisoformat(value).isoformat(timespec='seconds')
-            except ValueError:
-                QMessageBox.warning(self, 'Έλεγχος', 'Μη έγκυρη ημερομηνία και ώρα.'); return
-            values['expected_timestamp'] = active['timestamp']
-        reason, ok = QInputDialog.getText(self, 'Αιτιολογία', 'Αιτιολογία μεταβολής')
-        if not ok: return
-        if len(reason.strip()) < 5:
-            QMessageBox.warning(self, 'Έλεγχος', 'Η αιτιολογία απαιτεί τουλάχιστον 5 χαρακτήρες.'); return
-        values['reason'] = reason.strip()
+            started = datetime.fromisoformat(active['timestamp'])
+            title, prompt, default, key = ('Πραγματική ώρα ΕΝΑΡΞΗΣ',
+                f"Νέα πραγματική ώρα ΕΝΑΡΞΗΣ (τώρα {format_when(started)}, ίδια ημερομηνία):", started.replace(second=0), 'new_time')
+            minimum, minimum_text = None, ''
+        elif action == 'REMOTE_END':
+            started = datetime.fromisoformat(active['timestamp'])
+            title, prompt, default, key = ('Ώρα ΛΗΞΗΣ',
+                f"Πραγματική ώρα ΛΗΞΗΣ (η ΕΝΑΡΞΗ ήταν {format_when(started)}):", now, 'when')
+            minimum, minimum_text = started.replace(second=0), 'Η ΛΗΞΗ προηγείται της ΕΝΑΡΞΗΣ (' + format_when(started) + ').'
+        else:
+            title, prompt, default, key = ('Ώρα ΕΝΑΡΞΗΣ',
+                f"Πραγματική ώρα ΕΝΑΡΞΗΣ για {person.full_name} (προτείνεται η τρέχουσα):", now, 'when')
+            minimum, minimum_text = None, ''
+        answer = ask_moment(self, title, prompt, default, reason=True, reason_label='Αιτιολογία μεταβολής',
+                            minimum=minimum, minimum_text=minimum_text)
+        if not answer:
+            return
+        moment = answer['moment']
+        if action == 'CORRECT_START' and moment.date() != started.date():
+            QMessageBox.warning(self, 'Έλεγχος', 'Η διόρθωση περιορίζεται στην ίδια ημερομηνία.'); return
+        values[key] = moment.isoformat(timespec='seconds')
+        values.update(reason=answer['reason'], confirm_old=answer['confirm_old'])
         label = {'REMOTE_START': 'Απομακρυσμένη ΕΝΑΡΞΗ', 'REMOTE_END': 'Απομακρυσμένη ΛΗΞΗ',
                  'CORRECT_START': 'Διόρθωση ώρας ΕΝΑΡΞΗΣ'}[action]
-        previous = active['timestamp'] if active else 'Χωρίς ανοικτή καταχώριση'
+        previous = format_when(active['timestamp']) if active else 'Χωρίς ανοικτή καταχώριση'
         place = active['position'] if active else values['position']
-        self.change(action, description=f'{label}\n{person.full_name} — ΑΓΜΣ {agms}\nΘέση {place}\n'
-            f'Προηγούμενη ώρα: {previous}\nΝέα ώρα: {values.get("new_time", values["when"])}\nΑιτιολογία: {reason}', **values)
+        description = (f'{label}\n{person.full_name} — ΑΓΜΣ {agms}\nΘέση {place}\n'
+                       f'Προηγούμενη ώρα: {previous}\nΝέα ώρα: {format_when(moment)}\nΑιτιολογία: {answer["reason"]}')
+        self._pending = dict(action=action, values=values, description=description)
+        self.submit('check', self.endpoint.conflicts, self.officer.text().strip(), action, values)
 
     def import_people(self):
         path, _ = QFileDialog.getOpenFileName(self, 'Κεντρική ενημέρωση προσωπικού', '', 'Excel (*.xlsx *.xlsm)')
@@ -290,8 +414,10 @@ class CentralOfficerWindow(QMainWindow):
         agms = QLineEdit(self.target.text().strip())
         booth = QComboBox(); booth.addItems([str(i) for i in range(1,15)])
         way = QComboBox(); way.addItems(['ΕΙΣΟΔΟΣ','ΕΞΟΔΟΣ'])
-        started = QLineEdit(); started.setPlaceholderText('YYYY-MM-DD HH:MM:SS')
-        ended = QLineEdit(); ended.setPlaceholderText('YYYY-MM-DD HH:MM:SS')
+        now = datetime.now().replace(second=0, microsecond=0)
+        started = QDateTimeEdit(to_qt(now)); ended = QDateTimeEdit(to_qt(now))
+        for editor in (started, ended):
+            editor.setDisplayFormat('dd/MM/yyyy HH:mm'); editor.setCalendarPopup(True)
         reason = QPlainTextEdit(); reason.setMaximumHeight(75)
         for title, widget in [('ΑΓΜΣ',agms),('Θέση',booth),('Κατεύθυνση',way),
                               ('ΕΝΑΡΞΗ',started),('ΛΗΞΗ',ended),('Αιτιολογία',reason)]:
@@ -304,7 +430,7 @@ class CentralOfficerWindow(QMainWindow):
             return None
         values = dict(agms=agms.text().strip(),position=booth.currentText(),
                       direction=way.currentText(),reason=reason.toPlainText().strip(),
-                      start_at=started.text().strip(),end_at=ended.text().strip())
+                      start_at=from_qt(started.dateTime()),end_at=from_qt(ended.dateTime()))
         dialog.deleteLater()
         return values
 
@@ -318,27 +444,23 @@ class CentralOfficerWindow(QMainWindow):
         values = self.history_values()
         if values is None:
             return
-        try:
-            start = datetime.fromisoformat(values['start_at'])
-            end = datetime.fromisoformat(values['end_at'])
-            if end <= start:
-                raise ValueError()
-        except ValueError:
+        start, end = values['start_at'], values['end_at']
+        if end <= start or end > datetime.now() + timedelta(minutes=2):
             QMessageBox.warning(self, 'Έλεγχος', 'Ελέγξτε τις πραγματικές ημερομηνίες και ώρες.')
             return
         values.update(shift_id=str(identifier),start_at=start.isoformat(timespec='seconds'),
                       end_at=end.isoformat(timespec='seconds'))
         self.change('HISTORICAL_ADD',
-                    description='Προσθήκη ολοκληρωμένης εργασίας στην αναφορά '+str(identifier)+';',
+                    description=f'Προσθήκη ολοκληρωμένης εργασίας {format_when(start)} – {format_when(end)} στην αναφορά '+str(identifier)+';',
                     **values)
 
     def search_reports(self):
         day, ok = QInputDialog.getText(self, 'Αναζήτηση βάρδιας',
-                                        'Ημερομηνία έναρξης βάρδιας (YYYY-MM-DD)')
+                                        'Ημερομηνία έναρξης βάρδιας (ΗΗ/ΜΜ/ΕΕΕΕ)')
         if not ok:
             return
         try:
-            value = datetime.fromisoformat(day.strip()).date().isoformat()
+            value = parse_day(day).isoformat()
         except ValueError:
             QMessageBox.warning(self, 'Έλεγχος', 'Μη έγκυρη ημερομηνία.')
             return
