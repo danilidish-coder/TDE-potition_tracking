@@ -14,8 +14,11 @@ NOT RUN: πραγματικός SMB, πολλοί σταθμοί, αλλαγή �
 ## Αρχείο
 | Στοιχείο | Τιμή |
 |---|---|
-| Αρχείο | `TDE_Katagrafi_Theseon_v1.2.8.exe` |
-| SHA256 | `6032b6bcd5094252918aaeced854b7b1fcbe3e478ed71c6f65ea531212ca8231` |
-| Bytes | 63460281 |
+| Αρχείο | `TDE_Katagrafi_Theseon_v1.2.8b.exe` |
+| SHA256 | `a60602c139c77297b3a49901e3ed5c4dc1d678ae5fc5fc793482b2851add1ef4` |
+| Bytes | 63462604 |
 | Source commit | `dc34596cdc79400f533c64c53322bdad167687c3` |
 | CI run | 40912647215 (source-gates SUCCESS, candidate-exe SUCCESS, frozen selftest PASS, παράθυρα v1.2.8 χειριστή και ΑΞΥΠ ανοίγουν) |
+
+## Ενημέρωση v1.2.8b
+ΕΞΕΛΕΓΜΕΝΟ EXE: commit 6d4005d, run 40925915115. Διορθώσεις: ΠΡΟΣΘΗΚΗ ΕΡΓΑΣΙΑΣ βρίσκει άτομο με ΑΓΜΣ ή όνομα, η επιλεγμένη αναφορά διατηρείται, ευανάγνωστο κείμενο επιβεβαίωσης.

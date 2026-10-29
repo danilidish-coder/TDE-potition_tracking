@@ -231,11 +231,11 @@ jobs:
       actions: read
       contents: read
     env:
-      SOURCE_RUN: "40912647215"
-      ARTIFACT: TDE-CANDIDATE-v1.2.8-dc34596cdc79400f533c64c53322bdad167687c3-40912647215
-      EXPECTED_SHA256: 6032b6bcd5094252918aaeced854b7b1fcbe3e478ed71c6f65ea531212ca8231
-      EXPECTED_BYTES: "63460281"
-      EXE: TDE_Katagrafi_Theseon_v1.2.8.exe
+      SOURCE_RUN: "40925915115"
+      ARTIFACT: TDE-CANDIDATE-v1.2.8-6d4005d63ee4530d20ba027d3f0fbaa0575986a6-40925915115
+      EXPECTED_SHA256: a60602c139c77297b3a49901e3ed5c4dc1d678ae5fc5fc793482b2851add1ef4
+      EXPECTED_BYTES: "63462604"
+      EXE: TDE_Katagrafi_Theseon_v1.2.8b.exe
     steps:
       - name: Fetch the verified artifact and re-check its identity
         env:
