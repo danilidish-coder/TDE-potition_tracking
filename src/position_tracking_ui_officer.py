@@ -225,9 +225,14 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
             for col, key in enumerate(['agms','full_name','position','direction','timestamp']):
                 self.active_table.setItem(row, col, QTableWidgetItem(format_when(active[key]) if key == 'timestamp' else active[key]))
         self.booths.set_active(state['active'])
+        selected = self.reports.currentData()
         self.reports.clear(); self.reports.addItem('Τρέχουσα αναφορά', '')
         for shift in state['reports']:
             self.reports.addItem(self.shift_label(shift), shift['shift_id'])
+        if selected:
+            # Keep the chosen report after every refresh, so ΑΝΑΦΟΡΑ ΕΡΓΑΣΙΑΣ opens the
+            # same shift the work was just added to.
+            self.reports.setCurrentIndex(max(0, self.reports.findData(selected)))
         self.recipient.clear(); self.recipient.addItem('Όλοι οι ενεργοί σταθμοί', '')
         labels = state.get('station_labels', {})
         for client in state['clients']:

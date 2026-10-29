@@ -132,6 +132,12 @@ class ChosenTimes(unittest.TestCase):
         self.assertTrue(seen and seen[0], 'dialog must show the matched person')
         self.assertEqual(len(OfficerStore(self.root).historical_for_shift(shift_id)), 1)
         self.assertEqual(OfficerStore(self.root).historical_for_shift(shift_id)[0]['agms'], '999002')
+        # The chosen report stays selected after the refresh, and its text shows the added work.
+        self.assertEqual(self.window.reports.currentData(), shift_id)
+        from position_tracking_report_text import build_roster_shift_text
+        store = OfficerStore(self.root)
+        text = build_roster_shift_text(store, store.get_shift(shift_id), {p.agms: p for p in self.window._state['people']})
+        self.assertIn('ΙΣΤΟΡΙΚΗ ΚΑΤΑΧΩΡΙΣΗ', text); self.assertIn('TARGET', text)
 
     def test_time_dialog_helper_rules(self):
         now = datetime(2026, 10, 29, 18, 0)
