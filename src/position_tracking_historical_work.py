@@ -5,7 +5,7 @@ Phase D3 stage A. Public UI/report exposure is deliberately a later gate.
 from __future__ import annotations
 from datetime import datetime
 import json
-from position_tracking_common import _clean, _norm_search
+from position_tracking_common import _clean, _norm_search, format_when
 from position_tracking_store_io import BusyError
 
 
@@ -157,11 +157,14 @@ class HistoricalWorkMixin:
             if start_at >= shift_end or end_at <= shift_start:
                 raise ValueError("Η εργασία δεν ανήκει στο επιλεγμένο διάστημα βάρδιας.")
 
-            def conflict(other_agms, other_position):
+            def conflict(other_agms, other_position, began="", ended=""):
+                def when(value):
+                    return format_when(value) if value else "σε εξέλιξη"
+                span = f" (θέση {other_position}, {when(began)} – {when(ended)})" if began else ""
                 if agms == other_agms:
-                    raise ValueError("Υπάρχει ήδη καταγεγραμμένη εργασία του ίδιου ΑΓΜΣ στο διάστημα.")
+                    raise ValueError("Ο ίδιος αστυνομικός έχει ήδη καταγεγραμμένη εργασία στο διάστημα" + span + ".")
                 if position == other_position:
-                    raise ValueError("Η φυσική θέση είναι ήδη κατειλημμένη στο διάστημα.")
+                    raise ValueError("Η θέση " + position + " είναι ήδη κατειλημμένη στο διάστημα" + span + ".")
 
             # Canonical committed events cover both ordinary END and atomic handovers,
             # including an END not yet copied into the personnel_sessions index.
@@ -178,16 +181,16 @@ class HistoricalWorkMixin:
             for item in actual:
                 if item["started"] and item["started"] < stamp_end and (
                         item["ended"] is None or item["ended"] > stamp_start):
-                    conflict(_clean(item["agms"]), _clean(item["position"]))
+                    conflict(_clean(item["agms"]), _clean(item["position"]), item["started"], item["ended"])
             # Legacy indexed sessions can predate the canonical operations migration.
-            rows = db.execute("""SELECT agms,position FROM personnel_sessions
+            rows = db.execute("""SELECT agms,position,start_at,end_at FROM personnel_sessions
                                  WHERE start_at<? AND end_at>?""", (stamp_end, stamp_start)).fetchall()
             for row in rows:
-                conflict(_clean(row["agms"]), _clean(row["position"]))
-            rows = db.execute("""SELECT agms,position FROM historical_work
+                conflict(_clean(row["agms"]), _clean(row["position"]), row["start_at"], row["end_at"])
+            rows = db.execute("""SELECT agms,position,start_at,end_at FROM historical_work
                                  WHERE start_at<? AND end_at>?""", (stamp_end, stamp_start)).fetchall()
             for row in rows:
-                conflict(_clean(row["agms"]), _clean(row["position"]))
+                conflict(_clean(row["agms"]), _clean(row["position"]), row["start_at"], row["end_at"])
             receipt = {**intent, "record_id": action_id, "before": None,
                        "after": payload, "result": payload}
             self._insert_officer_action(db, receipt)

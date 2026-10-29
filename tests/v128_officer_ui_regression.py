@@ -142,6 +142,22 @@ class ChosenTimes(unittest.TestCase):
         text = build_roster_shift_text(store, store.get_shift(shift_id), {p.agms: p for p in self.window._state['people']})
         self.assertIn('ΙΣΤΟΡΙΚΗ ΚΑΤΑΧΩΡΙΣΗ', text); self.assertIn('TARGET', text)
 
+    def test_refused_add_is_shown_and_not_hidden_by_the_refresh(self):
+        self.run_with(minute(hours=3), self.window.start_shift.click)
+        self.run_with(minute(minutes=10), self.window.end_shift.click)
+        self.window.refresh(); self.wait(lambda: self.window._future is None and self.window.reports.count() > 1)
+        shift_id = self.window.reports.itemData(1)
+        with patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes), \
+                patch.object(QMessageBox, 'warning') as warning:
+            self.window.change('HISTORICAL_ADD', description='x', shift_id=shift_id, agms='999002', position='3',
+                               direction='ΕΙΣΟΔΟΣ', start_at=minute(hours=9).isoformat(timespec='seconds'),
+                               end_at=minute(hours=8).isoformat(timespec='seconds'), reason='Outside the shift')
+            self.settle()
+            self.wait(lambda: self.window._future is None)
+        self.assertTrue(warning.called)
+        self.assertIn('δεν ανήκει', warning.call_args.args[2])
+        self.assertIn('ΔΕΝ ΕΓΙΝΕ', self.window.info.text())
+
     def test_time_dialog_helper_rules(self):
         now = datetime(2026, 10, 29, 18, 0)
         self.assertEqual(problem_with(now + timedelta(hours=1), now)[0], 'Δεν επιτρέπεται μελλοντική ώρα.')

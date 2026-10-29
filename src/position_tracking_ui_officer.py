@@ -42,6 +42,7 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
         self._worker = SingleFlightWorker('TDE-officer')
         self._closing = False
         self._pending = None
+        self._refusal = ''
         self.setWindowTitle(f'Κεντρικό πάνελ ΑΞΥΠ v{CENTRAL_VERSION}{CENTRAL_REVISION}')
         self.resize(1180, 900)
         self.setMinimumSize(980, 700)
@@ -177,7 +178,12 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
             elif kind == 'mutation':
                 self.info.setText(result.message)
                 if result.status != 'UNKNOWN':
-                    self._request = None; self.refresh()
+                    self._request = None
+                    if result.status != 'CONFIRMED':
+                        # The refresh below redraws the panel: keep the refusal visible.
+                        self._refusal = 'ΔΕΝ ΕΓΙΝΕ Η ΚΑΤΑΧΩΡΗΣΗ.\n' + result.message
+                        QMessageBox.warning(self, 'Η ενέργεια δεν έγινε', result.message)
+                    self.refresh()
             elif kind == 'preview':
                 data, count = result
                 self.change('PERSONNEL_IMPORT', workbook=data, expected_revision=self._state['roster_revision'],
@@ -238,7 +244,8 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
         for client in state['clients']:
             self.recipient.addItem(labels.get(client['client_id']) or (client.get('computer', '') + ' / ' + client['client_id']),
                                    client['client_id'])
-        self.info.setText('Κεντρικά δεδομένα επαληθεύτηκαν.')
+        refusal, self._refusal = self._refusal, ''
+        self.info.setText(refusal or 'Κεντρικά δεδομένα επαληθεύτηκαν.')
 
     def change(self, action, description='', workbook=b'', **values):
         if not self._state or self._future is not None or self._request:
