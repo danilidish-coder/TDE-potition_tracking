@@ -165,20 +165,25 @@ class ChosenTimes(unittest.TestCase):
         self.run_with(minute(minutes=20), lambda: self.window.physical('REMOTE_END'))
         self.window.refresh(); self.wait(lambda: self.window._future is None and self.window._state is not None)
         with patch.object(QMessageBox, 'warning') as warning:
-            self.window.target.setText('999003'); self.window.correct_end()
+            self.window.target.setText('999003'); self.window.correct_end(); self.settle()
         self.assertTrue(warning.called)  # κανείς άλλος δεν έχει ολοκληρωμένη εργασία
         self.window.target.setText('999002')
         corrected = minute(hours=3)
-        with patch.object(QInputDialog, 'getItem', return_value=('', True)) as pick, \
+        answers = iter(['first', 'Ώρα ΛΗΞΗΣ'])
+        with patch.object(QInputDialog, 'getItem') as pick, \
                 patch('position_tracking_ui_officer.ask_moment', return_value=self.chosen(corrected, 'Left the booth at three')), \
                 patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes) as confirm:
             pick.side_effect = lambda parent, title, label, items, *a: (items[0], True)
             self.window.correct_end(); self.settle()
-        self.assertIn('Νέα ΛΗΞΗ', confirm.call_args.args[2])
+        self.assertIn('Νέα ώρα ΛΗΞΗΣ', confirm.call_args.args[2])
         row = OfficerStore(self.root).search_personnel_sessions(person_query='999002')[0]
         self.assertEqual(row['end_at'], corrected.isoformat(timespec='seconds'))
-        self.assertEqual(self.window._state['recent_sessions'][0]['end_at'], corrected.isoformat(timespec='seconds'))
         self.assertTrue(self.window.correct_end_btn.isEnabled())
+
+    def test_overlap_check_button_shows_the_report(self):
+        with patch('position_tracking_ui_officer.QDialog.exec', return_value=0) as shown:
+            self.window.overlaps_btn.click(); self.settle(); self.wait(lambda: shown.called)
+        self.assertTrue(shown.called)
 
     def test_time_dialog_helper_rules(self):
         now = datetime(2026, 10, 29, 18, 0)

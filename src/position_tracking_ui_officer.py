@@ -43,6 +43,7 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
         self._closing = False
         self._pending = None
         self._refusal = ''
+        self._closed_person = None
         self.setWindowTitle(f'Κεντρικό πάνελ ΑΞΥΠ v{CENTRAL_VERSION}{CENTRAL_REVISION}')
         self.resize(1180, 900)
         self.setMinimumSize(980, 700)
@@ -88,7 +89,7 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
         self.remote_start = self.button(row, 'ΑΠΟΜΑΚΡΥΣΜΕΝΗ ΕΝΑΡΞΗ', lambda: self.physical('REMOTE_START'))
         self.remote_end = self.button(row, 'ΑΠΟΜΑΚΡΥΣΜΕΝΗ ΛΗΞΗ', lambda: self.physical('REMOTE_END'))
         self.correct_btn = self.button(row, 'ΔΙΟΡΘΩΣΗ ΩΡΑΣ ΕΝΑΡΞΗΣ', lambda: self.physical('CORRECT_START'))
-        self.correct_end_btn = self.button(row, 'ΔΙΟΡΘΩΣΗ ΩΡΑΣ ΛΗΞΗΣ', self.correct_end)
+        self.correct_end_btn = self.button(row, 'ΔΙΟΡΘΩΣΗ ΟΛΟΚΛΗΡΩΜΕΝΗΣ ΕΡΓΑΣΙΑΣ', self.correct_end)
         self.booths = BoothMapWidget(); tabs.addTab(self.booths, 'Σχέδιο γκισέ')
         reports_page = QWidget(); reports_layout = QVBoxLayout(reports_page); tabs.addTab(reports_page, 'Αναφορές / μηνύματα')
         self.reports = QComboBox(); reports_layout.addWidget(self.reports)
@@ -98,6 +99,7 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
         self.search_reports_btn = self.button(row, 'ΑΝΑΖΗΤΗΣΗ ΒΑΡΔΙΑΣ', self.search_reports)
         self.stats_btn = self.button(row, 'ΑΤΟΜΙΚΑ ΣΤΑΤΙΣΤΙΚΑ', self.statistics)
         self.history_btn = self.button(row, 'ΙΣΤΟΡΙΚΟ ΑΛΛΑΓΩΝ', self.history)
+        self.overlaps_btn = self.button(row, 'ΕΛΕΓΧΟΣ ΕΠΙΚΑΛΥΨΕΩΝ', lambda: self.submit('overlaps', self.endpoint.overlaps, self.officer.text().strip()))
         self.shift_time_btn = self.button(row, 'ΔΙΟΡΘΩΣΗ ΩΡΑΣ ΒΑΡΔΙΑΣ', self.correct_shift_time)
         self.recipient = QComboBox(); reports_layout.addWidget(self.recipient)
         self.message = QPlainTextEdit(); self.message.setPlaceholderText('Υπηρεσιακό μήνυμα'); reports_layout.addWidget(self.message)
@@ -197,6 +199,13 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
                 self.info.setText('Βρέθηκαν αναφορές: ' + str(len(result)))
             elif kind == 'check':
                 self.after_check(result)
+            elif kind == 'sessions':
+                self.after_sessions(result)
+            elif kind == 'overlaps':
+                dlg = QDialog(self); dlg.setWindowTitle('Έλεγχος επικαλύψεων')
+                lay = QVBoxLayout(dlg); text = QPlainTextEdit(); text.setReadOnly(True)
+                text.setPlainText(result); lay.addWidget(text)
+                dlg.resize(900, 650); dlg.exec(); dlg.deleteLater()
             elif kind == 'history':
                 dlg = QDialog(self); dlg.setWindowTitle('Κεντρικό ιστορικό δηλωμένων χειρισμών')
                 lay = QVBoxLayout(dlg); text = QPlainTextEdit(); text.setReadOnly(True)

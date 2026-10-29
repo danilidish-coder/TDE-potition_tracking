@@ -169,22 +169,31 @@ class OfficerStore(SharedEventStore):
             self._upsert_shift_con(db, after)
         return receipt
 
-    def end_correction_check(self, values, moment, errors, warnings):
-        """Έλεγχοι πριν από διόρθωση ώρας ΛΗΞΗΣ θέσης που έχει ήδη κλείσει."""
+    def closed_correction_check(self, which, values, moment, errors, warnings):
+        """Έλεγχοι πριν από διόρθωση ώρας ΕΝΑΡΞΗΣ/ΛΗΞΗΣ εργασίας που έχει ήδη κλείσει. Δεν γράφει τίποτα."""
         agms, position = _clean(values.get('agms')), _clean(values.get('position'))
-        row = self._position_rows("SELECT payload FROM position_operations WHERE event_id=? AND state='COMMITTED'",
+        rows = self._position_rows("SELECT payload FROM position_operations WHERE event_id=? AND state='COMMITTED'",
                                    (_clean(values.get('expected_start_id')),))
-        if not row:
+        if not rows:
             return dict(errors=['Η καταχώριση δεν βρέθηκε πλέον. Ανανεώστε και ξαναδοκιμάστε.'], warnings=[])
-        started = datetime.fromisoformat(self._apply_start_correction(json.loads(row[0]['payload']))['timestamp'])
-        if moment <= started:
-            errors.append('Η ΛΗΞΗ πρέπει να έπεται της ΕΝΑΡΞΗΣ (' + format_when(started) + ').')
-        old_end = datetime.fromisoformat(values['expected_timestamp'])
-        if errors or moment <= old_end:
-            return dict(errors=errors, warnings=warnings)
-        low, high = old_end.isoformat(timespec='seconds'), moment.isoformat(timespec='seconds')
         mine = _clean(values.get('expected_end_id'))
-        for other in self.search_personnel_sessions(date_from=old_end.date(), date_to=moment.date()):
+        old = datetime.fromisoformat(values['expected_timestamp'])
+        other_end = None
+        for row in self.search_personnel_sessions(person_query=agms, date_from=min(old, moment).date(),
+                                                  date_to=max(old, moment).date()):
+            if _clean(row.get('end_event_id')) == mine:
+                other_end = row
+        if other_end is None:
+            return dict(errors=['Η εργασία δεν βρέθηκε πλέον. Ανανεώστε και ξαναδοκιμάστε.'], warnings=[])
+        if which == 'end' and moment <= datetime.fromisoformat(other_end['start_at']):
+            errors.append('Η ΛΗΞΗ πρέπει να έπεται της ΕΝΑΡΞΗΣ (' + format_when(other_end['start_at']) + ').')
+        if which == 'start' and moment >= datetime.fromisoformat(other_end['end_at']):
+            errors.append('Η ΕΝΑΡΞΗ πρέπει να προηγείται της ΛΗΞΗΣ (' + format_when(other_end['end_at']) + ').')
+        extends = moment > old if which == 'end' else moment < old
+        if errors or not extends:
+            return dict(errors=errors, warnings=warnings)
+        low, high = sorted((old.isoformat(timespec='seconds'), moment.isoformat(timespec='seconds')))
+        for other in self.search_personnel_sessions(date_from=min(old, moment).date(), date_to=max(old, moment).date()):
             if _clean(other.get('end_event_id')) == mine or not (other['start_at'] < high and other['end_at'] > low):
                 continue
             if _clean(other.get('agms')) == agms:
@@ -194,3 +203,46 @@ class OfficerStore(SharedEventStore):
                 warnings.append(f"Η θέση {position} είναι κατειλημμένη από {_clean(other.get('full_name'))} "
                                 f"{format_when(other['start_at'])} – {format_when(other['end_at'])}.")
         return dict(errors=errors, warnings=warnings)
+
+    def person_closed_sessions(self, agms, limit=150):
+        """Όλες οι ολοκληρωμένες εργασίες ενός ατόμου (νεότερες πρώτα), χωρίς ιστορικές καταχωρίσεις."""
+        rows = [row for row in self.search_personnel_sessions(person_query=agms)
+                if _clean(row.get('agms')) == _clean(agms) and not row.get('historical') and _clean(row.get('end_at'))]
+        return rows[:limit]
+
+    def overlap_lines(self, days=30):
+        """Κείμενο με όλες τις επικαλύψεις (ίδιο άτομο ή ίδια θέση) των τελευταίων ημερών."""
+        since = (datetime.now() - timedelta(days=days)).date()
+        items = [dict(row) for row in self.search_personnel_sessions(date_from=since) if _clean(row.get('end_at'))]
+        now = datetime.now().isoformat(timespec='seconds')
+        for active in self.active_all():
+            items.append(dict(agms=_clean(active.get('agms')), full_name=_clean(active.get('full_name')),
+                              position=_clean(active.get('position')), direction=_clean(active.get('direction')),
+                              start_at=_clean(active.get('timestamp')), end_at=now, open=True))
+        items.sort(key=lambda row: row['start_at'])
+        found = []
+        for index, first in enumerate(items):
+            for second in items[index + 1:]:
+                if second['start_at'] >= first['end_at']:
+                    continue
+                same_person = _clean(first['agms']) == _clean(second['agms'])
+                if not same_person and _clean(first['position']) != _clean(second['position']):
+                    continue
+                low, high = second['start_at'], min(first['end_at'], second['end_at'])
+                if low >= high:
+                    continue
+                label = (f"ΙΔΙΟ ΑΤΟΜΟ — {_clean(first['full_name'])} (ΑΓΜΣ {first['agms']})" if same_person
+                         else f"ΙΔΙΑ ΘΕΣΗ {first['position']}")
+
+                def line(row):
+                    end = 'ΑΝΟΙΚΤΗ' if row.get('open') else format_when(row['end_at'])
+                    who = '' if same_person else _clean(row['full_name']) + ': '
+                    return f"    {who}Θέση {row['position']} {row['direction']}  {format_when(row['start_at'])} – {end}"
+                found.append((low, label + '\n' + line(first) + '\n' + line(second) +
+                              f"\n    Επικάλυψη: {format_when(low)} – {format_when(high)}"))
+        if not found:
+            return f'Δεν βρέθηκαν επικαλύψεις τις τελευταίες {days} ημέρες.'
+        found.sort(key=lambda item: item[0])
+        return (f'Βρέθηκαν {len(found)} επικαλύψεις (τελευταίες {days} ημέρες).\n'
+                'Αν μια ΛΗΞΗ ή ΕΝΑΡΞΗ έγινε αργά, διορθώστε την με «ΔΙΟΡΘΩΣΗ ΟΛΟΚΛΗΡΩΜΕΝΗΣ ΕΡΓΑΣΙΑΣ».\n\n'
+                + '\n\n'.join(text for _, text in found))

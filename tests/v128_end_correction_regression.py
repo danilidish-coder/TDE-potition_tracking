@@ -42,7 +42,7 @@ class EndTimeCorrection(unittest.TestCase):
         return active['event_id']
 
     def session(self, agms='999002'):
-        return next(s for s in self.endpoint.snapshot('999001')['recent_sessions'] if s['agms'] == agms)
+        return self.endpoint.person_sessions('999001', agms)[0]
 
     def correct(self, session, minutes_ago, reason='Η ΛΗΞΗ πατήθηκε αργά', **extra):
         values = dict(agms=session['agms'], position=session['position'], expected_start_id=session['start_event_id'],
@@ -126,9 +126,38 @@ class EndTimeCorrection(unittest.TestCase):
             store._upsert_personnel_session_con(db, start, raw_end)
         self.assertEqual(self.session()['end_at'], self.iso(minutes=180))
 
+    def test_start_of_closed_work_can_be_corrected_too(self):
+        self.late_end(started=300, ended=60)
+        mine = self.session()
+        values = dict(agms='999002', position='3', expected_start_id=mine['start_event_id'],
+                      expected_end_id=mine['end_event_id'], expected_timestamp=mine['start_at'],
+                      new_time=self.iso(minutes=240), reason='Η ΕΝΑΡΞΗ έγινε νωρίτερα')
+        self.assertEqual(self.act('CORRECT_CLOSED_START', **values).status, 'CONFIRMED')
+        after = self.session()
+        self.assertEqual(after['start_at'], self.iso(minutes=240))
+        self.assertEqual(after['duration_seconds'], 180 * 60)
+        # Ξανά με παλιά εικόνα → απορρίπτεται· ΕΝΑΡΞΗ μετά τη ΛΗΞΗ → απορρίπτεται
+        self.assertEqual(self.act('CORRECT_CLOSED_START', **values).status, 'NOT_COMMITTED')
+        values.update(expected_timestamp=after['start_at'], new_time=self.iso(minutes=30))
+        result = self.act('CORRECT_CLOSED_START', **values)
+        self.assertEqual(result.status, 'NOT_COMMITTED'); self.assertIn('προηγείται', result.message)
+
+    def test_overlap_report_finds_late_end_and_disappears_after_correction(self):
+        self.late_end(agms='999002', position='3', started=300, ended=30)
+        self.late_end(agms='999003', position='3', started=150, ended=100)
+        store = OfficerStore(self.root)
+        text = self.endpoint.overlaps('999001')
+        self.assertIn('ΙΔΙΑ ΘΕΣΗ 3', text); self.assertIn('Επικάλυψη', text)
+        self.assertEqual(self.correct(self.session('999002'), 150).status, 'CONFIRMED')
+        self.assertIn('Δεν βρέθηκαν επικαλύψεις', self.endpoint.overlaps('999001'))
+        # Ίδιο άτομο, δύο θέσεις ταυτόχρονα
+        self.late_end(agms='999002', position='6', started=90, ended=70)
+        self.late_end(agms='999002', position='7', started=80, ended=60)
+        self.assertIn('ΙΔΙΟ ΑΤΟΜΟ', self.endpoint.overlaps('999001'))
+
     def test_open_position_is_not_an_end_correction(self):
         self.ok('REMOTE_START', agms='999002', position='5', direction='ΕΞΟΔΟΣ', when=self.iso(minutes=40), reason='open position')
-        self.assertEqual([s for s in self.endpoint.snapshot('999001')['recent_sessions']], [])
+        self.assertEqual(self.endpoint.person_sessions('999001', '999002'), [])
 
 
 if __name__ == '__main__':

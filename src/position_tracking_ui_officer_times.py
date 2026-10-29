@@ -103,42 +103,56 @@ class OfficerTimesMixin:
         self.change(pending['action'], description=description, **pending['values'])
 
     def correct_end(self):
-        """Διόρθωση ώρας ΛΗΞΗΣ εργασίας που έχει ήδη κλείσει (π.χ. ξεχάστηκε η ΛΗΞΗ και πατήθηκε αργά)."""
+        """Διόρθωση ώρας ΕΝΑΡΞΗΣ ή ΛΗΞΗΣ εργασίας που έχει ήδη κλείσει (π.χ. η ΛΗΞΗ πατήθηκε αργά)."""
         if not self._state or self._future is not None or self._request:
             return
         found = PersonnelRepository.find(self._state['people'], self.target.text().strip())
         if len(found) != 1:
             QMessageBox.warning(self, 'Έλεγχος', 'Επιλέξτε έναν αστυνομικό της κεντρικής λίστας (ΑΓΜΣ ή επώνυμο και όνομα).')
             return
-        person = found[0]
-        sessions = sorted((s for s in self._state.get('recent_sessions', []) if s['agms'] == person.agms),
-                          key=lambda s: s['end_at'], reverse=True)
+        self._closed_person = found[0]
+        self.submit('sessions', self.endpoint.person_sessions, self.officer.text().strip(), found[0].agms)
+
+    def after_sessions(self, sessions):
+        """Συνέχεια μετά την ανάκτηση των ολοκληρωμένων εργασιών του ατόμου."""
+        person = self._closed_person
         if not sessions:
-            QMessageBox.warning(self, 'Διόρθωση ώρας ΛΗΞΗΣ',
-                                'Δεν βρέθηκε ολοκληρωμένη εργασία του ατόμου τις τελευταίες 72 ώρες.\n'
+            QMessageBox.warning(self, 'Διόρθωση εργασίας',
+                                'Δεν βρέθηκε ολοκληρωμένη εργασία του ατόμου.\n'
                                 'Αν η θέση είναι ακόμη ανοικτή, χρησιμοποιήστε ΑΠΟΜΑΚΡΥΣΜΕΝΗ ΛΗΞΗ.')
             return
         labels = [f"Θέση {s['position']} {s['direction']}:  {format_when(s['start_at'])} – {format_when(s['end_at'])}"
                   for s in sessions]
-        label, ok = QInputDialog.getItem(self, 'Διόρθωση ώρας ΛΗΞΗΣ',
+        label, ok = QInputDialog.getItem(self, 'Διόρθωση εργασίας',
                                          f'Ποια εργασία του {person.full_name} διορθώνεται;', labels, 0, False)
         if not ok:
             return
         chosen = sessions[labels.index(label)]
+        which_label, ok = QInputDialog.getItem(self, 'Διόρθωση εργασίας', 'Ποια ώρα διορθώνεται;',
+                                               ['Ώρα ΛΗΞΗΣ', 'Ώρα ΕΝΑΡΞΗΣ'], 0, False)
+        if not ok:
+            return
+        is_end = which_label == 'Ώρα ΛΗΞΗΣ'
         started, ended = datetime.fromisoformat(chosen['start_at']), datetime.fromisoformat(chosen['end_at'])
-        answer = self._ask(self, 'Πραγματική ώρα ΛΗΞΗΣ',
-                           f"Νέα πραγματική ώρα ΛΗΞΗΣ (τώρα {format_when(ended)}, η ΕΝΑΡΞΗ ήταν {format_when(started)}):",
-                           ended.replace(second=0), reason=True, reason_label='Αιτιολογία μεταβολής',
-                           minimum=started.replace(second=0) + timedelta(minutes=1),
-                           minimum_text='Η ΛΗΞΗ πρέπει να έπεται της ΕΝΑΡΞΗΣ (' + format_when(started) + ').')
+        current = ended if is_end else started
+        limit = dict(minimum=started.replace(second=0) + timedelta(minutes=1),
+                     minimum_text='Η ΛΗΞΗ πρέπει να έπεται της ΕΝΑΡΞΗΣ (' + format_when(started) + ').') if is_end else {}
+        answer = self._ask(self, 'Διόρθωση ' + which_label.lower(),
+                           f"Νέα πραγματική {which_label.lower()} (τώρα {format_when(current)}):",
+                           current.replace(second=0), reason=True, reason_label='Αιτιολογία μεταβολής', **limit)
         if not answer:
             return
+        if not is_end and answer['moment'] >= ended:
+            QMessageBox.warning(self, 'Έλεγχος', 'Η ΕΝΑΡΞΗ πρέπει να προηγείται της ΛΗΞΗΣ (' + format_when(ended) + ').')
+            return
+        action = 'CORRECT_END' if is_end else 'CORRECT_CLOSED_START'
         values = dict(agms=person.agms, position=chosen['position'], expected_start_id=chosen['start_event_id'],
-                      expected_end_id=chosen['end_event_id'], expected_timestamp=chosen['end_at'],
+                      expected_end_id=chosen['end_event_id'], expected_timestamp=current.isoformat(timespec='seconds'),
                       new_time=answer['moment'].isoformat(timespec='seconds'),
                       reason=answer['reason'], confirm_old=answer['confirm_old'])
-        self._pending = dict(action='CORRECT_END', values=values,
-            description=f"Διόρθωση ώρας ΛΗΞΗΣ\n{person.full_name} — ΑΓΜΣ {person.agms}\nΘέση {chosen['position']}\n"
-                        f"ΕΝΑΡΞΗ: {format_when(started)}\nΠροηγούμενη ΛΗΞΗ: {format_when(ended)}\n"
-                        f"Νέα ΛΗΞΗ: {format_when(answer['moment'])}\nΑιτιολογία: {answer['reason']}")
-        self.submit('check', self.endpoint.conflicts, self.officer.text().strip(), 'CORRECT_END', values)
+        self._pending = dict(action=action, values=values,
+            description=f"Διόρθωση ώρας {'ΛΗΞΗΣ' if is_end else 'ΕΝΑΡΞΗΣ'}\n{person.full_name} — ΑΓΜΣ {person.agms}\n"
+                        f"Θέση {chosen['position']}\nΕΝΑΡΞΗ: {format_when(started)}\nΛΗΞΗ: {format_when(ended)}\n"
+                        f"Νέα ώρα {'ΛΗΞΗΣ' if is_end else 'ΕΝΑΡΞΗΣ'}: {format_when(answer['moment'])}\n"
+                        f"Αιτιολογία: {answer['reason']}")
+        self.submit('check', self.endpoint.conflicts, self.officer.text().strip(), action, values)
