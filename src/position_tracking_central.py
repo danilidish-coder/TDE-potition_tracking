@@ -4,6 +4,7 @@ from datetime import datetime
 import hashlib
 import json
 from pathlib import Path
+import re
 import threading
 import uuid
 
@@ -44,6 +45,7 @@ class CentralOperator:
         self._store_lock = threading.Lock()
         self._store_cache = None
         self._people_cache = None
+        self.ambiguous = ()
 
     @classmethod
     def from_shared_directory(cls, directory: Path):
@@ -86,6 +88,15 @@ class CentralOperator:
         # interrupted operation really needs recovery before it is shown.
         store.recover_if_needed()
         agms = _clean(agms)
+        self.ambiguous = ()
+        if agms and not re.fullmatch(r"\d+(\.0+)?", agms.replace(" ", "")):
+            # Typed a name: resolve it through the personnel list. The record is
+            # always kept under the person's AGMS, never under the typed text.
+            found = PersonnelRepository.find(self.people(store), agms)
+            if len(found) != 1:
+                self.ambiguous = tuple(found[:6])
+                return None, None
+            agms = found[0].agms
         active = store.get_active(agms) if agms else None
         if active:
             return self._active_person(active), active

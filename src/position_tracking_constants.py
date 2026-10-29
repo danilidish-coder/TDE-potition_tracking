@@ -5,5 +5,6 @@ APP_VERSION = "1.2.6"
 # Central-only application line (position_tracking_central_main.py). APP_VERSION above
 # stays tied to the approved legacy build and its version-consistency tests.
 CENTRAL_VERSION = "1.2.7"
+CENTRAL_REVISION = "b"  # second build of 1.2.7: shown in the window titles
 
 STATISTICS_PIN_SHA256 = "ca444860f0e1ddca9596007253ea43b3a5133780b0a566d9a096a53568c063fb"

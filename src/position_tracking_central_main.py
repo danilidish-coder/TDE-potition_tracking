@@ -20,7 +20,7 @@ import sys
 REQUIRED_MODULES = (
     "PySide6.QtWidgets", "PySide6.QtPrintSupport", "openpyxl",
     "position_tracking_central", "position_tracking_ui_central", "position_tracking_ui_officer",
-    "position_tracking_pdf", "position_tracking_store",
+    "position_tracking_pdf", "position_tracking_store", "position_tracking_ui_central_look", "position_tracking_personnel",
 )
 # Deliberately absent: python-docx, position_tracking_documents and
 # position_tracking_statistics belong to the legacy application only.
@@ -62,6 +62,8 @@ def run_selftest(directory: str | Path) -> int:
         start = PositionRequest("START", "999001", "1", "ΕΙΣΟΔΟΣ")
         check("START confirmed", operator.execute(start).status == "CONFIRMED")
         check("START repeat is idempotent", operator.execute(start).event["event_id"] == start.operation_id)
+        person, active = operator.lookup("synthetic")
+        check("lookup by surname", bool(person) and person.agms == "999001")
         person, active = operator.lookup("999001")
         check("active after START", bool(active) and active["event_id"] == start.operation_id)
         end = PositionRequest("END", "999001", expected_start_id=active["event_id"] if active else "")

@@ -41,7 +41,10 @@ class CentralOfficer(CentralOperator):
     def snapshot(self, officer_agms):
         store = self._store()
         people = self.people(store)
-        officer = next((p for p in people if p.agms == officer_agms), None)
+        found = PersonnelRepository.find(people, officer_agms)
+        if len(found) > 1:
+            raise ValueError('Βρέθηκαν πολλοί με αυτό το όνομα. Γράψτε επώνυμο και όνομα ή το ΑΓΜΣ.')
+        officer = found[0] if found else None
         if not officer:
             raise ValueError('Το δηλωμένο ΑΓΜΣ ΑΞΥΠ δεν υπάρχει στην κεντρική λίστα.')
         shift = store.current_shift()

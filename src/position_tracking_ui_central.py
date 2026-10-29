@@ -9,7 +9,9 @@ from PySide6.QtWidgets import (QComboBox, QFormLayout, QHBoxLayout, QLabel,
                               QVBoxLayout, QWidget)
 
 from position_tracking_central import CentralOperator, PositionRequest, UNCONFIRMED
-from position_tracking_constants import CENTRAL_VERSION
+from position_tracking_constants import CENTRAL_REVISION, CENTRAL_VERSION
+from position_tracking_ui_assets import ArrowComboBox
+from position_tracking_ui_central_look import apply_look, build_header, new_card
 from position_tracking_worker import SingleFlightWorker
 
 
@@ -50,35 +52,55 @@ class CentralOperatorWindow(QMainWindow):
         self._mail_worker = SingleFlightWorker('TDE-central-mail')
         self._mail_future = None
         self._mail_messages = []
-        self.setWindowTitle(f"Καταγραφή Θέσεων v{CENTRAL_VERSION} — κεντρική λειτουργία")
-        self.resize(800, 560)
+        self.setWindowTitle(f"Καταγραφή Θέσεων v{CENTRAL_VERSION}{CENTRAL_REVISION} — κεντρική λειτουργία")
+        self.resize(900, 760)
+        self.setMinimumSize(760, 640)
         root = QWidget(self)
         self.setCentralWidget(root)
-        layout = QVBoxLayout(root)
-        layout.setContentsMargins(28, 24, 28, 24)
-        title = QLabel("Τ.Δ.Ε. ΚΡΥΣΤΑΛΛΟΠΗΓΗΣ\nΚΑΤΑΓΡΑΦΗ ΘΕΣΕΩΝ")
+        outer = QVBoxLayout(root)
+        outer.setContentsMargins(28, 22, 28, 20)
+        outer.setSpacing(14)
+        outer.addWidget(build_header(self))
+        card = new_card()
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(12)
+        outer.addWidget(card, 1)
+        title = QLabel("ΠΡΟΣΩΠΙΚΟ")
+        title.setObjectName("cardTitle")
         title.setAlignment(Qt.AlignCenter)
-        title.setStyleSheet("font-size:22px;font-weight:800")
         layout.addWidget(title)
         form = QFormLayout()
+        form.setSpacing(12)
         self.agms_input = QLineEdit()
-        self.agms_input.setPlaceholderText("Πληκτρολογήστε Α.Γ.Μ.Σ.")
+        self.agms_input.setMinimumHeight(42)
+        self.agms_input.setPlaceholderText("Α.Γ.Μ.Σ. ή επώνυμο")
         self.agms_input.textChanged.connect(self._selection_changed)
         self.person_name = QLabel("—")
-        self.direction = QComboBox()
+        self.person_name.setObjectName("personName")
+        self.person_name.setWordWrap(True)
+        self.direction = ArrowComboBox()
         self.direction.addItems(["ΕΙΣΟΔΟΣ", "ΕΞΟΔΟΣ"])
-        self.position = QComboBox()
+        self.position = ArrowComboBox()
         self.position.addItems([str(i) for i in range(1, 15)])
+        for combo in (self.direction, self.position):
+            combo.setMinimumHeight(42)
         for label, widget in (("Α.Γ.Μ.Σ.", self.agms_input), ("Αστυνομικός", self.person_name),
                               ("ΚΑΤΕΥΘΥΝΣΗ", self.direction), ("ΘΕΣΗ", self.position)):
             form.addRow(label, widget)
         layout.addLayout(form)
         self.active_status = QLabel("ΕΛΕΓΧΟΣ ΚΕΝΤΡΙΚΩΝ ΔΕΔΟΜΕΝΩΝ…")
+        self.active_status.setObjectName("statusBox")
+        self.active_status.setAlignment(Qt.AlignCenter)
         self.active_status.setWordWrap(True)
         layout.addWidget(self.active_status)
+        layout.addStretch()
         row = QHBoxLayout()
+        row.setSpacing(12)
         self.start_btn = QPushButton("ΕΝΑΡΞΗ")
+        self.start_btn.setObjectName("startButton")
         self.end_btn = QPushButton("ΛΗΞΗ")
+        self.end_btn.setObjectName("endButton")
         self.start_btn.clicked.connect(lambda: self._act("START"))
         self.end_btn.clicked.connect(lambda: self._act("END"))
         for button in (self.start_btn, self.end_btn):
@@ -87,19 +109,27 @@ class CentralOperatorWindow(QMainWindow):
             row.addWidget(button)
         layout.addLayout(row)
         self.recheck_btn = QPushButton("ΕΠΑΝΕΛΕΓΧΟΣ ΚΕΝΤΡΙΚΩΝ ΔΕΔΟΜΕΝΩΝ")
+        self.recheck_btn.setObjectName("metalPrimary")
+        self.recheck_btn.setMinimumHeight(44)
         self.recheck_btn.clicked.connect(self._recheck)
         layout.addWidget(self.recheck_btn)
         self.info = QLabel("")
+        self.info.setObjectName("infoBox")
+        self.info.setAlignment(Qt.AlignCenter)
         self.info.setWordWrap(True)
-        layout.addWidget(self.info)
+        outer.addWidget(self.info)
         self.service_message = QLabel(''); self.service_message.setWordWrap(True)
+        self.service_message.setObjectName("infoBox"); self.service_message.setVisible(False)
         self.ack_message = QPushButton('ΕΛΑΒΑ ΓΝΩΣΗ ΥΠΗΡΕΣΙΑΚΟΥ ΜΗΝΥΜΑΤΟΣ')
+        self.ack_message.setObjectName("metalPrimary")
         self.ack_message.setVisible(False); self.ack_message.clicked.connect(self._ack_message)
-        layout.addWidget(self.service_message); layout.addWidget(self.ack_message)
-        layout.addStretch()
+        outer.addWidget(self.service_message); outer.addWidget(self.ack_message)
         self.exit_btn = QPushButton("ΕΞΟΔΟΣ ΑΠΟ ΤΟ ΠΡΟΓΡΑΜΜΑ")
+        self.exit_btn.setObjectName("exitButton")
+        self.exit_btn.setMinimumHeight(44)
         self.exit_btn.clicked.connect(self.close)
-        layout.addWidget(self.exit_btn)
+        outer.addWidget(self.exit_btn)
+        apply_look(self, root)
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
         self._timer.start(100)
@@ -120,9 +150,11 @@ class CentralOperatorWindow(QMainWindow):
                 self._mail_messages = self._mail_future.result()
             except Exception:
                 self.service_message.setText('Δεν επιβεβαιώθηκε ο έλεγχος υπηρεσιακών μηνυμάτων.')
+                self.service_message.setVisible(True)
             else:
                 message = self._mail_messages[0] if self._mail_messages else None
                 self.service_message.setText(message['text'] if message else '')
+                self.service_message.setVisible(bool(message))
                 self.ack_message.setVisible(bool(message))
             self._mail_future = None
 
@@ -189,9 +221,11 @@ class CentralOperatorWindow(QMainWindow):
             current = self._read_agms == self.agms_input.text().strip()
             try:
                 endpoint, (person, active) = future.result()
-            except Exception:
+            except Exception as error:
                 if current and self._request is None:
                     self.active_status.setText(UNCONFIRMED)
+                    # The real reason, so a missing list is told apart from a bad file.
+                    self.info.setText("Αιτία: " + (str(error) or type(error).__name__))
                     self._person = None
                     self._active = None
                     self._dirty = False  # Explicit recheck; no network polling.
@@ -200,12 +234,21 @@ class CentralOperatorWindow(QMainWindow):
                 if current and self._request is None:
                     self._person, self._active = person, active
                     self._dirty = False
+                    if self.info.text().startswith("Αιτία:"):
+                        self.info.setText("")
                     self.person_name.setText(person.display if person else "—")
                     if active:
                         self.active_status.setText(
                             f"ΕΝΕΡΓΗ: ΘΕΣΗ {active['position']} — {active['direction']} — από {active['timestamp'].replace('T', ' ')}")
                     else:
-                        self.active_status.setText("Δεν υπάρχει ανοικτή καταχώριση" if person else "Πληκτρολογήστε έγκυρο Α.Γ.Μ.Σ.")
+                        many = getattr(endpoint, "ambiguous", ())
+                        if person:
+                            self.active_status.setText("Δεν υπάρχει ανοικτή καταχώριση")
+                        elif many:
+                            self.active_status.setText("Βρέθηκαν πολλοί: " + " | ".join(p.display for p in many)
+                                                       + "\nΓράψτε επώνυμο και όνομα ή το ΑΓΜΣ.")
+                        else:
+                            self.active_status.setText("Δεν βρέθηκε. Γράψτε Α.Γ.Μ.Σ. ή επώνυμο.")
         # After MAX_ABANDONED_READS the read worker is closed for good: submitting
         # to it would raise in this 100 ms timer slot on every tick.
         if (self._dirty and self._read_future is None and self._request is None

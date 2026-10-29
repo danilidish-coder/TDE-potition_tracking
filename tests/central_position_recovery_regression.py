@@ -267,15 +267,26 @@ class RecoveryContract(unittest.TestCase):
         self.assertEqual(self.events("END"), [])
         self.assertIsNotNone(self.store.get_active(self.person.agms))
 
-    def test_legacy_duplicate_end_evidence_blocks_recovery(self):
+    def test_legacy_duplicate_end_is_kept_for_review_and_does_not_block_start(self):
+        """Older versions could record a second END for one START. The store must
+        open, keep one END as the truth, list the other for review and never
+        touch the original files."""
         self.start()
         ended = self.end()
         duplicate = {**ended, "event_id": "duplicate-end"}
         self.store._atomic_json(self.store._event_path(duplicate), duplicate)
         self.legacy_index_absent()
-        with self.assertRaises(sqlite3.IntegrityError):
-            self.reopen()
-        self.assertEqual(len(self.events("END")), 2)  # Preserve both as evidence.
+        self.reopen()  # must not raise
+        files = [f for f in self.store.events.rglob("*.json") if '"END"' in f.read_text(encoding="utf-8")]
+        self.assertEqual(len(files), 2)  # Both files preserved as evidence.
+        with self.store._shift_db_connect() as db:
+            ends = db.execute("SELECT event_id FROM position_operations WHERE kind='END'").fetchall()
+            review = db.execute("SELECT event_id, kept_event_id FROM legacy_duplicate_review").fetchall()
+        self.assertEqual(len(ends), 1)
+        self.assertEqual(len(review), 1)
+        self.assertNotEqual(review[0][0], review[0][1])
+        self.assertEqual({ends[0][0], review[0][0]}, {"end-original", "duplicate-end"})
+        self.assertIsNone(self.store.get_active(self.person.agms))
 
     def test_old_aborted_end_bytes_cannot_bypass_corrected_start_on_recovery(self):
         self.when = self.when.replace(hour=12, minute=0)

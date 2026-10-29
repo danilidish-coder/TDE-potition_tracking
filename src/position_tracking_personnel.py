@@ -42,8 +42,8 @@ class PersonnelRepository:
         "ΑΓΜΣ", "AΓΜΣ", "AGMS", "ΑΓΜ", "AΓΜ", "ΑΡΙΘΜΟΣΜΗΤΡΩΟΥ",
         "ΑΡΙΘΜΗΤΡΩΟΥ", "ΜΗΤΡΩΟ", "ΑΡΜΗΤΡΩΟΥ", "ΑΡΙΘΜΟΣΜΗΤΡ",
     }
-    RANK_ALIASES = {"ΒΑΘΜΟΣ", "ΒΑΘΜ", "RANK"}
-    SURNAME_ALIASES = {"ΕΠΩΝΥΜΟ", "ΕΠΩΝ", "SURNAME", "LASTNAME"}
+    RANK_ALIASES = {"ΒΑΘΜΟΣ", "ΒΑΘΜ", "ΒΑΘΜΙΔΑ", "RANK"}
+    SURNAME_ALIASES = {"ΕΠΩΝΥΜΟ", "ΕΠΩΝ", "ΕΠΩΝΥΜΙΑ", "ΕΠΙΘΕΤΟ", "SURNAME", "LASTNAME"}
     GIVEN_ALIASES = {"ΟΝΟΜΑ", "FIRSTNAME", "GIVENNAME"}
     FULLNAME_ALIASES = {"ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "ΟΝΟΜΑΕΠΩΝΥΜΟ", "FULLNAME"}
 
@@ -190,6 +190,37 @@ class PersonnelRepository:
         return best_col
 
     @classmethod
+    def name_key(cls, value: object) -> str:
+        """Accent-, case- and spacing-insensitive key for matching names."""
+        return cls._header_key(value)
+
+    @classmethod
+    def find(cls, people, query: object) -> list[PersonnelRecord]:
+        """Find people by AGMS (exact) or by surname / full name (any order).
+
+        A name query matches when the typed text equals the surname, the full
+        name in either order, or is the beginning of one of them (at least two
+        letters). The caller decides what to do when several people match.
+        """
+        text = _clean(query)
+        if not text:
+            return []
+        agms = cls._normalize_agms(text)
+        exact = [p for p in people if p.agms == agms]
+        if exact:
+            return exact
+        key = cls.name_key(text)
+        if len(key) < 2 or key.isdigit():
+            return []
+        full = lambda p: cls.name_key(p.surname + p.given_name)
+        full_rev = lambda p: cls.name_key(p.given_name + p.surname)
+        same = [p for p in people if key in (cls.name_key(p.surname), full(p), full_rev(p))]
+        if same:
+            return same
+        return [p for p in people if cls.name_key(p.surname).startswith(key)
+                or full(p).startswith(key) or full_rev(p).startswith(key)]
+
+    @classmethod
     def load(cls, path: str | Path) -> tuple[PersonnelRecord, ...]:
         sheets = cls._read_sheets(path)
         best_records: list[PersonnelRecord] = []
@@ -205,6 +236,18 @@ class PersonnelRepository:
                 header_row = -1
                 layout = {"agms": i_agms, "rank": -1, "surname": -1, "given": -1, "full": -1}
                 data_rows = rows
+                # No titles at all: guess the name columns from the text columns
+                # to the right of the AGMS (1 = full name, 2 = surname + name,
+                # 3 or more = rank, surname, name).
+                text_cols = [c for c in sorted({c for row in rows[:100] for c in row})
+                             if c != i_agms and sum(1 for row in rows[:100] if re.search(r"[^\W\d_]", row.get(c, ""))) >=
+                             max(1, sum(1 for row in rows[:100] if row.get(c, "")) // 2)]
+                if len(text_cols) == 1:
+                    layout["full"] = text_cols[0]
+                elif len(text_cols) == 2:
+                    layout["surname"], layout["given"] = text_cols
+                elif len(text_cols) >= 3:
+                    layout["rank"], layout["surname"], layout["given"] = text_cols[:3]
 
             merged: dict[str, PersonnelRecord] = {}
             order: list[str] = []

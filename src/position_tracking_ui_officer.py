@@ -6,11 +6,14 @@ import time
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QFormLayout, QHBoxLayout,
     QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton, QPlainTextEdit, QDialogButtonBox,
-    QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget, QInputDialog)
-from position_tracking_constants import CENTRAL_VERSION, STATISTICS_PIN_SHA256
+    QHeaderView, QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget, QInputDialog)
+from position_tracking_constants import CENTRAL_REVISION, CENTRAL_VERSION, STATISTICS_PIN_SHA256
 from position_tracking_central import UNCONFIRMED
 from position_tracking_officer import CentralOfficer, OfficerRequest
+from position_tracking_personnel import PersonnelRepository
 from position_tracking_ui_map import BoothMapWidget
+from position_tracking_ui_assets import ArrowComboBox
+from position_tracking_ui_central_look import apply_look, build_header, new_card
 from position_tracking_worker import SingleFlightWorker
 
 
@@ -35,27 +38,35 @@ class CentralOfficerWindow(QMainWindow):
         self._future = None
         self._worker = SingleFlightWorker('TDE-officer')
         self._closing = False
-        self.setWindowTitle(f'Κεντρικό πάνελ ΑΞΥΠ v{CENTRAL_VERSION}')
-        self.resize(1120, 850)
-        root = QWidget(); self.setCentralWidget(root); layout = QVBoxLayout(root)
+        self.setWindowTitle(f'Κεντρικό πάνελ ΑΞΥΠ v{CENTRAL_VERSION}{CENTRAL_REVISION}')
+        self.resize(1180, 900)
+        self.setMinimumSize(980, 700)
+        root = QWidget(); self.setCentralWidget(root)
+        outer = QVBoxLayout(root); outer.setContentsMargins(28, 22, 28, 20); outer.setSpacing(14)
+        outer.addWidget(build_header(self, 'ΚΕΝΤΡΙΚΟ ΠΑΝΕΛ ΑΞΙΩΜΑΤΙΚΟΥ ΥΠΗΡΕΣΙΑΣ'))
+        top = new_card(); layout = QVBoxLayout(top); layout.setContentsMargins(20, 14, 20, 14); layout.setSpacing(10)
+        outer.addWidget(top)
         notice = QLabel('Απλή πρόσβαση. Το ΑΓΜΣ είναι δηλωμένο στοιχείο χειριστή, όχι πιστοποιημένη ταυτότητα.')
-        notice.setWordWrap(True); layout.addWidget(notice)
-        row = QHBoxLayout(); self.officer = QLineEdit(); self.officer.setPlaceholderText('ΑΓΜΣ ΑΞΥΠ')
-        self.name = QLabel('—'); self.refresh_btn = QPushButton('ΕΠΑΝΕΛΕΓΧΟΣ')
+        notice.setObjectName('noticeBox'); notice.setWordWrap(True); layout.addWidget(notice)
+        row = QHBoxLayout(); self.officer = QLineEdit(); self.officer.setPlaceholderText('ΑΓΜΣ ή επώνυμο ΑΞΥΠ')
+        self.officer.setMinimumHeight(42)
+        self.name = QLabel('—'); self.name.setObjectName('personName')
+        self.refresh_btn = QPushButton('ΕΠΑΝΕΛΕΓΧΟΣ'); self.refresh_btn.setObjectName('metalPrimary'); self.refresh_btn.setMinimumHeight(42)
         row.addWidget(self.officer); row.addWidget(self.name, 1); row.addWidget(self.refresh_btn); layout.addLayout(row)
         self.officer.textChanged.connect(self._selection_changed)
         self.officer.editingFinished.connect(lambda: self.refresh() if self._state is None else None)
         self.refresh_btn.clicked.connect(self.refresh)
         self.info = QLabel('Συμπληρώστε το δηλωμένο ΑΓΜΣ ΑΞΥΠ και πατήστε ΕΠΑΝΕΛΕΓΧΟΣ.')
-        self.info.setWordWrap(True); layout.addWidget(self.info)
-        tabs = QTabWidget(); layout.addWidget(tabs, 1)
+        self.info.setObjectName('infoBox'); self.info.setWordWrap(True); layout.addWidget(self.info)
+        tabs = QTabWidget(); outer.addWidget(tabs, 1)
         self.actions = []
         shift_page = QWidget(); shift_layout = QVBoxLayout(shift_page); tabs.addTab(shift_page, 'Βάρδια / προσωπικό')
-        self.shift_status = QLabel('—'); shift_layout.addWidget(self.shift_status)
+        self.shift_status = QLabel('—'); self.shift_status.setObjectName('statusBox'); self.shift_status.setAlignment(Qt.AlignCenter); shift_layout.addWidget(self.shift_status)
         row = QHBoxLayout(); shift_layout.addLayout(row)
         self.start_shift = self.button(row, 'ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ', lambda: self.change('SHIFT_START',
             description='Να ξεκινήσει νέα βάρδια; Οι πραγματικές θέσεις δεν θα μεταβληθούν.'))
         self.end_shift = self.button(row, 'ΛΗΞΗ ΒΑΡΔΙΑΣ', self.end_current_shift)
+        self.end_shift.setObjectName('endButton'); self.start_shift.setObjectName('startButton')
         self.import_btn = self.button(row, 'ΚΕΝΤΡΙΚΗ ΛΙΣΤΑ ΠΡΟΣΩΠΙΚΟΥ', self.import_people)
         self.members = self.table(['ΑΓΜΣ', 'Ονοματεπώνυμο', 'Συμμετοχή']); shift_layout.addWidget(self.members)
         row = QHBoxLayout(); shift_layout.addLayout(row)
@@ -65,8 +76,8 @@ class CentralOfficerWindow(QMainWindow):
         self.active_table = self.table(['ΑΓΜΣ', 'Ονοματεπώνυμο', 'Θέση', 'Κατεύθυνση', 'ΕΝΑΡΞΗ'])
         live_layout.addWidget(self.active_table)
         form = QFormLayout(); live_layout.addLayout(form)
-        self.target = QLineEdit(); self.position = QComboBox(); self.position.addItems([str(i) for i in range(1, 15)])
-        self.direction = QComboBox(); self.direction.addItems(['ΕΙΣΟΔΟΣ', 'ΕΞΟΔΟΣ'])
+        self.target = QLineEdit(); self.position = ArrowComboBox(); self.position.addItems([str(i) for i in range(1, 15)])
+        self.direction = ArrowComboBox(); self.direction.addItems(['ΕΙΣΟΔΟΣ', 'ΕΞΟΔΟΣ'])
         form.addRow('ΑΓΜΣ αστυνομικού', self.target); form.addRow('Θέση', self.position); form.addRow('Κατεύθυνση', self.direction)
         self.active_table.itemSelectionChanged.connect(self.select_active)
         row = QHBoxLayout(); live_layout.addLayout(row)
@@ -86,11 +97,13 @@ class CentralOfficerWindow(QMainWindow):
         self.message = QPlainTextEdit(); self.message.setPlaceholderText('Υπηρεσιακό μήνυμα'); reports_layout.addWidget(self.message)
         row = QHBoxLayout(); reports_layout.addLayout(row)
         self.message_btn = self.button(row, 'ΑΠΟΣΤΟΛΗ ΜΗΝΥΜΑΤΟΣ', self.send_message)
+        apply_look(self, root)
         self._timer = QTimer(self); self._timer.timeout.connect(self.poll); self._timer.start(100)
         self.buttons()
 
     def button(self, row, label, callback):
         button = QPushButton(label); button.clicked.connect(callback); row.addWidget(button)
+        button.setObjectName('metalPrimary'); button.setMinimumHeight(44)
         self.actions.append(button)
         return button
 
@@ -99,6 +112,8 @@ class CentralOfficerWindow(QMainWindow):
         table = QTableWidget(0, len(columns)); table.setHorizontalHeaderLabels(columns)
         table.setSelectionBehavior(QTableWidget.SelectRows); table.setEditTriggers(QTableWidget.NoEditTriggers)
         table.horizontalHeader().setStretchLastSection(True)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        table.verticalHeader().setVisible(False); table.setAlternatingRowColors(True)
         return table
 
     def _selection_changed(self):
@@ -174,6 +189,9 @@ class CentralOfficerWindow(QMainWindow):
     def render(self):
         state = self._state
         self.name.setText(state['officer'].full_name + ' — δηλωμένος χειριστής')
+        if self.officer.text().strip() != state['officer'].agms:
+            # Typed by name: from here on every request carries the AGMS.
+            self.officer.blockSignals(True); self.officer.setText(state['officer'].agms); self.officer.blockSignals(False)
         shift = state['shift']
         self.shift_status.setText('Βάρδια: ' + (shift['start_at'] if shift else 'Δεν υπάρχει ενεργή βάρδια'))
         self.members.setRowCount(len(state['people']))
@@ -227,9 +245,11 @@ class CentralOfficerWindow(QMainWindow):
         if not self._state:
             return
         agms = self.target.text().strip()
-        person = next((p for p in self._state['people'] if p.agms == agms), None)
+        found = PersonnelRepository.find(self._state['people'], agms)
+        person = found[0] if len(found) == 1 else None
         if not person:
-            QMessageBox.warning(self, 'Έλεγχος', 'Επιλέξτε αστυνομικό της κεντρικής λίστας.'); return
+            QMessageBox.warning(self, 'Έλεγχος', 'Επιλέξτε έναν αστυνομικό της κεντρικής λίστας (ΑΓΜΣ ή επώνυμο και όνομα).'); return
+        agms = person.agms
         active = next((a for a in self._state['active'] if a['agms'] == agms), None)
         values = dict(agms=agms, when=datetime.now().isoformat(timespec='seconds'))
         if action == 'REMOTE_START':

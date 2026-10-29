@@ -62,6 +62,7 @@ jobs:
           python tests/central_load_and_report_warning_regression.py
           python tests/central_operator_load_ui_regression.py
           python tests/central_main_regression.py
+          python tests/central_names_and_legacy_regression.py
       - name: Full source regressions
         run: python tools/run_regressions.py --out artifact/regressions
       - name: Retain source diagnostics (no EXE)
@@ -131,7 +132,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 30
     env:
-      EXE_NAME: TDE_Katagrafi_Theseon_v1.2.7
+      EXE_NAME: TDE_Katagrafi_Theseon_v1.2.7b
     steps:
       - uses: actions/checkout@v4
         with:
@@ -196,7 +197,7 @@ jobs:
           New-Item -ItemType Directory -Path candidate -Force | Out-Null
           Copy-Item $exe candidate/
           $manifest = [ordered]@{
-            product = 'TDE Katagrafi Theseon'; version = 'v1.2.7'; entry = 'src/position_tracking_central_main.py'
+            product = 'TDE Katagrafi Theseon'; version = 'v1.2.7b'; entry = 'src/position_tracking_central_main.py'
             status = 'CANDIDATE - NOT APPROVED (awaiting user acceptance of this exact SHA256)'
             file = "$($env:EXE_NAME).exe"; sha256 = $hash; bytes = $file.Length
             source_commit = '${{ github.sha }}'; branch = '${{ github.ref_name }}'
@@ -258,52 +259,3 @@ jobs:
           archive: false
           if-no-files-found: error
           retention-days: 90
-
-  # PUBLIC pre-release (not "latest", marked NOT APPROVED) of the already
-  # verified candidate EXE, so that a download tool without GitHub login can
-  # fetch it and place it in Google Drive. No rebuild; hash re-checked first.
-  candidate-public-prerelease:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[candidate-public]') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      actions: read
-      contents: write
-    env:
-      SOURCE_RUN: "40790380482"
-      ARTIFACT: TDE-CANDIDATE-v1.2.7-1100524bfb58791fc2f590cb8bfacce48ecd76c1-40790380482
-      SOURCE_COMMIT: 1100524bfb58791fc2f590cb8bfacce48ecd76c1
-      EXPECTED_SHA256: 9885ee23c826714f40d4b87366a28a22d23e47565d771679e7af50a1c76ad3e2
-      EXPECTED_BYTES: "63426833"
-      TAG: v1.2.7-candidate-1100524
-      EXE: TDE_Katagrafi_Theseon_v1.2.7.exe
-    steps:
-      - name: Fetch the verified artifact and re-check its identity
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh run download "$SOURCE_RUN" -R "$GITHUB_REPOSITORY" -n "$ARTIFACT" -D candidate
-          actual=$(sha256sum "candidate/$EXE" | cut -d' ' -f1)
-          size=$(stat -c%s "candidate/$EXE")
-          if [ "$actual" != "$EXPECTED_SHA256" ] || [ "$size" != "$EXPECTED_BYTES" ]; then
-            echo "::error title=identity-mismatch::sha256=$actual bytes=$size"
-            exit 1
-          fi
-          test "$(head -c2 "candidate/$EXE")" = "MZ"
-          echo "::notice title=identity-ok::sha256=$actual bytes=$size"
-      - name: Publish pre-release (NOT approved, not latest)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if ! out=$(gh release create "$TAG" "candidate/$EXE" candidate/SHA256.txt candidate/MANIFEST.json \
-            -R "$GITHUB_REPOSITORY" --prerelease --latest=false --target "$SOURCE_COMMIT" \
-            --title "v1.2.7 CANDIDATE - NOT APPROVED - test only" \
-            --notes "Candidate central-only build for the owner's acceptance test. NOT APPROVED, not for production. SHA256 $EXPECTED_SHA256, $EXPECTED_BYTES bytes, source $SOURCE_COMMIT, CI run $SOURCE_RUN. To be deleted after it is copied to Drive." 2>&1); then
-            echo "::error title=release-failed::$(echo "$out" | tr '\n' ' ' | cut -c1-900)"
-            exit 1
-          fi
-          echo "::notice title=release::$out"

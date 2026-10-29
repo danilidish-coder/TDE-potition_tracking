@@ -163,6 +163,7 @@ class PositionRecoveryMixin:
         # One-time, bounded, fail-closed import for an isolated candidate share.
         # A legacy EXE must never write concurrently into this candidate store.
         count = 0
+        found = []
         folders = [self.events]
         while folders:
             with os.scandir(folders.pop()) as entries:
@@ -173,9 +174,12 @@ class PositionRecoveryMixin:
                     if entry.is_dir(follow_symlinks=False):
                         folders.append(Path(entry.path))
                         continue
-                    if not entry.name.endswith(".json"):
-                        continue
-                    self._index_legacy_position_event(db, Path(entry.path))
+                    if entry.name.endswith(".json"):
+                        found.append(Path(entry.path))
+        # Folders are year/month/day and names start with the timestamp, so the
+        # path order is the time order: the FIRST closing of a position is kept.
+        for path in sorted(found, key=lambda item: str(item.relative_to(self.root))):
+            self._index_legacy_position_event(db, path)
         # Already indexed historical sessions need no projection work. Raw
         # unmatched events remain unsettled and must be validated, never hidden.
         db.execute("""UPDATE position_operations SET settled=1 WHERE event_id IN (
@@ -186,9 +190,25 @@ class PositionRecoveryMixin:
         if event.get("kind") not in ("START", "END"):
             return
         self._event_path(event)  # Validate identity/timestamp, keep original path.
+        relative = str(path.relative_to(self.root))
+        # Older versions could record a second END for the same START, or the
+        # same event twice. The first one is kept as the truth; the extra one is
+        # listed for review. The original file is never changed or removed.
+        kept = db.execute("SELECT event_id FROM position_operations WHERE event_id=?", (event["event_id"],)).fetchone()
+        if kept is None and event["kind"] == "END" and event.get("start_event_id"):
+            kept = db.execute("SELECT event_id FROM position_operations WHERE kind='END' AND start_id=? AND state<>'ABORTED'",
+                              (event["start_event_id"],)).fetchone()
+        if kept is not None:
+            db.execute("""CREATE TABLE IF NOT EXISTS legacy_duplicate_review (
+                event_id TEXT NOT NULL, path TEXT NOT NULL PRIMARY KEY, kind TEXT NOT NULL,
+                agms TEXT NOT NULL, start_id TEXT, kept_event_id TEXT NOT NULL)""")
+            db.execute("INSERT OR IGNORE INTO legacy_duplicate_review VALUES (?, ?, ?, ?, ?, ?)",
+                       (event["event_id"], relative, event["kind"], event["agms"],
+                        event.get("start_event_id"), kept[0]))
+            return
         db.execute("INSERT INTO position_operations (event_id,kind,agms,start_id,event_path,payload,state,settled) VALUES (?, ?, ?, ?, ?, ?, 'COMMITTED', 0)",
                    (event["event_id"], event["kind"], event["agms"], event.get("start_event_id"),
-                    str(path.relative_to(self.root)), json.dumps(self._event_payload(event), ensure_ascii=False)))
+                    relative, json.dumps(self._event_payload(event), ensure_ascii=False)))
 
     def _recover_position_operations_locked(self):
         self._recover_handovers()
