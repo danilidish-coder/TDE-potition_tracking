@@ -133,7 +133,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 30
     env:
-      EXE_NAME: TDE_Katagrafi_Theseon_v1.2.8
+      EXE_NAME: TDE_Katagrafi_Theseon_v1.2.8b
     steps:
       - uses: actions/checkout@v4
         with:
@@ -198,7 +198,7 @@ jobs:
           New-Item -ItemType Directory -Path candidate -Force | Out-Null
           Copy-Item $exe candidate/
           $manifest = [ordered]@{
-            product = 'TDE Katagrafi Theseon'; version = 'v1.2.8'; entry = 'src/position_tracking_central_main.py'
+            product = 'TDE Katagrafi Theseon'; version = 'v1.2.8b'; entry = 'src/position_tracking_central_main.py'
             status = 'CANDIDATE - NOT APPROVED (awaiting user acceptance of this exact SHA256)'
             file = "$($env:EXE_NAME).exe"; sha256 = $hash; bytes = $file.Length
             source_commit = '${{ github.sha }}'; branch = '${{ github.ref_name }}'

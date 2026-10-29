@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from PySide6.QtCore import QCoreApplication, QEvent
-from PySide6.QtWidgets import QApplication, QDialog, QInputDialog, QMessageBox
+from PySide6.QtWidgets import QApplication, QDateTimeEdit, QDialog, QInputDialog, QMessageBox
 from position_tracking_officer_store import OfficerStore
 from position_tracking_ui_officer import CentralOfficerWindow
 from position_tracking_ui_when import ask_moment, problem_with
@@ -108,6 +108,30 @@ class ChosenTimes(unittest.TestCase):
         self.assertEqual(corrected['start_at'], new_start.isoformat(timespec='seconds'))
         self.assertEqual(corrected['shift_id'], original['shift_id'])
         self.assertEqual(corrected['time_corrections'][0]['reason'], 'Actual start was earlier')
+
+    def test_historical_add_accepts_a_typed_name_and_shows_the_person(self):
+        self.run_with(minute(hours=3), self.window.start_shift.click)
+        self.run_with(minute(minutes=10), self.window.end_shift.click)
+        self.window.refresh(); self.wait(lambda: self.window._future is None and self.window.reports.count() > 1)
+        shift_id = self.window.reports.itemData(1)
+        self.window.reports.setCurrentIndex(1)
+        seen = []
+        def fake_exec(dialog):
+            from PySide6.QtWidgets import QLineEdit, QLabel, QPlainTextEdit, QDialogButtonBox
+            edit = dialog.findChildren(QLineEdit)[0]
+            edit.setText('TARGET')
+            seen.append([l.text() for l in dialog.findChildren(QLabel) if 'ΑΓΜΣ 999002' in l.text()])
+            from position_tracking_ui_when import to_qt
+            editors = dialog.findChildren(QDateTimeEdit)
+            editors[0].setDateTime(to_qt(minute(hours=2))); editors[1].setDateTime(to_qt(minute(hours=1)))
+            dialog.findChildren(QPlainTextEdit)[0].setPlainText('Work missed in the register')
+            dialog.findChild(QDialogButtonBox).button(QDialogButtonBox.Ok).click()
+            return QDialog.Accepted
+        with patch.object(QDialog, 'exec', fake_exec), patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes):
+            self.window.historical(); self.settle()
+        self.assertTrue(seen and seen[0], 'dialog must show the matched person')
+        self.assertEqual(len(OfficerStore(self.root).historical_for_shift(shift_id)), 1)
+        self.assertEqual(OfficerStore(self.root).historical_for_shift(shift_id)[0]['agms'], '999002')
 
     def test_time_dialog_helper_rules(self):
         now = datetime(2026, 10, 29, 18, 0)

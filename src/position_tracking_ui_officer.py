@@ -322,6 +322,16 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
         dialog.setWindowTitle('Ολοκληρωμένη ιστορική εργασία')
         form = QFormLayout(dialog)
         agms = QLineEdit(self.target.text().strip())
+        agms.setPlaceholderText('ΑΓΜΣ ή επώνυμο και όνομα')
+        who = QLabel(''); who.setWordWrap(True)
+        matches = []
+
+        def lookup():
+            matches[:] = PersonnelRepository.find(self._state['people'], agms.text().strip()) if agms.text().strip() else []
+            who.setText(f'{matches[0].full_name} — ΑΓΜΣ {matches[0].agms}' if len(matches) == 1
+                        else 'Πολλοί με αυτό το όνομα: γράψτε επώνυμο και όνομα ή το ΑΓΜΣ.' if matches
+                        else 'Δεν βρέθηκε στην κεντρική λίστα.' if agms.text().strip() else '')
+        agms.textChanged.connect(lookup); lookup()
         booth = QComboBox(); booth.addItems([str(i) for i in range(1,15)])
         way = QComboBox(); way.addItems(['ΕΙΣΟΔΟΣ','ΕΞΟΔΟΣ'])
         now = datetime.now().replace(second=0, microsecond=0)
@@ -329,16 +339,21 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
         for editor in (started, ended):
             editor.setDisplayFormat('dd/MM/yyyy HH:mm'); editor.setCalendarPopup(True)
         reason = QPlainTextEdit(); reason.setMaximumHeight(75)
-        for title, widget in [('ΑΓΜΣ',agms),('Θέση',booth),('Κατεύθυνση',way),
+        for title, widget in [('ΑΓΜΣ / όνομα',agms),('Άτομο',who),('Θέση',booth),('Κατεύθυνση',way),
                               ('ΕΝΑΡΞΗ',started),('ΛΗΞΗ',ended),('Αιτιολογία',reason)]:
             form.addRow(title,widget)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(dialog.accept); buttons.rejected.connect(dialog.reject)
+        def accept():
+            if len(matches) != 1:
+                QMessageBox.warning(dialog, 'Έλεγχος', 'Επιλέξτε έναν αστυνομικό της κεντρικής λίστας (ΑΓΜΣ ή επώνυμο και όνομα).')
+            else:
+                dialog.accept()
+        buttons.accepted.connect(accept); buttons.rejected.connect(dialog.reject)
         form.addRow(buttons)
         if dialog.exec() != QDialog.Accepted:
             dialog.deleteLater()
             return None
-        values = dict(agms=agms.text().strip(),position=booth.currentText(),
+        values = dict(agms=matches[0].agms,position=booth.currentText(),
                       direction=way.currentText(),reason=reason.toPlainText().strip(),
                       start_at=from_qt(started.dateTime()),end_at=from_qt(ended.dateTime()))
         dialog.deleteLater()
@@ -354,6 +369,7 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
         values = self.history_values()
         if values is None:
             return
+        person_name = next((p.full_name for p in self._state['people'] if p.agms == values['agms']), values['agms'])
         start, end = values['start_at'], values['end_at']
         if end <= start or end > datetime.now() + timedelta(minutes=2):
             QMessageBox.warning(self, 'Έλεγχος', 'Ελέγξτε τις πραγματικές ημερομηνίες και ώρες.')
@@ -361,7 +377,7 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
         values.update(shift_id=str(identifier),start_at=start.isoformat(timespec='seconds'),
                       end_at=end.isoformat(timespec='seconds'))
         self.change('HISTORICAL_ADD',
-                    description=f'Προσθήκη ολοκληρωμένης εργασίας {format_when(start)} – {format_when(end)} στην αναφορά '+str(identifier)+';',
+                    description=f'Προσθήκη ολοκληρωμένης εργασίας για {person_name}, {format_when(start)} – {format_when(end)} στην αναφορά '+str(identifier)+';',
                     **values)
 
     def search_reports(self):
