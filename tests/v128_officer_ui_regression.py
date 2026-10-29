@@ -127,8 +127,11 @@ class ChosenTimes(unittest.TestCase):
             dialog.findChildren(QPlainTextEdit)[0].setPlainText('Work missed in the register')
             dialog.findChild(QDialogButtonBox).button(QDialogButtonBox.Ok).click()
             return QDialog.Accepted
-        with patch.object(QDialog, 'exec', fake_exec), patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes):
+        with patch.object(QDialog, 'exec', fake_exec), patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes) as confirm:
             self.window.historical(); self.settle()
+        question = confirm.call_args.args[2]
+        self.assertNotIn('SHIFT_', question); self.assertIn('TARGET', question)
+        self.assertRegex(question, r'\d{2}/\d{2}/\d{4} \d{2}:\d{2}')
         self.assertTrue(seen and seen[0], 'dialog must show the matched person')
         self.assertEqual(len(OfficerStore(self.root).historical_for_shift(shift_id)), 1)
         self.assertEqual(OfficerStore(self.root).historical_for_shift(shift_id)[0]['agms'], '999002')

@@ -381,8 +381,14 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
             return
         values.update(shift_id=str(identifier),start_at=start.isoformat(timespec='seconds'),
                       end_at=end.isoformat(timespec='seconds'))
+        shift = self._state.get('shift') or {}
+        label = self.reports.currentText() if self.reports.currentData() else (
+            'τρέχουσα βάρδια από ' + format_when(shift.get('start_at')))
         self.change('HISTORICAL_ADD',
-                    description=f'Προσθήκη ολοκληρωμένης εργασίας για {person_name}, {format_when(start)} – {format_when(end)} στην αναφορά '+str(identifier)+';',
+                    description=f'Προσθήκη ολοκληρωμένης εργασίας\nΆτομο: {person_name}\n'
+                                f'Θέση {values["position"]} — {values["direction"]}\n'
+                                f'Από {format_when(start)} έως {format_when(end)}\n'
+                                f'Στην αναφορά βάρδιας: {label}',
                     **values)
 
     def search_reports(self):
