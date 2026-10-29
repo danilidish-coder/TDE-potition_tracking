@@ -37,7 +37,7 @@ def session_marker(item: dict) -> str:
     start, end = item.get("start") or {}, item.get("end") or {}
     if start.get("historical"):
         return " (ΙΣΤΟΡΙΚΗ ΚΑΤΑΧΩΡΙΣΗ)"
-    if start.get("original_timestamp") or _officer_chose_time(start, "REMOTE_START") \
+    if start.get("original_timestamp") or end.get("original_timestamp") or _officer_chose_time(start, "REMOTE_START") \
             or _officer_chose_time(end, "REMOTE_END"):
         return " (ΔΙΟΡΘΩΜΕΝΗ)"
     return ""

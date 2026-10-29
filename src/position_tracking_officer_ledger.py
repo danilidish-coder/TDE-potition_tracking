@@ -1,6 +1,7 @@
 """Central append-only declared-actor receipts; no authentication claim."""
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+from position_tracking_common import _clean, format_when
 from position_tracking_store_io import BusyError
 
 
@@ -12,6 +13,8 @@ class OfficerLedgerMixin:
              event_path TEXT NOT NULL, mirrored INTEGER NOT NULL DEFAULT 0)''')
         db.execute('''CREATE TABLE IF NOT EXISTS officer_start_heads
             (start_id TEXT PRIMARY KEY, action_id TEXT NOT NULL, timestamp TEXT NOT NULL)''')
+        db.execute('''CREATE TABLE IF NOT EXISTS officer_end_heads
+            (end_id TEXT PRIMARY KEY, action_id TEXT NOT NULL, timestamp TEXT NOT NULL)''')
         for verb in ('UPDATE', 'DELETE'):
             db.execute(f'''CREATE TRIGGER IF NOT EXISTS officer_actions_no_{verb.lower()}
                 BEFORE {verb} ON officer_actions BEGIN SELECT RAISE(ABORT,'immutable officer action'); END''')
@@ -71,4 +74,53 @@ class OfficerLedgerMixin:
                 self._insert_officer_action(db, receipt)
                 db.execute('INSERT OR REPLACE INTO officer_start_heads VALUES (?,?,?)',
                            (expected_start_id, intent['action_id'], after['timestamp']))
+                return receipt
+
+    def correct_declared_end(self, agms, expected_start_id, expected_end_id, expected_timestamp, new_when, intent):
+        """Διόρθωση της ώρας ΛΗΞΗΣ μιας θέσης που έχει ήδη κλείσει.
+
+        Το αρχικό γεγονός ΛΗΞΗΣ μένει αναλλοίωτο. Η νέα ώρα καταχωρείται ως
+        «κεφαλή» μαζί με την απόδειξη του ΑΞΥΠ και εφαρμόζεται σε αναφορές,
+        ιστορικό και ελέγχους επικάλυψης.
+        """
+        if len(intent['reason'].strip()) < 5:
+            raise ValueError('Απαιτείται αιτιολογία τουλάχιστον 5 χαρακτήρων.')
+        if new_when > datetime.now() + timedelta(minutes=2):
+            raise ValueError('Η ώρα ΛΗΞΗΣ δεν μπορεί να είναι μελλοντική.')
+        with self._position_transaction(agms):
+            old = self.officer_action(intent['action_id'])
+            if old:
+                if old['intent'] != intent['intent']:
+                    raise BusyError('Το αναγνωριστικό αφορά άλλη ενέργεια.')
+                return old
+            with self._shift_db_write_lock(), self._shift_db_connect() as db:
+                db.execute('BEGIN IMMEDIATE')
+                row = db.execute('''SELECT payload FROM position_operations
+                    WHERE event_id=? AND kind='END' AND start_id=? AND state='COMMITTED' ''',
+                    (expected_end_id, expected_start_id)).fetchone()
+                start_row = db.execute('''SELECT payload FROM position_operations
+                    WHERE event_id=? AND kind='START' AND state='COMMITTED' ''', (expected_start_id,)).fetchone()
+                if not row or not start_row:
+                    raise BusyError('Η καταχώριση άλλαξε ή δεν υπάρχει πλέον. Απαιτείται επανέλεγχος.')
+                head = db.execute('SELECT timestamp FROM officer_end_heads WHERE end_id=?', (expected_end_id,)).fetchone()
+                raw_end = json.loads(row['payload'])
+                before = {**raw_end, 'timestamp': head['timestamp'] if head else raw_end['timestamp']}
+                if before['timestamp'] != expected_timestamp:
+                    raise BusyError('Η ώρα ΛΗΞΗΣ έχει ήδη διορθωθεί. Απαιτείται επανέλεγχος.')
+                if _clean(before.get('agms')) != _clean(agms):
+                    raise BusyError('Η ΛΗΞΗ ανήκει σε άλλον αστυνομικό.')
+                start = self._apply_start_correction(json.loads(start_row['payload']))
+                if new_when <= datetime.fromisoformat(start['timestamp']):
+                    raise ValueError('Η ΛΗΞΗ πρέπει να έπεται της ΕΝΑΡΞΗΣ (' + format_when(start['timestamp']) + ').')
+                stamp = new_when.isoformat(timespec='seconds')
+                if stamp == before['timestamp']:
+                    raise ValueError('Η νέα ώρα είναι ίδια με την υπάρχουσα.')
+                after = {**before, 'timestamp': stamp}
+                receipt = {**intent, 'record_id': expected_end_id, 'before': before, 'after': after, 'result': after}
+                self._insert_officer_action(db, receipt)
+                db.execute('INSERT OR REPLACE INTO officer_end_heads VALUES (?,?,?)',
+                           (expected_end_id, intent['action_id'], stamp))
+                seconds = max(0, int((new_when - datetime.fromisoformat(start['timestamp'])).total_seconds()))
+                db.execute('UPDATE personnel_sessions SET end_at=?, duration_seconds=? WHERE end_event_id=?',
+                           (stamp, seconds, expected_end_id))
                 return receipt

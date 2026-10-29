@@ -162,7 +162,7 @@ class HistoricalWorkMixin:
                     return format_when(value) if value else "σε εξέλιξη"
                 span = f" (θέση {other_position}, {when(began)} – {when(ended)})" if began else ""
                 if agms == other_agms:
-                    raise ValueError("Ο ίδιος αστυνομικός έχει ήδη καταγεγραμμένη εργασία στο διάστημα" + span + ".")
+                    raise ValueError("Ο ίδιος αστυνομικός (ΑΓΜΣ " + agms + ") έχει ήδη καταγεγραμμένη εργασία στο διάστημα" + span + ".")
                 if position == other_position:
                     raise ValueError("Η θέση " + position + " είναι ήδη κατειλημμένη στο διάστημα" + span + ".")
 
@@ -171,11 +171,12 @@ class HistoricalWorkMixin:
             actual = db.execute("""SELECT s.agms,
                 json_extract(s.payload,'$.position') AS position,
                 COALESCE(h.timestamp,json_extract(s.payload,'$.timestamp')) AS started,
-                json_extract(e.payload,'$.timestamp') AS ended
+                COALESCE(eh.timestamp,json_extract(e.payload,'$.timestamp')) AS ended
                 FROM position_operations s
                 LEFT JOIN position_operations e ON e.start_id=s.event_id
                     AND e.kind='END' AND e.state='COMMITTED'
                 LEFT JOIN officer_start_heads h ON h.start_id=s.event_id
+                LEFT JOIN officer_end_heads eh ON eh.end_id=e.event_id
                 WHERE s.kind='START' AND s.state='COMMITTED'
             """).fetchall()
             for item in actual:

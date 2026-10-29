@@ -27,7 +27,24 @@ class PositionStoreMixin:
         return _clean(data["corrected_start_at"])
 
 
+    def _effective_end_timestamp(self, event_id: str, timestamp: str) -> str:
+        if getattr(self, '_officer_ledger_ready', False):
+            rows = self._position_rows('SELECT timestamp FROM officer_end_heads WHERE end_id=?', (event_id,))
+            if rows:
+                return rows[0]['timestamp']
+        return timestamp
+
+
     def _apply_start_correction(self, event: dict) -> dict:
+        """Εφαρμόζει τη διορθωμένη ώρα ΕΝΑΡΞΗΣ ή ΛΗΞΗΣ (το αρχικό γεγονός μένει αναλλοίωτο)."""
+        if _clean(event.get("kind")).upper() == "END":
+            revised = self._effective_end_timestamp(_clean(event.get("event_id")), _clean(event.get("timestamp")))
+            if revised == _clean(event.get("timestamp")):
+                return event
+            result = dict(event)
+            result["original_timestamp"] = event["timestamp"]
+            result["timestamp"] = revised
+            return result
         if _clean(event.get("kind")).upper() != "START":
             return event
         revised = self._effective_start_timestamp(_clean(event.get("event_id")), _clean(event.get("timestamp")))

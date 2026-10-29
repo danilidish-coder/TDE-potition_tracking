@@ -2,7 +2,7 @@
 from copy import deepcopy
 from datetime import datetime, timedelta
 import json
-from position_tracking_common import _clean
+from position_tracking_common import _clean, format_when
 from position_tracking_store import SharedEventStore
 from position_tracking_store_io import BusyError
 
@@ -168,3 +168,29 @@ class OfficerStore(SharedEventStore):
             self._insert_officer_action(db, receipt)
             self._upsert_shift_con(db, after)
         return receipt
+
+    def end_correction_check(self, values, moment, errors, warnings):
+        """Έλεγχοι πριν από διόρθωση ώρας ΛΗΞΗΣ θέσης που έχει ήδη κλείσει."""
+        agms, position = _clean(values.get('agms')), _clean(values.get('position'))
+        row = self._position_rows("SELECT payload FROM position_operations WHERE event_id=? AND state='COMMITTED'",
+                                   (_clean(values.get('expected_start_id')),))
+        if not row:
+            return dict(errors=['Η καταχώριση δεν βρέθηκε πλέον. Ανανεώστε και ξαναδοκιμάστε.'], warnings=[])
+        started = datetime.fromisoformat(self._apply_start_correction(json.loads(row[0]['payload']))['timestamp'])
+        if moment <= started:
+            errors.append('Η ΛΗΞΗ πρέπει να έπεται της ΕΝΑΡΞΗΣ (' + format_when(started) + ').')
+        old_end = datetime.fromisoformat(values['expected_timestamp'])
+        if errors or moment <= old_end:
+            return dict(errors=errors, warnings=warnings)
+        low, high = old_end.isoformat(timespec='seconds'), moment.isoformat(timespec='seconds')
+        mine = _clean(values.get('expected_end_id'))
+        for other in self.search_personnel_sessions(date_from=old_end.date(), date_to=moment.date()):
+            if _clean(other.get('end_event_id')) == mine or not (other['start_at'] < high and other['end_at'] > low):
+                continue
+            if _clean(other.get('agms')) == agms:
+                warnings.append(f"Επικάλυψη με άλλη εργασία του ίδιου ατόμου: Θέση {other['position']} "
+                                f"{format_when(other['start_at'])} – {format_when(other['end_at'])}.")
+            elif position and _clean(other.get('position')) == position:
+                warnings.append(f"Η θέση {position} είναι κατειλημμένη από {_clean(other.get('full_name'))} "
+                                f"{format_when(other['start_at'])} – {format_when(other['end_at'])}.")
+        return dict(errors=errors, warnings=warnings)

@@ -15,9 +15,16 @@ class SessionIndexMixin:
         end_event_id = _clean(end.get("event_id"))
         if not start_event_id or not end_event_id:
             return
+        end_stamp = _clean(end.get("timestamp"))
+        try:
+            head = con.execute("SELECT timestamp FROM officer_end_heads WHERE end_id=?", (end_event_id,)).fetchone()
+            if head:
+                end_stamp = _clean(head[0])
+        except sqlite3.Error:
+            pass  # Older store without corrections: the recorded time stands.
         try:
             start_dt = datetime.fromisoformat(_clean(start.get("timestamp")))
-            end_dt = datetime.fromisoformat(_clean(end.get("timestamp")))
+            end_dt = datetime.fromisoformat(end_stamp)
         except Exception:
             return
         if end_dt < start_dt:

@@ -35,6 +35,7 @@ class OfficerRequest:
 CLOCK_TOLERANCE = timedelta(minutes=2)
 OLD_TIME_LIMIT = timedelta(hours=24)
 RECENT_STARTS_WINDOW = timedelta(hours=24)
+RECENT_SESSIONS_WINDOW = timedelta(hours=72)
 
 
 def short_name(item):
@@ -86,7 +87,8 @@ def check_chosen_time(value, reference, minimum=None, confirm_old=False, what='�
 
 ACTION_LABELS = {
     'REMOTE_START': 'Απομακρυσμένη ΕΝΑΡΞΗ', 'REMOTE_END': 'Απομακρυσμένη ΛΗΞΗ',
-    'CORRECT_START': 'Διόρθωση ώρας ΕΝΑΡΞΗΣ', 'HISTORICAL_ADD': 'Προσθήκη εργασίας',
+    'CORRECT_START': 'Διόρθωση ώρας ΕΝΑΡΞΗΣ', 'CORRECT_END': 'Διόρθωση ώρας ΛΗΞΗΣ',
+    'HISTORICAL_ADD': 'Προσθήκη εργασίας',
     'SHIFT_START': 'ΕΝΑΡΞΗ ΒΑΡΔΙΑΣ', 'SHIFT_END': 'ΛΗΞΗ ΒΑΡΔΙΑΣ', 'SHIFT_TIME_CORRECT': 'Διόρθωση ώρας βάρδιας',
     'MEMBER_STATE': 'Συμμετοχή στη βάρδια', 'PERSONNEL_IMPORT': 'Ενημέρωση προσωπικού', 'MESSAGE': 'Μήνυμα',
 }
@@ -154,7 +156,14 @@ class CentralOfficer(CentralOperator):
             item = json.loads(row['payload'])
             recent.append(dict(agms=_clean(item.get('agms')), full_name=_clean(item.get('full_name')),
                                position=_clean(item.get('position')), timestamp=_clean(item.get('timestamp'))))
-        return dict(officer=officer, people=people, shift=shift, active=active,
+        recent_sessions = [dict(agms=_clean(row['agms']), full_name=_clean(row['full_name']),
+                                position=_clean(row['position']), direction=_clean(row['direction']),
+                                start_event_id=_clean(row['start_event_id']), end_event_id=_clean(row['end_event_id']),
+                                start_at=_clean(row['start_at']), end_at=_clean(row['end_at']))
+                           for row in store.search_personnel_sessions(date_from=(datetime.now() - RECENT_SESSIONS_WINDOW).date())
+                           if not row.get('historical') and _clean(row['end_at'])
+                           >= (datetime.now() - RECENT_SESSIONS_WINDOW).isoformat(timespec='seconds')]
+        return dict(officer=officer, people=people, shift=shift, active=active, recent_sessions=recent_sessions,
                     roster_revision=roster['revision'] if roster else '',
                     reports=store.search_finalized_shifts(limit=20), clients=clients,
                     station_labels=station_labels(clients, active), recent_starts=recent,
@@ -210,6 +219,19 @@ class CentralOfficer(CentralOperator):
                 else:
                     store.correct_declared_start(person.agms, datetime.fromisoformat(values['new_time']),
                         values['expected_start_id'], values['expected_timestamp'], intent)
+                if not store.officer_action(request.action_id):
+                    raise BusyError('Η ενέργεια δεν μεταβάλλει πλέον την επιλεγμένη καταχώριση. Επανελέγξτε.')
+            elif request.action == 'CORRECT_END':
+                if len(reason) < 5:
+                    raise ValueError('Συμπληρώστε αιτιολογία τουλάχιστον 5 χαρακτήρων.')
+                person = people.get(values['agms'])
+                if not person:
+                    raise ValueError('Ο αστυνομικός δεν υπάρχει στην κεντρική λίστα.')
+                new_when = datetime.fromisoformat(values['new_time'])
+                check_chosen_time(new_when, datetime.fromisoformat(request.recorded_at),
+                                  confirm_old=bool(values.get('confirm_old')), what='Η ώρα ΛΗΞΗΣ')
+                store.correct_declared_end(person.agms, values['expected_start_id'], values['expected_end_id'],
+                                           values['expected_timestamp'], new_when, intent)
                 if not store.officer_action(request.action_id):
                     raise BusyError('Η ενέργεια δεν μεταβάλλει πλέον την επιλεγμένη καταχώριση. Επανελέγξτε.')
             elif request.action == 'HISTORICAL_ADD':
@@ -277,7 +299,7 @@ class CentralOfficer(CentralOperator):
         errors, warnings = [], []
         agms = _clean(values.get('agms'))
         position = _clean(values.get('position'))
-        start_text = values.get('new_time') if action == 'CORRECT_START' else values.get('when')
+        start_text = values.get('new_time') if action in ('CORRECT_START', 'CORRECT_END') else values.get('when')
         try:
             moment = datetime.fromisoformat(start_text)
         except (TypeError, ValueError):
@@ -286,6 +308,8 @@ class CentralOfficer(CentralOperator):
             errors.append('Η ώρα δεν μπορεί να είναι μελλοντική.')
         elif now - moment > OLD_TIME_LIMIT:
             warnings.append('Η ώρα είναι πάνω από 24 ώρες πίσω.')
+        if action == 'CORRECT_END':
+            return store.end_correction_check(values, moment, errors, warnings)
         active = next((a for a in state['active'] if a['agms'] == agms), None)
         if action in ('REMOTE_END', 'CORRECT_START') and active and action == 'REMOTE_END':
             if moment < datetime.fromisoformat(active['timestamp']):

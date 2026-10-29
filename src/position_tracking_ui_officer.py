@@ -88,6 +88,7 @@ class CentralOfficerWindow(OfficerTimesMixin, QMainWindow):
         self.remote_start = self.button(row, 'ΑΠΟΜΑΚΡΥΣΜΕΝΗ ΕΝΑΡΞΗ', lambda: self.physical('REMOTE_START'))
         self.remote_end = self.button(row, 'ΑΠΟΜΑΚΡΥΣΜΕΝΗ ΛΗΞΗ', lambda: self.physical('REMOTE_END'))
         self.correct_btn = self.button(row, 'ΔΙΟΡΘΩΣΗ ΩΡΑΣ ΕΝΑΡΞΗΣ', lambda: self.physical('CORRECT_START'))
+        self.correct_end_btn = self.button(row, 'ΔΙΟΡΘΩΣΗ ΩΡΑΣ ΛΗΞΗΣ', self.correct_end)
         self.booths = BoothMapWidget(); tabs.addTab(self.booths, 'Σχέδιο γκισέ')
         reports_page = QWidget(); reports_layout = QVBoxLayout(reports_page); tabs.addTab(reports_page, 'Αναφορές / μηνύματα')
         self.reports = QComboBox(); reports_layout.addWidget(self.reports)
