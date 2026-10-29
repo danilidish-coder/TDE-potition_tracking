@@ -8,7 +8,7 @@
 | SHA256 | `90550a161923d602ab7c335cb0db7c575009fbda67fccc09dd46569c08175110` |
 | Bytes | 63435197 |
 | Source commit (αυτό που χτίστηκε) | `b99c39c04de8fb57e741e8c23fad6ab51f7ae1de` (branch `fix/v127-issue11-20261029`) |
-| Tag | `v1.2.7b-approved` |
+| Μόνιμη αρχειοθέτηση | branch `approved/v1.2.7b-20261029` (δείχνει ακριβώς στο source commit· το tag δεν ήταν δυνατό να δημιουργηθεί από το περιβάλλον του Claude, μπορεί να μπει από τον κάτοχο του repo) |
 | Windows CI run build | 40865455189 (source-gates SUCCESS, candidate-exe SUCCESS) |
 | Απλό EXE (μη zip) | run 40868228222, artifact `TDE_Katagrafi_Theseon_v1.2.7b.exe` (λήξη 90 ημέρες) |
 | Είσοδος | `src/position_tracking_central_main.py` |
