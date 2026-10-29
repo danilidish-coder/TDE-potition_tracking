@@ -259,8 +259,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release create "$TAG" "candidate/$EXE" candidate/SHA256.txt candidate/MANIFEST.json \
+          if ! out=$(gh release create "$TAG" "candidate/$EXE" candidate/SHA256.txt candidate/MANIFEST.json \
             -R "$GITHUB_REPOSITORY" --draft --prerelease --target "$SOURCE_COMMIT" \
             --title "v1.2.7 CANDIDATE (NOT APPROVED) - $SOURCE_COMMIT" \
-            --notes "Candidate central-only build for the user's own acceptance test. NOT APPROVED. SHA256 $EXPECTED_SHA256, $EXPECTED_BYTES bytes, source $SOURCE_COMMIT, CI run $SOURCE_RUN. Draft: visible only to repository writers."
+            --notes "Candidate central-only build for the user's own acceptance test. NOT APPROVED. SHA256 $EXPECTED_SHA256, $EXPECTED_BYTES bytes, source $SOURCE_COMMIT, CI run $SOURCE_RUN. Draft: visible only to repository writers." 2>&1); then
+            echo "::error title=release-failed::$(echo "$out" | tr '\n' ' ' | cut -c1-900)"
+            exit 1
+          fi
           echo "::notice title=draft-release::created draft $TAG"
