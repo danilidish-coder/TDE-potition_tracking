@@ -1,0 +1,143 @@
+{
+  "source_commit": "ec8eab72e5c95f7b31add2b2b4208d30fb2493ee",
+  "exe_sha256": "baf96c420e27a291efd2cae0058310256388281f0bef16ad37674b1aeeac16f0",
+  "temporary_data_only": true,
+  "status": "PASS",
+  "idle_exit": {
+    "status": "PASS",
+    "exit_code": 0,
+    "operations": 0,
+    "central_created": false,
+    "configured_personnel_missing": true
+  },
+  "offline_operations": [
+    {
+      "id": "494deb9d2d0748e1bf5d50a5030b8212",
+      "kind": "START",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T14:25:17",
+      "start_id": "",
+      "status": "PENDING"
+    },
+    {
+      "id": "583f1144e9d949739360f854cb6ef8c3",
+      "kind": "END",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T14:25:18",
+      "start_id": "494deb9d2d0748e1bf5d50a5030b8212",
+      "status": "PENDING"
+    }
+  ],
+  "operations": 4,
+  "original_ids_preserved": true,
+  "original_timestamps_preserved": true,
+  "completed_sessions": 2,
+  "final_operations": [
+    {
+      "id": "494deb9d2d0748e1bf5d50a5030b8212",
+      "kind": "START",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T14:25:17",
+      "start_id": "",
+      "status": "APPLIED"
+    },
+    {
+      "id": "583f1144e9d949739360f854cb6ef8c3",
+      "kind": "END",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T14:25:18",
+      "start_id": "494deb9d2d0748e1bf5d50a5030b8212",
+      "status": "APPLIED"
+    },
+    {
+      "id": "2f012c7c122e4bba952b3021e0fb0784",
+      "kind": "START",
+      "position": "1",
+      "direction": "ΕΙΣΟΔΟΣ",
+      "created_at": "2026-10-16T14:25:20",
+      "start_id": "",
+      "status": "APPLIED"
+    },
+    {
+      "id": "5010bd5a5452428fb09a144e71647961",
+      "kind": "END",
+      "position": "1",
+      "direction": "ΕΙΣΟΔΟΣ",
+      "created_at": "2026-10-16T14:25:20",
+      "start_id": "2f012c7c122e4bba952b3021e0fb0784",
+      "status": "APPLIED"
+    }
+  ],
+  "events": [
+    {
+      "version": 2,
+      "event_id": "494deb9d2d0748e1bf5d50a5030b8212",
+      "kind": "START",
+      "timestamp": "2026-10-16T14:25:17",
+      "agms": "910001",
+      "rank": "ΑΣΤ",
+      "surname": "ΔΟΚΙΜΗ",
+      "given_name": "ΠΡΟΣΩΠΙΚΟ",
+      "full_name": "ΔΟΚΙΜΗ ΠΡΟΣΩΠΙΚΟ",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "computer": "runnervmgnbhw",
+      "user": "runneradmin",
+      "client_id": "runnervmgnbhw__runneradmin__3680"
+    },
+    {
+      "version": 2,
+      "event_id": "583f1144e9d949739360f854cb6ef8c3",
+      "kind": "END",
+      "timestamp": "2026-10-16T14:25:18",
+      "start_event_id": "494deb9d2d0748e1bf5d50a5030b8212",
+      "agms": "910001",
+      "rank": "ΑΣΤ",
+      "surname": "ΔΟΚΙΜΗ",
+      "given_name": "ΠΡΟΣΩΠΙΚΟ",
+      "full_name": "ΔΟΚΙΜΗ ΠΡΟΣΩΠΙΚΟ",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "computer": "runnervmgnbhw",
+      "user": "runneradmin",
+      "end_reason": "OFFLINE_REPLAY"
+    },
+    {
+      "version": 2,
+      "event_id": "2f012c7c122e4bba952b3021e0fb0784",
+      "kind": "START",
+      "timestamp": "2026-10-16T14:25:20",
+      "agms": "910001",
+      "rank": "ΑΣΤ",
+      "surname": "ΔΟΚΙΜΗ",
+      "given_name": "ΠΡΟΣΩΠΙΚΟ",
+      "full_name": "ΔΟΚΙΜΗ ΠΡΟΣΩΠΙΚΟ",
+      "position": "1",
+      "direction": "ΕΙΣΟΔΟΣ",
+      "computer": "runnervmgnbhw",
+      "user": "runneradmin",
+      "client_id": "runnervmgnbhw__runneradmin__2496"
+    },
+    {
+      "version": 2,
+      "event_id": "5010bd5a5452428fb09a144e71647961",
+      "kind": "END",
+      "timestamp": "2026-10-16T14:25:20",
+      "start_event_id": "2f012c7c122e4bba952b3021e0fb0784",
+      "agms": "910001",
+      "rank": "ΑΣΤ",
+      "surname": "ΔΟΚΙΜΗ",
+      "given_name": "ΠΡΟΣΩΠΙΚΟ",
+      "full_name": "ΔΟΚΙΜΗ ΠΡΟΣΩΠΙΚΟ",
+      "position": "1",
+      "direction": "ΕΙΣΟΔΟΣ",
+      "computer": "runnervmgnbhw",
+      "user": "runneradmin",
+      "end_reason": "OFFLINE_REPLAY"
+    }
+  ]
+}

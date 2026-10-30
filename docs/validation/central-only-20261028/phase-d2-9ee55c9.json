@@ -1,0 +1,112 @@
+{
+  "tested_commit": "9ee55c9ded932a83f5260f8e5fc11f011255fc18",
+  "application_source": "b4cf2020e97d7fdf1ff58671e01a06a264a77ce2",
+  "starting_checkpoint": "b5eeb92e5f1394211eb1d50b98c0909f5c0cbb54",
+  "branch": "feature/central-only-simple-20261027",
+  "approved_base": "4340c41865328cd893e6dc23fcdcedfefa7f9bf2",
+  "status": "D2 BLOCKED / SECURITY FAIL / NO PRIVILEGED ACTIVATION",
+  "source_changed": false,
+  "run_id": 40723755684,
+  "run_url": "https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40723755684",
+  "conclusion": "failure",
+  "jobs": [
+    {
+      "platform": "Windows",
+      "job": 122941364356,
+      "conclusion": "failure",
+      "full_scripts": {
+        "passed": 60,
+        "failed": 1,
+        "total": 61
+      },
+      "security_tests": {
+        "passed": 0,
+        "failed": 5
+      },
+      "evidence": [
+        "2026-10-28T16:14:02.8543454Z Ran 11 tests in 7.075s",
+        "2026-10-28T16:14:07.4975140Z Ran 5 tests in 4.118s",
+        "2026-10-28T16:14:17.5477555Z Ran 16 tests in 9.894s",
+        "2026-10-28T16:14:22.4219455Z Ran 5 tests in 4.336s",
+        "2026-10-28T16:14:25.6924271Z Ran 6 tests in 3.106s",
+        "2026-10-28T16:14:27.8101503Z Ran 4 tests in 1.992s",
+        "2026-10-28T16:14:44.4340976Z Ran 25 tests in 16.455s",
+        "2026-10-28T16:14:48.9759151Z Ran 11 tests in 4.236s",
+        "2026-10-28T16:14:56.6830733Z Ran 6 tests in 7.223s",
+        "2026-10-28T16:15:26.3709366Z central_officer_authorization_regression.py: FAIL",
+        "2026-10-28T16:15:26.3734261Z FAIL: test_caller_supplied_sender_does_not_authorize_official_message (__main__.OfficerAuthorization.test_caller_supplied_sender_does_not_authorize_official_message)",
+        "2026-10-28T16:15:26.3748539Z AssertionError: UNAUTHORIZED_OFFICER_ACTION_ACCEPTED: {\"action\": \"OFFICIAL_MESSAGE\", \"returned\": \"accepted\", \"changed\": [\"messages\", \"audit\"], \"live_before\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"live_after\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"committed_ENDs\": 0}",
+        "2026-10-28T16:15:26.3750871Z FAIL: test_direct_business_call_cannot_bypass_membership_authorization (__main__.OfficerAuthorization.test_direct_business_call_cannot_bypass_membership_authorization)",
+        "2026-10-28T16:15:26.3763812Z AssertionError: UNAUTHORIZED_OFFICER_ACTION_ACCEPTED: {\"action\": \"MEMBER_EXCLUDE\", \"returned\": \"ACTIVE\", \"changed\": [\"current_shift\", \"audit\"], \"live_before\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"live_after\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"committed_ENDs\": 0}",
+        "2026-10-28T16:15:26.3767050Z FAIL: test_gui_bypass_cannot_finalize_another_officers_shift (__main__.OfficerAuthorization.test_gui_bypass_cannot_finalize_another_officers_shift)",
+        "2026-10-28T16:15:26.3777096Z AssertionError: UNAUTHORIZED_OFFICER_ACTION_ACCEPTED: {\"action\": \"SHIFT_FINALIZE\", \"returned\": \"FINALIZED\", \"changed\": [\"current_shift\", \"audit\"], \"live_before\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"live_after\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"committed_ENDs\": 0}",
+        "2026-10-28T16:15:26.3780692Z FAIL: test_typed_officer_and_forged_windows_label_cannot_start_shift (__main__.OfficerAuthorization.test_typed_officer_and_forged_windows_label_cannot_start_shift)",
+        "2026-10-28T16:15:26.3790416Z AssertionError: UNAUTHORIZED_OFFICER_ACTION_ACCEPTED: {\"action\": \"SHIFT_START\", \"returned\": \"ACTIVE\", \"changed\": [\"current_shift\", \"audit\"], \"live_before\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"live_after\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"committed_ENDs\": 0}",
+        "2026-10-28T16:15:26.3793944Z FAIL: test_valid_start_and_shift_ids_do_not_authorize_remote_end (__main__.OfficerAuthorization.test_valid_start_and_shift_ids_do_not_authorize_remote_end)",
+        "2026-10-28T16:15:26.3804033Z AssertionError: UNAUTHORIZED_OFFICER_ACTION_ACCEPTED: {\"action\": \"REMOTE_END\", \"returned\": \"END\", \"changed\": [\"positions\", \"operations\", \"sessions\", \"audit\"], \"live_before\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"live_after\": [], \"committed_ENDs\": 1}",
+        "2026-10-28T16:15:26.3806399Z Ran 5 tests in 2.146s",
+        "2026-10-28T16:15:26.3806732Z FAILED (failures=5)",
+        "2026-10-28T16:20:57.9214525Z Scripts: 61; failed: 1"
+      ]
+    },
+    {
+      "platform": "Linux",
+      "job": 122941363509,
+      "conclusion": "failure",
+      "full_scripts": {
+        "passed": 60,
+        "failed": 1,
+        "total": 61
+      },
+      "security_tests": {
+        "passed": 0,
+        "failed": 5
+      },
+      "evidence": [
+        "2026-10-28T16:13:57.6818799Z Ran 11 tests in 0.506s",
+        "2026-10-28T16:13:59.9985429Z Ran 5 tests in 1.637s",
+        "2026-10-28T16:14:02.0981741Z Ran 16 tests in 1.988s",
+        "2026-10-28T16:14:05.3087935Z Ran 5 tests in 2.769s",
+        "2026-10-28T16:14:05.6557606Z Ran 6 tests in 0.235s",
+        "2026-10-28T16:14:05.8995442Z Ran 4 tests in 0.163s",
+        "2026-10-28T16:14:10.2792288Z Ran 25 tests in 4.273s",
+        "2026-10-28T16:14:10.8780060Z Ran 11 tests in 0.410s",
+        "2026-10-28T16:14:16.6032308Z Ran 6 tests in 5.397s",
+        "2026-10-28T16:14:28.0031363Z central_officer_authorization_regression.py: FAIL",
+        "2026-10-28T16:14:28.0033927Z FAIL: test_caller_supplied_sender_does_not_authorize_official_message (__main__.OfficerAuthorization.test_caller_supplied_sender_does_not_authorize_official_message)",
+        "2026-10-28T16:14:28.0053208Z AssertionError: UNAUTHORIZED_OFFICER_ACTION_ACCEPTED: {\"action\": \"OFFICIAL_MESSAGE\", \"returned\": \"accepted\", \"changed\": [\"messages\", \"audit\"], \"live_before\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"live_after\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"committed_ENDs\": 0}",
+        "2026-10-28T16:14:28.0056853Z FAIL: test_direct_business_call_cannot_bypass_membership_authorization (__main__.OfficerAuthorization.test_direct_business_call_cannot_bypass_membership_authorization)",
+        "2026-10-28T16:14:28.0068095Z AssertionError: UNAUTHORIZED_OFFICER_ACTION_ACCEPTED: {\"action\": \"MEMBER_EXCLUDE\", \"returned\": \"ACTIVE\", \"changed\": [\"current_shift\", \"audit\"], \"live_before\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"live_after\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"committed_ENDs\": 0}",
+        "2026-10-28T16:14:28.0071359Z FAIL: test_gui_bypass_cannot_finalize_another_officers_shift (__main__.OfficerAuthorization.test_gui_bypass_cannot_finalize_another_officers_shift)",
+        "2026-10-28T16:14:28.0082113Z AssertionError: UNAUTHORIZED_OFFICER_ACTION_ACCEPTED: {\"action\": \"SHIFT_FINALIZE\", \"returned\": \"FINALIZED\", \"changed\": [\"current_shift\", \"audit\"], \"live_before\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"live_after\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"committed_ENDs\": 0}",
+        "2026-10-28T16:14:28.0085827Z FAIL: test_typed_officer_and_forged_windows_label_cannot_start_shift (__main__.OfficerAuthorization.test_typed_officer_and_forged_windows_label_cannot_start_shift)",
+        "2026-10-28T16:14:28.0096744Z AssertionError: UNAUTHORIZED_OFFICER_ACTION_ACCEPTED: {\"action\": \"SHIFT_START\", \"returned\": \"ACTIVE\", \"changed\": [\"current_shift\", \"audit\"], \"live_before\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"live_after\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"committed_ENDs\": 0}",
+        "2026-10-28T16:14:28.0100136Z FAIL: test_valid_start_and_shift_ids_do_not_authorize_remote_end (__main__.OfficerAuthorization.test_valid_start_and_shift_ids_do_not_authorize_remote_end)",
+        "2026-10-28T16:14:28.0111186Z AssertionError: UNAUTHORIZED_OFFICER_ACTION_ACCEPTED: {\"action\": \"REMOTE_END\", \"returned\": \"END\", \"changed\": [\"positions\", \"operations\", \"sessions\", \"audit\"], \"live_before\": [{\"agms\": \"999001\", \"position\": \"1\", \"start_id\": \"synthetic-start\"}], \"live_after\": [], \"committed_ENDs\": 1}",
+        "2026-10-28T16:14:28.0114215Z Ran 5 tests in 0.154s",
+        "2026-10-28T16:14:28.0114621Z FAILED (failures=5)",
+        "2026-10-28T16:16:04.3486706Z Scripts: 61; failed: 1"
+      ]
+    }
+  ],
+  "failure_cause": "No verified officer identity or permission check at existing business functions. Caller-supplied labels accepted for shift start/member exclusion/finalization/remote END/official message. Remote END test removes the synthetic live claim without authenticating its claimed officer.",
+  "local_targeted": {
+    "passed": 0,
+    "failed": 5,
+    "seconds": 0.034
+  },
+  "previous_B_C_D1_focused": "PASS on both OS",
+  "authorized_D2_actions": "NOT RUN: trusted identity/role prerequisite absent",
+  "protected_central_personnel_import_and_visibility": "NOT IMPLEMENTED / NOT RUN",
+  "authorized_D2_remote_start_end_ui": "NOT IMPLEMENTED / NOT RUN",
+  "authenticated_multi_station_D2": "NOT RUN",
+  "real_isolated_smb": "NOT RUN",
+  "packaged_exe": "NOT RUN",
+  "exe_workflow": {
+    "run_id": 40723755789,
+    "conclusion": "skipped"
+  },
+  "production_data": "NOT TOUCHED",
+  "D3": "NOT STARTED",
+  "next_step": "Verify isolated Windows test identity/roles and service-owned canonical storage ACLs, then review minimal trusted adapter design. Do not enable client-only privileged checks or weaken security gate."
+}

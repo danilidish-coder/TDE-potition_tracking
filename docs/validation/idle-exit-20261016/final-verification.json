@@ -1,0 +1,52 @@
+{
+  "source_commit": "410bf72fe197e6e7d9a4a1a299a135a716c71bf3",
+  "application_tree": "aef033e4f06b6e568f35822a5c2d168d1a6db139",
+  "latest_native_evidence_commit": "cc3451dcb9450716f2473b3feb5a55a4020d8ca6",
+  "observed_date_athens": "2026-10-16",
+  "windows": {
+    "run_id": "38916161811",
+    "status": "SUCCESS",
+    "regression_scripts": 50,
+    "native_idle_exit": {
+      "status": "PASS",
+      "exit_code": 0,
+      "operations": 0,
+      "central_created": false,
+      "configured_personnel_missing": true
+    },
+    "functional_operations": 4,
+    "completed_sessions": 2,
+    "original_ids_and_timestamps_preserved": true,
+    "startup_anomalies": 0,
+    "startup_trials": 20,
+    "theme_anomalies": 0,
+    "theme_trials": 30,
+    "confirmed_clicks": 30
+  },
+  "linux": {
+    "run_id": "38916162147",
+    "status": "SUCCESS",
+    "regression_scripts": 50
+  },
+  "module_gate": {
+    "run_id": "38916162111",
+    "status": "SUCCESS"
+  },
+  "artifact": {
+    "name": "POSITION_TRACKING_WINDOWS_TEST-410bf72fe197e6e7d9a4a1a299a135a716c71bf3-38916161811",
+    "url": "https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/38916161811",
+    "size": "60.6 MB",
+    "archive_sha256": "ff3736fe28a824b5bfd9207412b18d9e49506662d5902594c2eeac7d0c2c29fd",
+    "exe_sha256": "3f896e307abfcbde477e201259e02f2e2cd683eafe18064b9ecea3a81a790f24",
+    "retention_days": 7,
+    "availability_verified_via": "GitHub completed Actions page; binary hash from actual native functional report and mandatory accepted packaging gate; archive not downloaded in this environment"
+  },
+  "intermediate_source": {
+    "commit": "ec8eab72e5c95f7b31add2b2b4208d30fb2493ee",
+    "windows": "38914933955 SUCCESS",
+    "linux": "38914934027 SUCCESS",
+    "gate": "38914933969 SUCCESS",
+    "scope": "Initial idle exit and map fixes accepted; later local delayed-failure regression justified final code/CI update."
+  },
+  "remaining": "Other synchronous history/report/message/roster/shift/admin GUI shared I/O; permanent OS SMB syscall cancellation; real field acceptance. See RELIABILITY_REPORT_EL.md."
+}

@@ -1,0 +1,1 @@
+WINDOWS_USER_HANDOFF_REGRESSION: PASS (handoff, idempotence, non-target preservation, shift confirmation)

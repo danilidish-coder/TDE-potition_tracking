@@ -1,0 +1,157 @@
+[
+  {
+    "test": "client_lifecycle_regression.py",
+    "exit_code": 0,
+    "seconds": 1.016
+  },
+  {
+    "test": "common_module_regression.py",
+    "exit_code": 0,
+    "seconds": 0.203
+  },
+  {
+    "test": "communication_control_regression.py",
+    "exit_code": 0,
+    "seconds": 0.609
+  },
+  {
+    "test": "current_report_retention_regression.py",
+    "exit_code": 0,
+    "seconds": 0.797
+  },
+  {
+    "test": "machine_queue_module_regression.py",
+    "exit_code": 0,
+    "seconds": 0.657
+  },
+  {
+    "test": "network_resilience_regression.py",
+    "exit_code": 0,
+    "seconds": 19.437
+  },
+  {
+    "test": "offline_15_clients_restart_stress.py",
+    "exit_code": 0,
+    "seconds": 3.359
+  },
+  {
+    "test": "offline_durability_stage4_regression.py",
+    "exit_code": 0,
+    "seconds": 0.891
+  },
+  {
+    "test": "offline_recovery_integration.py",
+    "exit_code": 0,
+    "seconds": 1.078
+  },
+  {
+    "test": "offline_single_machine_claim_stress.py",
+    "exit_code": 0,
+    "seconds": 2.344
+  },
+  {
+    "test": "offline_user_logoff_machine_queue.py",
+    "exit_code": 0,
+    "seconds": 0.703
+  },
+  {
+    "test": "pdf_report_regression.py",
+    "exit_code": 0,
+    "seconds": 1.922
+  },
+  {
+    "test": "personnel_history_sqlite_regression.py",
+    "exit_code": 0,
+    "seconds": 1.141
+  },
+  {
+    "test": "rendering_regression.py",
+    "exit_code": 0,
+    "seconds": 1.656
+  },
+  {
+    "test": "report_archive_history_regression.py",
+    "exit_code": 0,
+    "seconds": 0.453
+  },
+  {
+    "test": "report_archive_search_regression.py",
+    "exit_code": 0,
+    "seconds": 1.484
+  },
+  {
+    "test": "runner_encoding_regression.py",
+    "exit_code": 0,
+    "seconds": 0.157
+  },
+  {
+    "test": "shared_file_lock_concurrency_regression.py",
+    "exit_code": 0,
+    "seconds": 4.078
+  },
+  {
+    "test": "shift_end_actions_regression.py",
+    "exit_code": 0,
+    "seconds": 0.562
+  },
+  {
+    "test": "shift_end_release_regression.py",
+    "exit_code": 0,
+    "seconds": 0.438
+  },
+  {
+    "test": "shift_smb_lock_concurrency.py",
+    "exit_code": 0,
+    "seconds": 2.828
+  },
+  {
+    "test": "simulate_officer_simple_flow.py",
+    "exit_code": 0,
+    "seconds": 0.687
+  },
+  {
+    "test": "simulated_shared_host_shortcuts.py",
+    "exit_code": 0,
+    "seconds": 3.469
+  },
+  {
+    "test": "sqlite_shift_archive_regression.py",
+    "exit_code": 0,
+    "seconds": 0.344
+  },
+  {
+    "test": "start_time_correction_edge_regression.py",
+    "exit_code": 0,
+    "seconds": 0.39
+  },
+  {
+    "test": "stress_shift_membership_reversal.py",
+    "exit_code": 0,
+    "seconds": 66.36
+  },
+  {
+    "test": "visual_startup_evidence_regression.py",
+    "exit_code": 0,
+    "seconds": 0.172
+  },
+  {
+    "test": "windows_handoff_module_regression.py",
+    "exit_code": 0,
+    "seconds": 0.734
+  },
+  {
+    "test": "windows_handoff_replay_order_regression.py",
+    "exit_code": 0,
+    "seconds": 5.234
+  },
+  {
+    "test": "windows_session_module_regression.py",
+    "exit_code": 0,
+    "seconds": 0.297
+  },
+  {
+    "test": "windows_user_handoff_regression.py",
+    "exit_code": 0,
+    "seconds": 1.078
+  }
+]

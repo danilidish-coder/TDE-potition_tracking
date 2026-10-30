@@ -1,0 +1,11 @@
+{
+  "tested_commit": "ec80b132c35c48f25a3b3601ad74a3290f769825",
+  "platform": "Linux, Python 3.12, existing .venv",
+  "scripts_passed": 36,
+  "windows_only_process_cases_skipped": 3,
+  "additional_completed_checks": [
+    "compileall src tests tools",
+    "git diff --check"
+  ],
+  "note": "Saved results from the completed validation; no new test cycle at checkpoint. Native Windows visual acceptance remains pending."
+}

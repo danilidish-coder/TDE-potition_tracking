@@ -1,0 +1,9 @@
+./workspace/TDE-potition_tracking/tests/visual_flicker_windows.py:173: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  pa = list(a.getdata())
+/workspace/TDE-potition_tracking/tests/visual_flicker_windows.py:174: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  pb = list(b.getdata())
+......
+----------------------------------------------------------------------
+Ran 7 tests in 0.136s
+
+OK

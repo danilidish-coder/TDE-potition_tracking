@@ -1,0 +1,11 @@
+Fontconfig error: No writable cache directories
+This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.
+----------------------------------------------------------------------
+Ran 5 tests in 1.981s
+
+OK

@@ -1,0 +1,59 @@
+name: Modular Position Tracking — Stage Gate
+on:
+  push:
+    branches: [feature/v125-modularization-20261013]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/modularization-stage-gate.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  module-contract:
+    name: Per-module Windows contract and Python compilation
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Verify every Python module compiles
+        run: python -m compileall -q src
+      - name: Windows WTS contract (11 cases) and real application import mapping
+        run: python tests/windows_session_module_regression.py
+      - name: Shared lock 72-way contention contract
+        run: python tests/shared_file_lock_concurrency_regression.py
+      - name: Shared machine queue ACL and legacy pending contract
+        run: python tests/machine_queue_module_regression.py
+      - name: Isolated Windows handoff module stage 3a contract
+        run: python tests/windows_handoff_module_regression.py
+      - name: Windows handoff replay ordering and 14 booths
+        run: python tests/windows_handoff_replay_order_regression.py
+      - name: Stage 4 offline restart durability and original event IDs
+        run: python tests/offline_durability_stage4_regression.py
+      - name: Stage 5 common helpers extraction contract
+        run: python tests/common_module_regression.py
+      - name: Verify new pre-release version v1.2.6
+        shell: pwsh
+        run: |
+          python -c "import sys; sys.path.insert(0, 'src'); import position_tracking as app; assert app.APP_VERSION == '1.2.6', app.APP_VERSION"
+          if($LASTEXITCODE -ne 0) {throw "Pre-release version mismatch"}
+          if(-not(Test-Path src/position_tracking_offline.py)){throw "Offline module missing"}
+          Write-Host 'STAGE1_BASELINE_VERSION_AND_MODULES: PASS'
+  linux-contract:
+    name: Independent Linux module contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m compileall -q src
+      - run: python tests/windows_session_module_regression.py
+      - run: python tests/shared_file_lock_concurrency_regression.py
+      - run: python tests/machine_queue_module_regression.py
+      - run: python tests/windows_handoff_module_regression.py
+      - run: python tests/windows_handoff_replay_order_regression.py
+      - run: python tests/offline_durability_stage4_regression.py
+      - run: python tests/common_module_regression.py

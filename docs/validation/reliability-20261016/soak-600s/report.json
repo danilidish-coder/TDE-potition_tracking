@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "synthetic_only": true,
+  "requested_seconds": 600.0,
+  "git_head": "5231b30928066ddb6d86256a95c48698baabd287",
+  "actual_seconds": 600.023,
+  "gui_ticks": 29823,
+  "maximum_gui_gap_seconds": 0.128,
+  "peak_queues": {
+    "network": 2,
+    "state": 1,
+    "position": 1
+  },
+  "rss_growth_after_warmup_bytes": 2301952,
+  "handles_growth_after_warmup": 1,
+  "cpu_fraction_one_core": 0.0203,
+  "simulated_client_waves": 5,
+  "simulated_client_processes": 75,
+  "disconnect_recovery_cycles": 17,
+  "preserved_operations": 34,
+  "completed_sessions": 17
+}

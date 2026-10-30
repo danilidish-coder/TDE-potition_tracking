@@ -1,0 +1,83 @@
+{
+  "tested_commit": "b4cf2020e97d7fdf1ff58671e01a06a264a77ce2",
+  "core_commit": "1858dc02e3520632fd836f08d585343ea3228ce0",
+  "starting_checkpoint": "d6969b1e62265857901621c23f4923185ebc6297",
+  "approved_base": "4340c41865328cd893e6dc23fcdcedfefa7f9bf2",
+  "branch": "feature/central-only-simple-20261027",
+  "run_id": 40707038963,
+  "run_url": "https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40707038963",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "platform": "Windows",
+      "job": 122881840033,
+      "conclusion": "success",
+      "evidence": [
+        "2026-10-28T14:34:01.4671016Z Ran 11 tests in 8.912s",
+        "2026-10-28T14:34:05.9264844Z Ran 5 tests in 3.936s",
+        "2026-10-28T14:34:16.8890964Z Ran 16 tests in 10.814s",
+        "2026-10-28T14:34:22.5055126Z Ran 5 tests in 5.054s",
+        "2026-10-28T14:34:25.7550487Z Ran 6 tests in 3.087s",
+        "2026-10-28T14:34:28.2989054Z Ran 4 tests in 2.420s",
+        "2026-10-28T14:34:44.9800738Z Ran 25 tests in 16.519s",
+        "2026-10-28T14:34:49.5720465Z Ran 11 tests in 4.291s",
+        "2026-10-28T14:34:57.0917315Z Ran 6 tests in 7.045s",
+        "2026-10-28T14:35:59.2271938Z central_shift_separation_regression.py: PASS",
+        "2026-10-28T14:36:03.1847081Z central_shift_ui_regression.py: PASS",
+        "2026-10-28T14:40:39.0085017Z ui_recovery_timing_regression.py: PASS",
+        "2026-10-28T14:40:53.2572017Z Scripts: 60; failed: 0"
+      ]
+    },
+    {
+      "platform": "Linux",
+      "job": 122881839593,
+      "conclusion": "success",
+      "evidence": [
+        "2026-10-28T14:33:33.8497161Z Ran 11 tests in 0.438s",
+        "2026-10-28T14:33:36.3036530Z Ran 5 tests in 1.582s",
+        "2026-10-28T14:33:38.5952282Z Ran 16 tests in 2.182s",
+        "2026-10-28T14:33:41.8123598Z Ran 5 tests in 2.724s",
+        "2026-10-28T14:33:42.1455304Z Ran 6 tests in 0.213s",
+        "2026-10-28T14:33:42.3704934Z Ran 4 tests in 0.138s",
+        "2026-10-28T14:33:45.8410363Z Ran 25 tests in 3.358s",
+        "2026-10-28T14:33:46.3859266Z Ran 11 tests in 0.348s",
+        "2026-10-28T14:33:51.8110698Z Ran 6 tests in 5.090s",
+        "2026-10-28T14:34:14.5790502Z central_shift_separation_regression.py: PASS",
+        "2026-10-28T14:34:16.3335231Z central_shift_ui_regression.py: PASS",
+        "2026-10-28T14:35:34.6502512Z ui_recovery_timing_regression.py: PASS",
+        "2026-10-28T14:35:40.1118323Z Scripts: 60; failed: 0"
+      ]
+    }
+  ],
+  "focused_order": [
+    "central_shift_separation_regression.py (11 tests)",
+    "central_shift_ui_regression.py (5 tests)",
+    "central_handover_regression.py (16 tests)",
+    "central_handover_ui_regression.py (5 tests)",
+    "central_stale_worker_regression.py (6 tests)",
+    "central_end_interruption_regression.py (4 tests)",
+    "central_position_recovery_regression.py (25 tests)",
+    "central_operator_regression.py (11 tests)",
+    "central_operator_ui_regression.py (6 tests)"
+  ],
+  "initial_local_full": {
+    "scripts": 60,
+    "failed": 1,
+    "failure": "ui_recovery_timing_regression.py held obsolete implicit Windows-handoff lock; intermediate working-tree test run, not final source result.",
+    "repair": "Fixture now holds real position recovery lock. Same 13s hold, >12s elapsed assertion, >100 heartbeat assertion, 31s ceiling and receipt checks retained.",
+    "targeted_repeat": {
+      "status": "PASS",
+      "recovery_seconds": 18.074,
+      "gui_heartbeats": 361
+    }
+  },
+  "exe_workflow": {
+    "run_id": 40707038918,
+    "conclusion": "skipped"
+  },
+  "real_isolated_smb": "NOT RUN: no mounted share, endpoint/credentials, VPN or private TCP grant",
+  "physical_15_stations": "NOT RUN",
+  "packaged_exe": "NOT RUN",
+  "drive_registry_update": "BLOCKED by automatic approval review: unverified destination ownership and exact-payload authorization. Proposed text retained in D1_REGISTRY_UPDATE_PROPOSED_EL.txt.",
+  "D2": "NOT STARTED; requires new user instruction"
+}

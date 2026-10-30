@@ -1,0 +1,293 @@
+{
+  "platform": "Linux Python 3.12 existing .venv; native Windows cases skipped, EXE driver unrun locally",
+  "stages": [
+    {
+      "stage": "tde-annotation-contract-20261016",
+      "scripts": 44,
+      "failed": [],
+      "results": "tde-annotation-contract-20261016.json"
+    },
+    {
+      "stage": "tde-architecture-20261016",
+      "scripts": 42,
+      "failed": [],
+      "results": "tde-architecture-20261016.json"
+    },
+    {
+      "stage": "tde-artifact-gate-20261016",
+      "scripts": 40,
+      "failed": [],
+      "results": "tde-artifact-gate-20261016.json"
+    },
+    {
+      "stage": "tde-background-fixture-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-background-fixture-20261016.json"
+    },
+    {
+      "stage": "tde-background-message-loop-20261016",
+      "scripts": 40,
+      "failed": [],
+      "results": "tde-background-message-loop-20261016.json"
+    },
+    {
+      "stage": "tde-communication-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-communication-20261016.json"
+    },
+    {
+      "stage": "tde-diagnostic-20261016",
+      "scripts": 36,
+      "failed": [],
+      "results": "tde-diagnostic-20261016.json"
+    },
+    {
+      "stage": "tde-documents-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-documents-20261016.json"
+    },
+    {
+      "stage": "tde-entry-composition-20261016",
+      "scripts": 41,
+      "failed": [],
+      "results": "tde-entry-composition-20261016.json"
+    },
+    {
+      "stage": "tde-event-queries-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-event-queries-20261016.json"
+    },
+    {
+      "stage": "tde-exe-reader-close-20261016",
+      "scripts": 44,
+      "failed": [],
+      "results": "tde-exe-reader-close-20261016.json"
+    },
+    {
+      "stage": "tde-final-functional-gate-20261016",
+      "scripts": 43,
+      "failed": [],
+      "results": "tde-final-functional-gate-20261016.json"
+    },
+    {
+      "stage": "tde-first-paint-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-first-paint-20261016.json"
+    },
+    {
+      "stage": "tde-first-presentation-20261016",
+      "scripts": 41,
+      "failed": [],
+      "results": "tde-first-presentation-20261016.json"
+    },
+    {
+      "stage": "tde-foreground-ack-20261016",
+      "scripts": 44,
+      "failed": [],
+      "results": "tde-foreground-ack-20261016.json"
+    },
+    {
+      "stage": "tde-frozen-functional-gate-20261016",
+      "scripts": 43,
+      "failed": [],
+      "results": "tde-frozen-functional-gate-20261016.json"
+    },
+    {
+      "stage": "tde-lightweight-gate-20261016",
+      "scripts": 41,
+      "failed": [],
+      "results": "tde-lightweight-gate-20261016.json"
+    },
+    {
+      "stage": "tde-pdf-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-pdf-20261016.json"
+    },
+    {
+      "stage": "tde-positions-20261016",
+      "scripts": 39,
+      "failed": [
+        "windows_handoff_module_regression.py"
+      ],
+      "results": "tde-positions-20261016.json"
+    },
+    {
+      "stage": "tde-positions-verified-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-positions-verified-20261016.json"
+    },
+    {
+      "stage": "tde-render-readiness-20261016",
+      "scripts": 41,
+      "failed": [],
+      "results": "tde-render-readiness-20261016.json"
+    },
+    {
+      "stage": "tde-report-text-20261016",
+      "scripts": 38,
+      "failed": [],
+      "results": "tde-report-text-20261016.json"
+    },
+    {
+      "stage": "tde-session-index-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-session-index-20261016.json"
+    },
+    {
+      "stage": "tde-settings-20261016",
+      "scripts": 37,
+      "failed": [],
+      "results": "tde-settings-20261016.json"
+    },
+    {
+      "stage": "tde-settings-windows-path-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-settings-windows-path-20261016.json"
+    },
+    {
+      "stage": "tde-shift-index-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-shift-index-20261016.json"
+    },
+    {
+      "stage": "tde-shifts-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-shifts-20261016.json"
+    },
+    {
+      "stage": "tde-statistics-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-statistics-20261016.json"
+    },
+    {
+      "stage": "tde-store-composition-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-store-composition-20261016.json"
+    },
+    {
+      "stage": "tde-store-io-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-store-io-20261016.json"
+    },
+    {
+      "stage": "tde-ui-admin-20261016",
+      "scripts": 41,
+      "failed": [],
+      "results": "tde-ui-admin-20261016.json"
+    },
+    {
+      "stage": "tde-ui-assets-20261016",
+      "scripts": 39,
+      "failed": [],
+      "results": "tde-ui-assets-20261016.json"
+    },
+    {
+      "stage": "tde-ui-communication-20261016",
+      "scripts": 40,
+      "failed": [],
+      "results": "tde-ui-communication-20261016.json"
+    },
+    {
+      "stage": "tde-ui-configuration-20261016",
+      "scripts": 40,
+      "failed": [],
+      "results": "tde-ui-configuration-20261016.json"
+    },
+    {
+      "stage": "tde-ui-history-20261016",
+      "scripts": 41,
+      "failed": [],
+      "results": "tde-ui-history-20261016.json"
+    },
+    {
+      "stage": "tde-ui-lifecycle-20261016",
+      "scripts": 41,
+      "failed": [],
+      "results": "tde-ui-lifecycle-20261016.json"
+    },
+    {
+      "stage": "tde-ui-map-20261016",
+      "scripts": 40,
+      "failed": [
+        "shift_end_actions_regression.py"
+      ],
+      "results": "tde-ui-map-20261016.json"
+    },
+    {
+      "stage": "tde-ui-map-verified-20261016",
+      "scripts": 40,
+      "failed": [],
+      "results": "tde-ui-map-verified-20261016.json"
+    },
+    {
+      "stage": "tde-ui-messages-20261016",
+      "scripts": 40,
+      "failed": [],
+      "results": "tde-ui-messages-20261016.json"
+    },
+    {
+      "stage": "tde-ui-positions-20261016",
+      "scripts": 40,
+      "failed": [],
+      "results": "tde-ui-positions-20261016.json"
+    },
+    {
+      "stage": "tde-ui-reports-20261016",
+      "scripts": 41,
+      "failed": [],
+      "results": "tde-ui-reports-20261016.json"
+    },
+    {
+      "stage": "tde-ui-selection-20261016",
+      "scripts": 40,
+      "failed": [],
+      "results": "tde-ui-selection-20261016.json"
+    },
+    {
+      "stage": "tde-ui-shift-end-20261016",
+      "scripts": 41,
+      "failed": [
+        "rendering_regression.py"
+      ],
+      "results": "tde-ui-shift-end-20261016.json"
+    },
+    {
+      "stage": "tde-ui-shift-end-verified-20261016",
+      "scripts": 41,
+      "failed": [],
+      "results": "tde-ui-shift-end-verified-20261016.json"
+    },
+    {
+      "stage": "tde-ui-shifts-20261016",
+      "scripts": 41,
+      "failed": [],
+      "results": "tde-ui-shifts-20261016.json"
+    },
+    {
+      "stage": "tde-ui-view-20261016",
+      "scripts": 40,
+      "failed": [],
+      "results": "tde-ui-view-20261016.json"
+    },
+    {
+      "stage": "tde-ui-workflow-20261016",
+      "scripts": 43,
+      "failed": [],
+      "results": "tde-ui-workflow-20261016.json"
+    }
+  ]
+}

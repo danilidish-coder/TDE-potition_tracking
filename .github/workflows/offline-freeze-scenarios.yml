@@ -1,0 +1,27 @@
+name: Isolated Offline Freeze Scenario Reproduction
+
+on:
+  push:
+    branches:
+      - feature/simple-central-only-20261025
+    paths:
+      - tests/test_offline_freeze_scenarios.py
+      - .github/workflows/offline-freeze-scenarios.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replay-scenarios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile replay sources
+        run: python -m py_compile src/position_tracking_offline.py src/position_tracking_handoff.py tests/test_offline_freeze_scenarios.py
+      - name: Run synthetic freeze scenarios (no live data)
+        run: python -m unittest discover -s tests -p 'test_offline_freeze_scenarios.py' -v

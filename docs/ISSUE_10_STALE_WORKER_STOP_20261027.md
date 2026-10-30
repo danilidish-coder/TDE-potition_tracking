@@ -1,0 +1,756 @@
+# Issue #10 — Verified D2 Windows source checkpoint, 28 October 2026
+
+## D2 source verified, not packaged, field acceptance still pending
+
+Verified source HEAD before this documentation-only commit:
+`e0f693b79be5ebd9139f48682d2eb5ffd4a0a358`, branch
+`feature/central-only-simple-20261027`. Approved production remains
+`CURRENT_APPROVED.json` on main: v1.2.6, source
+`4340c41865328cd893e6dc23fcdcedfefa7f9bf2`, EXE SHA256
+`e59587390a398808ad454a1fb4de9d46c7d6139f203785489294655242b6de0d`.
+No production manifest, EXE, shortcut or service data was changed.
+
+Source test evidence: GitHub Actions run
+https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40750433255,
+Windows job `123035369182`, completed **SUCCESS** on the exact above source.
+Focused D2 backend **17/17 PASS**, real Qt officer panel **9/9 PASS**;
+full source regression **62 mandatory scripts, 0 failed**.
+The original five strong-officer-authentication tests genuinely **FAIL 5/5**
+under the user's later explicit free-access requirement; they remain visible
+as **historical/non-mandatory**, not misreported as passed. AGMS is declared
+attribution only, not cryptographically verified identity or enforced access
+control. No integrity/START/END/concurrency/recovery tests were exempted.
+
+D2 source-only behavior: `--central-officer` separate minimal officer GUI;
+central roster revision, shift member decisions, active positions/map,
+confirmed remote START/END, active-START correction, central immutable
+actor/reason/before-after journal, existing PDF and statistics PIN, official
+messages. `--central-only` preserves minimal operator GUI. These flags are
+not yet the default packaged EXE entry point. See
+`docs/ISSUE_10_D2_DECLARED_OPERATOR_20261028.md`.
+Prior Windows required failure (legacy DDL concurrency in run `40748148719`)
+was repaired at `e0f693b`; full Windows source CI reran successfully.
+
+**D2 SOURCE PASS; DOC CHECKPOINT COMPLETE; NOT AN EXE RELEASE.**
+Real isolated SMB host interruption/restart, multi-station field run, frozen
+EXE launcher/identity and final packaged Windows acceptance are **NOT RUN**.
+Phase D3 (durable completed historical work, regeneration and report regression)
+is **NOT IMPLEMENTED**. Windows-only automatic CI is configured, optional Linux
+manual execution is NOT RUN. No on-site acceptance is inferred.
+
+Next stage: make a small, isolated, independently tested D3 implementation
+based on this verified D2 source, keeping existing open live position state
+unchanged and the approved production baseline untouched. Do not merge to main
+or replace an approved EXE. Check for newer unpublished Codex workspace changes
+before reconciling independent changes into the same branch.
+
+---
+
+# Issue #10 — Phase D2 declared-operator WIP checkpoint, 28 October 2026
+
+## Latest continuation — D2 source ready; Windows repair/mandatory CI pending
+
+Newest user policy: Windows is the only mandatory automatic platform. Linux is
+optional via workflow_dispatch include_linux=true; default and push run Windows
+only. Workflow-only commit `eab8b85af34ed4cc22c693d9bd348eab6133a1ae` changes one
+file, 7 insertions/1 deletion; no test assertion or full Windows step changed.
+Static YAML/input/matrix policy checks PASS for push, manual false and manual true.
+Real manual Linux dispatch is NOT RUN: the workflow is absent on main, the
+connected GitHub tool exposes no dispatch action and CLI authentication is not
+usable here. No main change or interactive login is attempted. The opt-in
+declaration is valid; actual manual trigger availability is not claimed tested.
+
+Original run 40748148719 was NOT cancelled and completed before this workflow
+change: Linux job 123027322844 SUCCESS, 62/62 mandatory scripts; Windows job
+123027323273 FAILURE, 61/62 mandatory scripts. All D2/B/C/D1 focused gates PASS.
+The sole required failure was offline_single_machine_claim_stress.py, concurrent
+legacy OfflineJournal constructor CREATE TABLE raising database is locked.
+Both platforms retain the five historical identity FAIL cases separately.
+Exact evidence: docs/validation/central-only-20261028/d2-ea21db1-first-platform-gates.json.
+
+Minimal independent repair: BEGIN IMMEDIATE before legacy schema DDL, acquiring
+the write reservation before any schema read-to-write upgrade. The existing
+2-second busy timeout and all queue rows/IDs/timestamps remain unchanged. This
+does not activate offline behavior in either central entry. Local targeted
+claim stress PASS (96 threads, 12 processes, 200 reopens), durability 5/5 PASS.
+The same unchanged claim test now runs first in the focused CI gate for prompt
+Windows feedback. Next required evidence is the complete Windows suite under
+the new one-platform automatic workflow. No timeout/assertion is weakened.
+
+Execution-count benefit: automatic source platform jobs change from 2 to 1
+per relevant push (one fewer, 50% fewer platform executions). Workflow run count
+is still one; wall-clock time is not promised to halve because prior jobs ran
+in parallel. An explicit manual include_linux=true still runs both platforms.
+
+### D2 implementation and first validation
+
+Saved source/test revision: `ea21db10834dad9ae58bf48afd75a24ec5ce3cfc`.
+Backend/audit validation commit: `5c0b39f70395ba1a267c7a820109f93c57714eeb`.
+Recovered WIP was preserved/pushed as `8f1cfd2801f84d2f1f04eb9eac62e5b47c3698e8`
+before continuation. That WIP deliberately did not request CI and was never
+claimed complete; the final source CI below runs all mandatory gates normally.
+
+Current source workflow: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40748148719
+Final platform outcomes are PENDING. EXE workflow `40748149129`: SKIPPED.
+Local targeted backend: **17/17 PASS**; real Qt officer panel: **9/9 PASS**,
+including source-mode launch/exit, confirmations, UNKNOWN recheck, PDF output,
+central roster visibility and message delivery/acknowledgement. Existing recovery
+25/25 and architecture 4/4 PASS. First complete local run: **62 mandatory scripts
+PASS, zero mandatory failures**; historical identity script still **5 FAIL**.
+
+Implemented source-only `--central-officer` entry, separate from the lean
+`--central-only` operator. The central panel covers shifts, approval/exclusion/
+undo, central personnel revision publication, active table/existing booth plan,
+explicit remote START/END, active-start correction, existing report/PIN-statistics
+engines, official messages and on-demand central action history. No second
+position engine, offline queue or workstation roster/profile copy was added.
+
+Declared officer AGMS/name is resolved from the central list for each command.
+Physical changes require reason and confirmation. Their immutable receipt
+(actor, list revision, requested/accepted time, action ID, target ID, before/after,
+reason/result) commits with the position/correction state in SQLite. History
+cannot be updated/deleted by application SQL. New corrections retain each old
+and new value without rewriting START bytes. Document/roster publications use
+canonical SQL receipts and compare-and-swap revisions; central JSONs are repairable
+mirrors. Full detail: `docs/ISSUE_10_D2_DECLARED_OPERATOR_20261028.md`.
+
+The exact historical five denial tests are unchanged and still executed. Their
+actual FAIL output/exit code is retained with required=false under the explicit
+new requirement. The runner verifies their source hash and treats unexpected
+runtime/errors/timeouts as mandatory failure, rather than broadly ignoring errors.
+All prior B/C/D1 integrity/function gates remain mandatory and unchanged.
+
+Accepted security limit: AGMS is declared attribution, **not certified identity**;
+free access does not enforce officer roles or prevent another person declaring a
+known AGMS. The existing statistics PIN is unchanged. No new authentication
+service, shared password or domain setup is introduced. Old strong-authentication
+blocker sections below are historical, superseded by the user's latest decision.
+
+Next step: inspect exact Windows/Linux results for ea21db1, diagnose any mandatory
+failure without weakening assertions/timeouts, record log evidence and update the
+live registry if supported. Stop after D2; do not start D3. Real SMB and packaged
+EXE remain NOT RUN. No production source/EXE/manifest/shortcuts/data changed.
+
+### Recovery history before these source commits
+
+Starting checkpoint `85dff853bcdb8a5a9308b8a8f7e54a0993de25aa`, same feature
+branch and approved ancestor 4340c418. Guide v2.1, live Drive registry,
+CURRENT_APPROVED.json on main and Issue #10 were read successfully. The newest
+explicit user decision supersedes the strong-authentication requirement below:
+officer AGMS is declared attribution, not certified identity; no new password,
+domain/SSPI/Kerberos or authorization service is required. Existing individual
+statistics PIN remains unchanged. Free access is not represented as secure role
+enforcement. The old five failing denial tests and their FAIL evidence remain
+historical; separation from current mandatory integrity gates is NOT DONE yet.
+
+Recovery audit found eight pending source files (five modified, three new).
+No reset/clean/restore/rebase was used and no prior work was discarded.
+WIP adds `position_tracking_officer.py`, `_officer_ledger.py`, `_officer_store.py`:
+declared-actor command service, append-only central audit records, SQL document
+receipts, correction heads and staged reuse of existing shift/message methods.
+Existing START/END acceptance now has an optional audit insertion in the same
+SQL transaction. Central lookup can read the published personnel revision.
+These changes are partial and **NOT a completed D2 implementation**.
+
+Current verification: Python compilation PASS; D1 targeted separation 11/11
+PASS after the first edits. Recovery test was started but its execution handle
+was lost on interruption: **result NOT VERIFIED**, not claimed PASS. New D2
+backend, crash/race/audit/roster tests, GUI wiring and Windows/Linux CI are
+**NOT RUN for this WIP**. Existing historical source CI 40723755684 remains
+FAIL for the now-superseded authentication property, as recorded below.
+
+Next step after saving this WIP: finish and test the central officer GUI,
+immutable correction/remote-action receipts and central personnel publication;
+retain all B/C/D1 gates, document historical-test separation, then execute full
+Windows/Linux source CI. Checkpoint commits are not application acceptance.
+No EXE, main, CURRENT_APPROVED.json, shortcuts, real data or offline queues
+were changed. Real SMB remains NOT RUN. Do not start D3.
+
+---
+
+# Historical D2 strong-authentication stop — superseded requirement
+
+## Phase D2 continuation from b5eeb92 — BLOCKED: verified authority missing
+
+Branch `feature/central-only-simple-20261027`; actual clean starting HEAD
+`b5eeb92e5f1394211eb1d50b98c0909f5c0cbb54`, approved ancestor
+`4340c41865328cd893e6dc23fcdcedfefa7f9bf2` verified. D1 run `40707038963`
+remains accepted evidence (60/60 PASS per OS); no previous diagnosis repeated.
+The active guide v2.1, live Drive registry (now records D1), GitHub Issue #10
+and CURRENT_APPROVED.json on main were all read successfully. Production
+identity still matches 4340c418 and its approved EXE. CURRENT_APPROVED.json is
+absent from this historical feature branch as documented, and was not copied.
+No Drive write was attempted; the prior blocked proposal is historical.
+
+**Security STOP:** no verified officer authentication/authorization mechanism
+was found. Typed AGMS, caller-supplied PersonnelRecord/sender and USERNAME are
+accepted as labels by the existing legacy business functions. No trusted
+identity/role or protected server boundary is configured in this environment.
+Do not treat the legacy panel as an authorized D2 panel or activate privileged
+features using an injected test identity, embedded PIN or editable role file.
+
+New `tests/central_officer_authorization_regression.py`: **0 PASS / 5 FAIL**
+locally, all real missing-authorization failures in synthetic temporary data.
+Direct bypass accepts SHIFT_START, MEMBER_EXCLUDE, SHIFT_FINALIZE,
+OFFICIAL_MESSAGE and REMOTE_END. The REMOTE_END case removes the synthetic
+live claim and commits an END attributed to a caller-supplied officer without
+authentication. Expected behavior remains PermissionError before any mutation.
+Tests are not skipped/xfail and assertions/timeouts are not weakened.
+
+Security test/design commit: `9ee55c9ded932a83f5260f8e5fc11f011255fc18`.
+Source run: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40723755684
+Linux job `122941363509`: focused B/C/D1 gates PASS; full **60 scripts PASS,
+1 script FAIL**, all five failures in the new officer authorization script.
+Windows job `122941364356`: focused B/C/D1 gates PASS; full **60 scripts PASS,
+1 script FAIL**, the same five missing-authorization cases. Run `40723755684`
+completed **FAILURE** on both OS. All 60 prior scripts still PASS; this is not a
+START/END/handover or D1 regression. It is the newly exposed D2 security failure,
+which remains blocking and is not marked expected. Exact immutable job-log
+evidence: `docs/validation/central-only-20261028/phase-d2-9ee55c9.json`.
+EXE workflow `40723755789`: **SKIPPED intentionally**.
+
+No application source changed. D2 functional implementation/activation is
+**NOT IMPLEMENTED / BLOCKED**. Source is still D1 b4cf202. Authorized officer
+actions, protected audit, remote START/END UI, central roster update/visibility
+and authenticated multi-station handling are **NOT RUN**; tests must not use
+an allow-all mock as proof of real authorization. Real SMB and EXE remain NOT RUN.
+
+Minimal safe design and exact evidence paths:
+`docs/ISSUE_10_D2_AUTHORIZATION_BLOCKER_20261028.md`.
+It reuses the existing transactional engine behind one trusted central command
+boundary, with server-verified individual Windows identity/role and service-only
+canonical writes. Client-only checks cannot protect client-writable data. The
+actual isolated Windows identity/group/ACL setup is UNKNOWN and must be verified
+before implementation is resumed. This is not permission to deploy a service.
+
+**STOPPED for independent review of the identity boundary. D2 NOT COMPLETE.**
+The current source has a demonstrated unauthorized-mutation path; it is not an
+officer-authorized candidate. New changes comprise the strict test, design and
+checkpoint/log evidence only. No new panel or privileged feature was activated.
+
+Next step: identify and verify the isolated Windows test host's actual identity
+authority, individual officer group/accounts and canonical data ownership/ACLs.
+Review the minimal trusted adapter design before implementing it. Do not infer
+these from AGMS, USERNAME, CI runner administrator status or a supplied boolean.
+Then fix the five denial cases and add genuine authenticated positive/revocation,
+confirmation, roster-revision and multi-station checks before full platform CI.
+Do not start D3 or build an EXE. Main, CURRENT_APPROVED.json, approved EXE,
+shortcuts and real data are untouched. No external registry write was attempted.
+
+Exact resume command, from repository root:
+
+```bash
+git switch feature/central-only-simple-20261027 && git status --short --branch && git rev-parse HEAD && git merge-base --is-ancestor 9ee55c9ded932a83f5260f8e5fc11f011255fc18 HEAD && sed -n '1,100p' docs/ISSUE_10_STALE_WORKER_STOP_20261027.md && cat docs/ISSUE_10_D2_AUTHORIZATION_BLOCKER_20261028.md
+```
+
+The commit containing this final section adds documentation/evidence only after
+the tested 9ee55c9 diagnostic commit; the actual application source remains b4cf202.
+
+---
+
+# Previous Phase D1 checkpoint — source PASS
+
+## Phase D1 continuation from d6969b1 — Windows/Linux source PASS; STOP after D1
+
+Branch `feature/central-only-simple-20261027`; clean starting checkpoint
+`d6969b1e62265857901621c23f4923185ebc6297`, approved ancestor
+`4340c41865328cd893e6dc23fcdcedfefa7f9bf2`.
+Read the active development guide v2.1 and live Drive app registry, GitHub
+Issue #10, repository DEVELOPMENT_RULES.md and CURRENT_APPROVED.json on main.
+The approved manifest is absent from this historical feature branch by design;
+it was read remotely without copying/changing it. Approved source/EXE identity
+is unchanged. Previous Phase C source run `40697620744` remains accepted evidence.
+
+D1 core commit: `1858dc02e3520632fd836f08d585343ea3228ce0`.
+D1 GUI/test integration and exact CI source:
+`b4cf2020e97d7fdf1ff58671e01a06a264a77ce2`.
+Source workflow: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40707038963
+Linux job `122881839593`: focused tests and full **60/60 scripts PASS**.
+Windows job `122881840033`: focused tests and full **60/60 scripts PASS**.
+Run `40707038963` is completed **SUCCESS**, zero failed scripts on either OS.
+Focused D1 11 backend + 5 real Qt tests PASS on each platform, followed by all
+previous START/END/handover gates. Exact log excerpts and source identity:
+`docs/validation/central-only-20261028/phase-d1-b4cf202.json`.
+EXE workflow `40707038918`: **SKIPPED intentionally**.
+
+Real isolated SMB availability check: **NOT RUN / unavailable**. No mounted
+CIFS/SMB share, configured private TCP destination, VPN or synthetic test-share
+credentials/endpoints were available in the managed environment. No service
+network was contacted or scanned. The source fault tests below are simulations,
+not a replacement for physical SMB interruption/restart acceptance, which remains
+mandatory before operational approval and does not block independent D1 work.
+
+Implemented D1 only:
+
+- `position_tracking_shifts.py`: officer shift completion no longer calls
+  physical END, no longer requires a matching live-position preview, and keeps
+  `closed_active_agms=[]` for compatibility. Wrong shift ID, pending-member
+  decisions and shift time-order validation remain enforced. Explicit guarded
+  `end_officer_shift_member` is separate and unchanged.
+- Membership can be decided before physical START. Officer-only discovery also
+  finds committed short work already explicitly ended before the next refresh.
+  Membership changes accept an expected shift ID, so late decisions cannot alter
+  the next shift. Exclusion/undo changes only membership, never work timestamps.
+- `position_tracking_positions.py`: physical START never calls shift sync or
+  waits on `__SHIFT_CONTROL__`, including legacy sync_shift=True callers.
+- `position_tracking_handoff.py`: central Windows identity-change compatibility
+  hook is a no-op; it cannot generate END or mutate/read central work. Historical
+  offline code/queues remain isolated and untouched; no queue is activated.
+- `position_tracking_event_queries.py`: existing shift session projection uses
+  durable events as of the report boundary, so later actual END/handover cannot
+  erase prior shift work. The report clip is not a physical END. No new historical
+  admission/report feature was started.
+- Existing GUI modules `position_tracking_ui_shifts.py`, `_ui_admin.py`,
+  `_ui_shift_end.py`, `_ui_lifecycle.py`: one owned worker without a waiting
+  queue runs shift reads/start/membership operations. The existing completion
+  modal allows open positions and clearly states they remain active; its implicit
+  bulk-END completion path was removed. Explicit single END remains separate.
+  No new officer panel, authorization design, D2 or packaged candidate was built.
+
+New targeted tests: `central_shift_separation_regression.py` **11/11 PASS**;
+real Qt `central_shift_ui_regression.py` **5/5 PASS** locally. Cover open-position
+shift changes, exclusion/undo, approval before START, short-work discovery,
+stale shift decisions, simultaneous physical writes while shift control or slow
+shift persistence is held, failed finalization, lost mirror ACK, later actual
+END/reopen, responsive GUI and YES/NO completion without physical END.
+
+Old auto-END expectations were replaced with stronger immutable START identity,
+timestamp, raw-event/no-new-END and history checks in shift_end_release/actions,
+network_resilience, windows_user_handoff, windows_handoff_module/replay_order and
+simulated_shared_host_shortcuts tests. Existing real END identity/time replay
+checks remain. No assertions were marked expected failures or skipped.
+
+First local full run: **59/60 scripts PASS, one FAIL** in ui_recovery_timing.
+Its fixture held the removed implicit Windows handoff lock. It now holds the
+actual central position-recovery lock, keeping the 13-second hold, >12-second
+elapsed assertion, >100 GUI heartbeats, 31-second ceiling and receipt checks.
+Targeted repeat: **PASS**, 18.074 seconds recovery and 361 heartbeats. This is
+documented adaptation to the approved removal of implicit END, not an increased
+timeout or weakened integrity check. Final Linux and Windows full runs: **PASS**.
+
+Status: **D1 SOURCE VERIFICATION PASS / STOPPED AFTER D1**. No open failing source
+test or demonstrated integrity defect remains in these scenarios. The candidate
+is not operationally approved. The central preview is still opt-in
+`--central-only`; final default entry/packaging and the remaining Issue #10
+features are unfinished. Do not begin D2 without a new explicit instruction.
+Do not build an EXE. Main, CURRENT_APPROVED.json, approved EXE, service shortcuts
+and real data remain untouched.
+
+Drive registry update was **BLOCKED** by automatic approval review (destination
+ownership and exact-payload authorization not verified). No update was applied;
+readback still starts with Phase C. Proposed exact text is retained for approval
+in `docs/validation/central-only-20261028/D1_REGISTRY_UPDATE_PROPOSED_EL.txt`.
+This affects external documentation only, not the successful D1 source gates.
+
+Next step: await a new user instruction for D2. Real isolated SMB handover/drop/
+restart acceptance remains NOT RUN and mandatory before operational approval.
+The Drive registry proposal requires approval before another write attempt.
+Do not repeat completed source diagnosis. Exact resume command, from repo root:
+
+```bash
+git switch feature/central-only-simple-20261027 && git status --short --branch && git rev-parse HEAD && git merge-base --is-ancestor b4cf2020e97d7fdf1ff58671e01a06a264a77ce2 HEAD && sed -n '1,125p' docs/ISSUE_10_STALE_WORKER_STOP_20261027.md
+```
+
+The commit containing this final section only adds checkpoint/log/proposed
+registry documentation after the exact CI-tested b4cf202 source/test revision.
+
+---
+
+# Previous Phase C checkpoint — source PASS
+
+## Phase C continuation from a9b8982 — source verification PASS
+
+Branch `feature/central-only-simple-20261027`; clean starting HEAD was
+`a9b898213eb543782114abd330bfe4ed96aeb6c5`, with approved merge-base
+`4340c41865328cd893e6dc23fcdcedfefa7f9bf2`. Prior 56/56 platform gates were
+accepted as evidence and their Windows diagnosis was not repeated.
+
+Implemented exclusively confirmed booth replacement:
+
+- Backend core commit `8efd285e53157d0cbcf437dc9f0692394557199d` adds
+  `position_tracking_position_handover.py`. One BEGIN IMMEDIATE transaction
+  validates the exact old START and new person's eligibility, inserts distinct
+  END/START IDs with the identical full timestamp, changes the unique live claim,
+  stores completed previous work and saves an immutable receipt with actor/reason.
+- JSON event files are recoverable mirrors for this transaction. The immutable
+  central receipt supplies both events and live/history state if mirror writes
+  fail. Recovery is bounded and never re-applies an old live claim.
+- Service returns HANDOVER_REQUIRED with the observed old START/name. GUI asks
+  YES/NO, defaults NO, displays booth and directions, and submits YES with the
+  exact observed START ID. NO makes no business-state write. A prior actual END
+  follows the ordinary START path without a replacement question.
+- Recheck retains the same operation identity after unknown ACK. Stale YES,
+  duplicate commands and late writers cannot replace newer occupants.
+- Existing event projections pre-index STARTs so same-second handover chains
+  retain all completed work. Active-map reads use one SQL claim snapshot so a
+  replacement between reads cannot hide both people. These are Phase C history/
+  consistency integrations, not new historical-report or officer functions.
+
+Service/GUI source commit: `3101a57dac951546c0f4f70f6c5509b8cdeabde7`.
+Source CI: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40660029478
+Linux job `122720454755`: PASS, focused gates and full 58-script suite.
+Windows job `122720454349`: focused gates PASS; full suite 57/58 PASS, one FAIL:
+`runtime_diagnostics_regression.py::test_rotation_is_bounded_and_records_remain_valid_after_writer_closes`
+recorded 22/30 required real resource probes within its unchanged 5-second bound.
+Its tight QTest.qWait loop can starve the Python diagnostics writer on Windows.
+The fixture now pumps Qt and explicitly yields the Python GIL, with unchanged
+deadlines, real resource probes, minimum count and file/record assertions.
+Local diagnostics 5/5 PASS in 1.464 seconds; repeat platform gates now PASS below.
+Failure evidence: `docs/validation/central-only-20261028/phase-c-3101a57.json`.
+EXE workflow `40660029897`: SKIPPED intentionally.
+
+Latest verified source/test commit: `e325229b5547346caff027d9fb3f3f10eb97e948`.
+Repeat source run: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40697620744
+Linux job `122848497381`: focused gates and full 58/58 scripts PASS.
+Windows job `122848496917`: focused gates and full 58/58 scripts PASS.
+The run is completed SUCCESS. Both platforms passed handover backend 16/16,
+handover Qt GUI 5/5, stale-worker 6/6, END 4/4, recovery 25/25, service 11/11 and
+existing operator GUI 6/6 in the focused step, followed by the full 58-script
+suite with zero failures. Windows diagnostics regression also PASS.
+Final exact job-log evidence:
+`docs/validation/central-only-20261028/phase-c-e325229.json`.
+EXE workflow `40697620977`: SKIPPED intentionally. Application source is still
+`3101a57dac951546c0f4f70f6c5509b8cdeabde7`; the repeat changes only the test pump.
+
+Local targeted evidence: backend 16/16 PASS; real Qt confirmation/recheck 5/5
+PASS; existing recovery 25/25, END 4/4, stale-worker 6/6, service 11/11 and module
+architecture 4/4 PASS. Network resilience and legacy identity checks PASS.
+The final local full suite also passed 58/58 after the active-snapshot
+hardening. Final repeated Windows/Linux source CI is PASS. No timeout or prior
+safety assertion was weakened.
+
+New tests cover: NO leaves canonical tables/raw events byte-for-byte unchanged;
+ordinary START after actual END; YES timestamps/audit/history; same-ID retries;
+identity collision; 15 concurrent clients; rollback between END and START;
+process death inside SQL and after commit; lost commit ACK plus unavailable
+read-back; projection outage/recovery; delayed pre-commit and post-commit workers;
+same-second chains; coherent readers during and across the atomic transaction.
+
+Changed source modules/functions:
+
+- `src/position_tracking_position_handover.py`: `handover`, `_commit_handover`,
+  immutable receipt validation and bounded mirror recovery.
+- `src/position_tracking_store.py`: composes the handover capability.
+- `src/position_tracking_position_recovery.py`: initializes handover schema and
+  recovers/validates canonical receipt evidence.
+- `src/position_tracking_positions.py`: `active_all` reads one coherent SQL
+  claim snapshot while retaining legacy corruption checks and workstation labels.
+- `src/position_tracking_event_queries.py`: merges canonical handover events and
+  pairs same-second sessions using pre-indexed START identities.
+- `src/position_tracking_central.py`: immutable confirmation identity and
+  `CentralOperator.execute/check` handover/preflight/idempotency routing.
+- `src/position_tracking_ui_central.py`: default-NO confirmation and `_poll`
+  integration; existing single-flight action/recheck worker owns the request.
+
+New tests: `tests/central_handover_regression.py` and
+`tests/central_handover_ui_regression.py`. Source workflow
+`.github/workflows/central-only-gates.yml` runs both first on Windows/Linux.
+`tests/runtime_diagnostics_regression.py` only fixes its event pump as explained
+above; no diagnostics application behavior, timeout or safety check changed.
+
+Status: Phase C SOURCE VERIFICATION PASS; source-only candidate. No open source
+failure or demonstrated data-integrity defect remains in the exercised scenarios.
+Physical SMB interruption/restart, packaged EXE and 15 physical stations are
+NOT RUN. No new EXE build, main/manifest/release, real service data,
+shortcuts or deployed queues were changed. No officer or historical-entry feature
+was started. Preview remains opt-in (`--central-only`).
+
+Next step: preserve this verified candidate and perform Phase C acceptance on
+an isolated real SMB test share with synthetic personnel before any packaged or
+production acceptance. That environment is not available in this workspace.
+The complete application/Issue #10 is still unfinished. Do not proceed to
+officer/report features in this assignment. Do not repeat the completed source
+diagnosis or build an EXE on the strength of these source gates alone.
+
+Exact resume command (from the repository root):
+
+```bash
+git switch feature/central-only-simple-20261027 && git status --short --branch && git rev-parse HEAD && git merge-base --is-ancestor e325229b5547346caff027d9fb3f3f10eb97e948 HEAD && sed -n '1,155p' docs/ISSUE_10_STALE_WORKER_STOP_20261027.md
+```
+
+Continue from the commit containing this final documentation checkpoint (its
+exact SHA is returned by the command and final handoff). Its only changes after
+the CI-tested e325229 source/test revision are this checkpoint and log evidence.
+
+---
+
+# Previous Windows/Linux source gates PASS, 28 October 2026
+
+## Current continuation from 81ccc3a (supersedes the WIP below)
+
+Application remains incomplete; no EXE or production change. Application source
+is still `184567e3f0ef34cee11ce40b5728ea26fdbaa87a`. This continuation changes
+regression fixtures and documentation only. The three original Windows failures
+are resolved. Overall source verification at test revision
+`e688cc79b9bb0f2df6a4ca0cbb5b270d985420a9` is PASS on both platforms:
+
+- Diagnostic commit `8f9b95536df453f8b5608ff45dd76af9f37e88be`, run
+  `40654847842`, Windows job `122703285275`, reproduces the three failures with
+  worker state. START was centrally CONFIRMED, action future finished, and the
+  read either was still in SQLite or already held the correct active START.
+  GUI state was still dirty. There was no central write rejection or data loss.
+- Fix `902c4ca3b9e093674322faec5965c7b6d637f34a` yields the Python GIL explicitly
+  with `time.sleep(0.005)` between `processEvents` calls. The Windows tight
+  `QTest.qWait(5)` loop starved the Python/SQLite worker compared with the real
+  QApplication event loop. No application code, predicate, state assertion or
+  5-second deadline was changed. Failure diagnostics remain for future evidence.
+- Local PySide6 6.12: all 6 UI cases PASS in 4.801 seconds, normal process exit.
+- Run `40655231061`, exact test revision `902c4ca`: focused stale-worker 6/6,
+  END 4/4, recovery 25/25, service 11/11 and GUI 6/6 PASS on both platforms.
+- Linux job `122704530746`: full source CI PASS.
+- Windows job `122704530486`: full source CI completed with 54/56 scripts PASS.
+  Failures were legacy `exit_responsiveness_regression.py` and
+  `ui_workflow_regression.py`, which also pumped Qt using tight qWait loops.
+  Their assertions/deadlines were retained; revision
+  `e688cc79b9bb0f2df6a4ca0cbb5b270d985420a9` explicitly yields the GIL in those
+  loops too. The offline code itself was not changed or revived.
+- Local targeted validation of e688cc7: legacy exit 6/6 PASS (4.536 seconds),
+  legacy workflow 1/1 PASS (4.105 seconds, 62 GUI heartbeats during recovery).
+- Final verification run `40656531869` for e688cc7 is **SUCCESS** on both
+  platforms: Linux job `122708794143` and Windows job `122708794596`.
+  Each passed all focused gates and the complete **56-script suite, 0 failures**.
+  This includes the three originally failing Windows GUI cases and the two
+  subsequently exposed legacy regression scripts. Actual job-log summaries are
+  retained in `docs/validation/central-only-20261028/source-gates-e688cc7.json`.
+- EXE build run `40655231033`: SKIPPED intentionally. Packaged EXE, physical SMB
+  interruption/restart and 15 physical stations: NOT RUN.
+
+Exact next continuation instruction (do not repeat this completed diagnosis):
+
+> Continue TDE-potition_tracking on feature/central-only-simple-20261027 from
+> the commit containing this checkpoint. Verify clean HEAD and ancestry from
+> e688cc79b9bb0f2df6a4ca0cbb5b270d985420a9 and approved baseline 4340c41865328cd893e6dc23fcdcedfefa7f9bf2.
+> Read this current section first. Run 40656531869 already passed both complete
+> platform gates. Continue Issue #10 with the next small Phase C change:
+> explicit confirmed booth handover, atomic END-old + START-new with identical
+> timestamp, preserved operation identities, actor/reason audit and stale-worker
+> fencing. NO must leave all central state unchanged; ordinary START after END
+> must show no handover dialog. Preserve all previous gates, use synthetic
+> temporary stores, checkpoint and repeat relevant source CI. Do not modify main,
+> CURRENT_APPROVED.json, approved EXE, production data or deployed queues.
+
+Remaining Issue #10 work is NOT IMPLEMENTED/NOT VERIFIED by this checkpoint:
+handover; officer authorization/panel and centralized roster administration;
+full shift/live-position separation; historical report admissions, overlap checks
+and regeneration; remaining officer/map/report GUI I/O isolation; eventual default
+central-only entry and packaged candidate/real SMB acceptance. The operator
+preview remains opt-in (`--central-only`), and passing source gates is not full
+application completion or permission to use production data.
+
+---
+
+# Previous WIP CHECKPOINT, 28 October 2026
+
+**STOPPED AT USER REQUEST / APPLICATION NOT COMPLETE / WINDOWS GATE FAIL.**
+No programming, new tests, builds or further feature work was started for this
+checkpoint. The sections below the historical divider retain earlier evidence;
+this section is the current state.
+
+## Latest saved source and branch
+
+- Branch: `feature/central-only-simple-20261027`, repository
+  `danilidish-coder/TDE-potition_tracking`.
+- Latest source commit: **`184567e3f0ef34cee11ce40b5728ea26fdbaa87a`**.
+- Preceding fixes: `25fd91902cbf54c5afa58ff8f3b9367fb57aa6ff`
+  (transactional claims/fencing) and
+  `fe144b3ee727595e4af3a2a2151a007d93483d9f` (Qt shutdown).
+- Approved baseline remains ancestor
+  `4340c41865328cd893e6dc23fcdcedfefa7f9bf2`.
+- All application changes were already committed at source SHA above. The WIP
+  commit containing this section preserves the handoff documentation only; its
+  exact SHA is reported after push and can be read with
+  `git log -1 --format=%H -- docs/ISSUE_10_STALE_WORKER_STOP_20261027.md`.
+
+## Implemented since the previous STOP
+
+1. Added `position_tracking_position_claims.py`: central SQLite live claims,
+   unique physical booth/AGMS constraints, and per-attempt tokens. Conditional
+   commits/aborts prevent a superseded worker from borrowing a retry's token,
+   regaining authority or rolling back a committed operation.
+2. Active position queries use the central accepted claim, rather than treating
+   an overwritten/deleted JSON projection as authoritative. Superseded raw bytes
+   remain available as evidence, marked ABORTED and excluded from work reports.
+   Original operation IDs/times remain stable across retries.
+3. Recovery revalidates the original END time against the effective START,
+   including old aborted bytes delivered after a subsequent START correction.
+4. Removed QWidget-bound work from the read worker. Shutdown stops new work and
+   destroys native widgets on the GUI thread while QApplication still exists.
+   Qt test fixtures use that same explicit deferred deletion. The subprocess
+   check now covers repeated exits and exit with a blocked share read.
+5. The original two stale-worker test methods and their assertions are unchanged
+   from `340eeb3` (AST comparison verified). Four additional fencing cases and
+   one additional END-time recovery case were added; no timeout was extended.
+
+## PASS / FAIL / NOT RUN at source 184567e
+
+CI run: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40570239152
+
+| Check | Result |
+| --- | --- |
+| Original stale-worker assertions, plus four new cases | PASS, 6/6 in Linux and Windows focused gates |
+| Original END interruption gate | PASS, 4/4 in both focused gates |
+| Central recovery | PASS, 25/25 in both focused gates |
+| Central service/worker | PASS, 11/11 in both focused gates |
+| Local Qt 6.12 UI checks | PASS, 6/6, process exit 0 |
+| Local portable runner | PASS, 56 scripts, zero failures in the completed previous execution |
+| Linux CI job `122422193134` | PASS, including focused and full source regressions |
+| Windows CI job `122422192745` | FAIL in focused Qt UI checks, 3/6 cases failing |
+| Full Windows regression step | NOT RUN: preceding focused step failed |
+| Windows EXE build, run `40570238840` | SKIPPED intentionally, not a build PASS |
+| Packaged EXE, real SMB interruption/restart, physical 15-terminal acceptance | NOT RUN |
+
+The local runner output was observed before this checkpoint, not rerun now.
+Its temporary JSON under `/tmp` is no longer present in the current environment;
+the CI run/job identities above provide the remote evidence. No new test run
+was launched to recreate temporary files.
+
+## Remaining failures / exact next task
+
+Windows UI failures in job `122422192745`:
+
+- `test_blocked_write_is_still_owned_after_ui_timeout`
+- `test_exit_and_windows_account_change_preserve_central_active_position`
+- `test_real_central_start_end_from_buttons`
+
+All fail waiting for `end_btn.isEnabled()` with **"Qt state did not settle"**.
+The cause is NOT YET DIAGNOSED. Do not assume this is merely slow Windows and do
+not extend timeouts or weaken assertions. The former subprocess shutdown-crash
+case passes in this run; the overall Windows gate still fails. Further Issue #10
+feature development remains paused until the Windows gate is genuinely green.
+
+Exact continuation instruction:
+
+> Stay on feature/central-only-simple-20261027 in TDE-potition_tracking. Read
+> docs/ISSUE_10_STALE_WORKER_STOP_20261027.md first and verify source ancestry from
+> 184567e3f0ef34cee11ce40b5728ea26fdbaa87a and approved baseline 4340c41865328cd893e6dc23fcdcedfefa7f9bf2.
+> Diagnose the three Windows Qt-state failures using run 40570239152, job
+> 122422192745. Inspect actual worker outcomes, central claims and UI polling;
+> do not increase timeouts or weaken tests. Make minimal fixes and repeat the
+> focused gates and Windows/Linux regressions. Only after both platforms pass
+> continue Issue #10. Do not merge main, modify CURRENT_APPROVED.json, build or
+> replace the approved EXE, or access production data/queues.
+
+No main, approved manifest, release EXE, production data, shortcuts or deployed
+queues were changed. The candidate remains source-only and incomplete. No work
+was discarded. Commit/push this checkpoint and verify its exact remote SHA.
+
+---
+
+# Historical STOP after stale-worker integrity proof
+
+**HISTORICAL FAIL / NOT READY.** This earlier checkpoint superseded the
+readiness conclusions in the earlier recovery and preview notes, while retaining
+their actual, scoped PASS evidence. No assertion was suppressed or relaxed.
+
+## Identity and completed work
+
+- Baseline: `4340c41865328cd893e6dc23fcdcedfefa7f9bf2`.
+- User-requested starting checkpoint: `839c3c5d319fdb5a1f0f2fa1526db78a870b58a8`.
+- Branch throughout: `feature/central-only-simple-20261027`.
+- Recovery source commit: `2599257440a9e8b46b770f1ef4ef21a092b44e42`.
+- Direct-central preview source commit: `f0b4606ff51fa7bc083b12106d1e7ad56fcf9d71`.
+- The stop checkpoint adds only failing safety tests, test-gate ordering and
+  evidence/documentation. Application source remains that of `f0b4606`.
+
+The original END receipt-gap defect now passes all four unchanged original tests.
+Central evidence recovers its END/history on reopen and rejects a second END
+under ordinary lock ownership. Cross-day IDs and corresponding ordinary START
+interruption/reopen cases also pass. These fixes are retained for review, but
+do not establish complete SMB safety.
+
+## Newly reproduced failures
+
+Command: `python tests/central_stale_worker_regression.py`.
+
+The fixture uses real store code, OS/SQLite locks for new clients, a temporary
+synthetic store and one blocked old worker. Only the old instance's officer-lock
+contexts are replaced to model the SMB server releasing its locks while the old
+call stack remains blocked. This is an explicit server-lock-loss **model**, not
+a claim that physical SMB interruption was tested.
+
+1. **FAIL — stale START:** old client records PREPARED and pauses before raw
+   START JSON. A new client recovers, treats missing evidence as aborted, and
+   starts another person at booth 1. Resuming the old call writes its JSON and
+   active marker. Both people are now returned by `active_all()` at booth 1:
+   `AssertionError: 2 != 1`.
+2. **FAIL — stale END:** old client commits END JSON and pauses before the
+   pending receipt. A new client recovers END and writes a new START for the
+   same AGMS at booth 2. Resuming the old call writes the old receipt and
+   unconditionally unlinks that AGMS's active path, removing the newer confirmed
+   START. Reopen still returns None:
+   `AssertionError: unexpectedly None`.
+
+These are distinct from process death: a terminated process cannot resume;
+an SMB-disconnected worker may still resume file operations through new handles.
+Successfully acquiring a server lock is not proof that the previous call stack
+has stopped. Bounded GUI workers and stable IDs alone do not fence that writer.
+
+## Stop reason and required next design
+
+Issue #10 follow-up comment `6450736281` explicitly says:
+**"If integrity remains uncertain, STOP again with proof."** The two assertions
+above are the proof. The Phase B preview is frozen and no Phase C/D or packaging
+work follows. Its flag remains opt-in for source review; do not run it against
+production or treat its existence as acceptance.
+
+The next repair needs centrally enforced fencing/conditional state transitions,
+not just another timeout or an extra unvalidated lock acquisition. In particular:
+
+- A superseded PREPARED operation must never regain authority when an old worker
+  resumes. A missing raw file cannot by itself prove that its worker stopped.
+- No END projection may remove a newer START. Both the canonical live claim and
+  its projections must validate the exact immutable START being changed.
+- Booth/AGMS exclusivity must remain centrally enforceable after server lock
+  loss. Stale JSON projections must not become authoritative live/report state.
+- Preserve original events/IDs/times and audit; do not repair real deployed data
+  or delete queues during this work. Keep the new failing gates unchanged and
+  run them before further operator/officer work.
+
+## Test ledger
+
+| Evidence | Result |
+| --- | --- |
+| Original END gate | PASS, 4/4 unchanged |
+| Ordinary central recovery suite | PASS, 24/24 |
+| Direct-central service/worker | PASS, 11/11 |
+| Local Qt preview, PySide6 6.8.3 | PASS, 6/6 |
+| Local portable scripts before adding stale-worker gate | PASS, 55 scripts |
+| New stale-worker safety model | **FAIL, 2/2** |
+| Overall integrity/readiness | **FAIL** |
+| Packaged EXE, real SMB, 15 physical stations | NOT RUN |
+
+The full local runner's earlier 55/55 result is not a current all-green suite:
+it did not yet include the two new assertions. The new test is discovered by
+the normal full runner and is now the first focused source-CI gate. No expected
+failure markers, assertion changes or timeout increases were used.
+
+## CI evidence for source f0b4606
+
+Source run: https://github.com/danilidish-coder/TDE-potition_tracking/actions/runs/40566794748
+
+Linux job `122410105225`: **FAIL** in focused operator UI checks. END 4/4,
+recovery 24/24 and service 11/11 passed first. UI subprocess exited `-6` under
+PySide6 6.12.0 / Ubuntu 26.04; first diagnostic:
+
+```text
+QObject: shared QObject was deleted directly. The program is malformed and may crash.
+corrupted double-linked list
+```
+
+The failing test was
+`test_central_preview_launch_never_initializes_legacy_window_or_local_providers`.
+Full CI source regressions were NOT RUN because that focused step failed. Local
+PySide6 6.8.3 success is not used to override this crash. The shutdown ownership
+problem also needs diagnosis before the preview can be accepted.
+
+Windows job `122410104556`: **FAIL** at the same UI subprocess assertion, exit
+code `3221226505` (hex `0xC0000409`). Its END 4/4, recovery 24/24 and service
+11/11 gates passed first. Full Windows source regressions were NOT RUN after
+that focused failure. This is Windows **source** execution, not a packaged EXE
+or physical SMB test. Both platform jobs in run `40566794748` failed; neither
+is a candidate acceptance result.
+
+The old EXE workflow run `40566794588` was **SKIPPED**, as intended for this
+source-only branch. No candidate or production EXE was built, installed or
+published. Main, CURRENT_APPROVED.json, approved binary, production data, queues
+and shortcuts remain untouched. There is no new binary SHA/size/URL to report.

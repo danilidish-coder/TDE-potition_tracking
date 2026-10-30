@@ -1,0 +1,15 @@
+{
+  "source_commit": "762c3a369a199766ab629007b6b2a3c27885d5e1",
+  "observed_date_athens": "2026-10-16",
+  "runs": {
+    "38874685744": "SUCCESS",
+    "38874685771": "SUCCESS",
+    "38874685792": "SUCCESS",
+    "38874685760": "SUCCESS"
+  },
+  "artifact": "POSITION_TRACKING_WINDOWS_TEST-762c3a369a199766ab629007b6b2a3c27885d5e1-38874685744",
+  "artifact_size": "60.5 MB",
+  "artifact_sha256": "27d252e4e2b781ed0dc53661e3600619953838452338f714e257a1d01c1f992b",
+  "exe_sha256": "beb836483229f3656e959c0891a7bd27cb7f58a0813b2bfa1015dabbf27699f7",
+  "evidence": "Public Actions run HTML and preserved CI functional/regression/visual reports. No tests rerun; archive not downloaded."
+}

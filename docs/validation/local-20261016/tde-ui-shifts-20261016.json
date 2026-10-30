@@ -1,0 +1,207 @@
+[
+  {
+    "test": "client_lifecycle_regression.py",
+    "exit_code": 0,
+    "seconds": 0.123
+  },
+  {
+    "test": "common_module_regression.py",
+    "exit_code": 0,
+    "seconds": 0.107
+  },
+  {
+    "test": "communication_control_regression.py",
+    "exit_code": 0,
+    "seconds": 0.089
+  },
+  {
+    "test": "current_report_retention_regression.py",
+    "exit_code": 0,
+    "seconds": 0.152
+  },
+  {
+    "test": "development_artifact_regression.py",
+    "exit_code": 0,
+    "seconds": 0.09
+  },
+  {
+    "test": "initial_presentation_regression.py",
+    "exit_code": 0,
+    "seconds": 0.222
+  },
+  {
+    "test": "machine_queue_module_regression.py",
+    "exit_code": 0,
+    "seconds": 0.173
+  },
+  {
+    "test": "module_boundaries_regression.py",
+    "exit_code": 0,
+    "seconds": 0.327
+  },
+  {
+    "test": "network_resilience_regression.py",
+    "exit_code": 0,
+    "seconds": 4.238
+  },
+  {
+    "test": "offline_15_clients_restart_stress.py",
+    "exit_code": 0,
+    "seconds": 0.939
+  },
+  {
+    "test": "offline_applied_cache_regression.py",
+    "exit_code": 0,
+    "seconds": 0.168
+  },
+  {
+    "test": "offline_durability_stage4_regression.py",
+    "exit_code": 0,
+    "seconds": 0.121
+  },
+  {
+    "test": "offline_recovery_integration.py",
+    "exit_code": 0,
+    "seconds": 0.096
+  },
+  {
+    "test": "offline_single_machine_claim_stress.py",
+    "exit_code": 0,
+    "seconds": 0.902
+  },
+  {
+    "test": "offline_user_logoff_machine_queue.py",
+    "exit_code": 0,
+    "seconds": 0.077
+  },
+  {
+    "test": "pdf_report_regression.py",
+    "exit_code": 0,
+    "seconds": 0.217
+  },
+  {
+    "test": "personnel_history_sqlite_regression.py",
+    "exit_code": 0,
+    "seconds": 0.217
+  },
+  {
+    "test": "personnel_module_regression.py",
+    "exit_code": 0,
+    "seconds": 0.327
+  },
+  {
+    "test": "rendering_regression.py",
+    "exit_code": 0,
+    "seconds": 2.247
+  },
+  {
+    "test": "report_archive_history_regression.py",
+    "exit_code": 0,
+    "seconds": 0.238
+  },
+  {
+    "test": "report_archive_search_regression.py",
+    "exit_code": 0,
+    "seconds": 0.081
+  },
+  {
+    "test": "report_text_module_regression.py",
+    "exit_code": 0,
+    "seconds": 0.166
+  },
+  {
+    "test": "runner_encoding_regression.py",
+    "exit_code": 0,
+    "seconds": 0.201
+  },
+  {
+    "test": "settings_module_regression.py",
+    "exit_code": 0,
+    "seconds": 0.198
+  },
+  {
+    "test": "shared_file_lock_concurrency_regression.py",
+    "exit_code": 0,
+    "seconds": 1.804
+  },
+  {
+    "test": "shift_end_actions_regression.py",
+    "exit_code": 0,
+    "seconds": 0.249
+  },
+  {
+    "test": "shift_end_release_regression.py",
+    "exit_code": 0,
+    "seconds": 0.081
+  },
+  {
+    "test": "shift_smb_lock_concurrency.py",
+    "exit_code": 0,
+    "seconds": 1.296
+  },
+  {
+    "test": "simulate_officer_simple_flow.py",
+    "exit_code": 0,
+    "seconds": 0.285
+  },
+  {
+    "test": "simulated_shared_host_shortcuts.py",
+    "exit_code": 0,
+    "seconds": 1.059
+  },
+  {
+    "test": "sqlite_shift_archive_regression.py",
+    "exit_code": 0,
+    "seconds": 0.076
+  },
+  {
+    "test": "start_marker_ack_regression.py",
+    "exit_code": 0,
+    "seconds": 0.148
+  },
+  {
+    "test": "start_time_correction_edge_regression.py",
+    "exit_code": 0,
+    "seconds": 0.094
+  },
+  {
+    "test": "stress_shift_membership_reversal.py",
+    "exit_code": 0,
+    "seconds": 10.501
+  },
+  {
+    "test": "theme_module_regression.py",
+    "exit_code": 0,
+    "seconds": 0.187
+  },
+  {
+    "test": "visual_process_regression.py",
+    "exit_code": 0,
+    "seconds": 0.074
+  },
+  {
+    "test": "visual_startup_evidence_regression.py",
+    "exit_code": 0,
+    "seconds": 0.286
+  },
+  {
+    "test": "windows_handoff_module_regression.py",
+    "exit_code": 0,
+    "seconds": 0.096
+  },
+  {
+    "test": "windows_handoff_replay_order_regression.py",
+    "exit_code": 0,
+    "seconds": 0.289
+  },
+  {
+    "test": "windows_session_module_regression.py",
+    "exit_code": 0,
+    "seconds": 0.14
+  },
+  {
+    "test": "windows_user_handoff_regression.py",
+    "exit_code": 0,
+    "seconds": 0.091
+  }
+]

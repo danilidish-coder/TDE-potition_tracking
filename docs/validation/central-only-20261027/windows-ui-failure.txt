@@ -1,0 +1,31 @@
+Source: f0b4606ff51fa7bc083b12106d1e7ad56fcf9d71
+Actions run: 40566794748
+Job: 122410104556
+Result: FAIL
+Excerpt from actual job log:
+
+2026-10-27T19:12:51.1134609Z 
+2026-10-27T19:12:51.1134713Z OK
+2026-10-27T19:13:35.6818624Z ..F...
+2026-10-27T19:13:35.6822034Z ======================================================================
+2026-10-27T19:13:35.6823767Z FAIL: test_central_preview_launch_never_initializes_legacy_window_or_local_providers (__main__.OperatorUI.test_central_preview_launch_never_initializes_legacy_window_or_local_providers)
+2026-10-27T19:13:35.6825114Z ----------------------------------------------------------------------
+2026-10-27T19:13:35.6825478Z Traceback (most recent call last):
+2026-10-27T19:13:35.6831672Z   File "D:\a\TDE-potition_tracking\TDE-potition_tracking\tests\central_operator_ui_regression.py", line 191, in test_central_preview_launch_never_initializes_legacy_window_or_local_providers
+2026-10-27T19:13:35.6832563Z     self.assertEqual(completed.returncode, 0, completed.stderr)
+2026-10-27T19:13:35.6832914Z AssertionError: 3221226505 != 0 : 
+2026-10-27T19:13:35.6833136Z 
+2026-10-27T19:13:35.6833293Z ----------------------------------------------------------------------
+2026-10-27T19:13:35.6833621Z Ran 6 tests in 43.751s
+2026-10-27T19:13:35.6833767Z 
+2026-10-27T19:13:35.6833848Z FAILED (failures=1)
+2026-10-27T19:13:35.7374359Z ##[error]Process completed with exit code 1.
+2026-10-27T19:13:35.7602628Z ##[group]Run actions/upload-artifact@v4
+2026-10-27T19:13:35.7602993Z with:
+2026-10-27T19:13:35.7603402Z   name: CENTRAL_SOURCE_GATES-windows-latest-f0b4606ff51fa7bc083b12106d1e7ad56fcf9d71-40566794748
+2026-10-27T19:13:35.7603883Z   path: artifact/regressions
+2026-10-27T19:13:35.7604132Z   if-no-files-found: ignore
+2026-10-27T19:13:35.7604379Z   retention-days: 14
+2026-10-27T19:13:35.7604590Z   compression-level: 6
+2026-10-27T19:13:35.7604802Z   overwrite: false
+

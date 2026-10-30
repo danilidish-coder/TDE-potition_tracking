@@ -1,0 +1,15 @@
+..F..
+======================================================================
+FAIL: test_rotation_is_bounded_and_records_remain_valid_after_writer_closes (__main__.RuntimeDiagnosticsRegression.test_rotation_is_bounded_and_records_remain_valid_after_writer_closes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/runtime_diagnostics_regression.py", line 76, in test_rotation_is_bounded_and_records_remain_valid_after_writer_closes
+    files = list(Path(directory).glob('*')); self.assertGreaterEqual(len(files), 2)
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 1 not greater than or equal to 2
+
+----------------------------------------------------------------------
+Ran 5 tests in 1.301s
+
+FAILED (failures=1)
+Fontconfig error: No writable cache directories

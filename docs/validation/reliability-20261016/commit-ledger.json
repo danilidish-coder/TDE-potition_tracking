@@ -1,0 +1,46 @@
+[
+  {
+    "commit": "d2b5beb66fc9321007b431a2cb6fa9d48475fa43",
+    "subject": "Confirm completed modularization acceptance and resume reliability audit [skip ci]"
+  },
+  {
+    "commit": "4ef0041bbe18421954d2aef6182405e907febeaa",
+    "subject": "Bound personnel selection reads while shared storage is blocked [skip ci]"
+  },
+  {
+    "commit": "39b44f08955ed54b49b3d8170190cfdcf7bb2636",
+    "subject": "Reject delayed shared reads after durable local state has advanced [skip ci]"
+  },
+  {
+    "commit": "15896636170415a27f2b8d2d11be3d8f07b34344",
+    "subject": "Keep confirmed local and remote exit responsive without false END acknowledgements [skip ci]"
+  },
+  {
+    "commit": "5231b30928066ddb6d86256a95c48698baabd287",
+    "subject": "Add bounded local stall diagnostics and measured reliability soak"
+  },
+  {
+    "commit": "577d98ac297caaa45c833626d2712ba35c244d91",
+    "subject": "Record Linux regression outcomes for 5231b30928066ddb6d86256a95c48698baabd287 [skip ci]"
+  },
+  {
+    "commit": "048ddbf255838525a80c914482c94454c8e5a705",
+    "subject": "Record isolated Windows visual evidence for 5231b30928066ddb6d86256a95c48698baabd287 [skip ci]"
+  },
+  {
+    "commit": "1554dedb68afecc3c39fe6cfdeb275ad7263aa8e",
+    "subject": "Observe diagnostic rotation after deterministic sampling and writer closure"
+  },
+  {
+    "commit": "eb18c04afd1399195079dcfc99e44071dcfedd46",
+    "subject": "Record Linux regression outcomes for 1554dedb68afecc3c39fe6cfdeb275ad7263aa8e [skip ci]"
+  },
+  {
+    "commit": "bc30b88539fe6fddfb9de3fc4738b2f72ee1a242",
+    "subject": "Preserve measured 600-second reliability soak and exact pending native checkpoint [skip ci]"
+  },
+  {
+    "commit": "4e7b238115473049be065cce603003db2449baca",
+    "subject": "Record isolated Windows visual evidence for 1554dedb68afecc3c39fe6cfdeb275ad7263aa8e [skip ci]"
+  }
+]

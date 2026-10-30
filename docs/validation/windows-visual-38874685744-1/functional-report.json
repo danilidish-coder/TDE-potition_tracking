@@ -1,0 +1,136 @@
+{
+  "source_commit": "762c3a369a199766ab629007b6b2a3c27885d5e1",
+  "exe_sha256": "beb836483229f3656e959c0891a7bd27cb7f58a0813b2bfa1015dabbf27699f7",
+  "temporary_data_only": true,
+  "status": "PASS",
+  "offline_operations": [
+    {
+      "id": "4633500a4b654153b8d2adcddd33b636",
+      "kind": "START",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T08:39:31",
+      "start_id": "",
+      "status": "PENDING"
+    },
+    {
+      "id": "4e1d3e567bdf41d0a251628503a93aea",
+      "kind": "END",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T08:39:32",
+      "start_id": "4633500a4b654153b8d2adcddd33b636",
+      "status": "PENDING"
+    }
+  ],
+  "operations": 4,
+  "original_ids_preserved": true,
+  "original_timestamps_preserved": true,
+  "completed_sessions": 2,
+  "final_operations": [
+    {
+      "id": "4633500a4b654153b8d2adcddd33b636",
+      "kind": "START",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T08:39:31",
+      "start_id": "",
+      "status": "APPLIED"
+    },
+    {
+      "id": "4e1d3e567bdf41d0a251628503a93aea",
+      "kind": "END",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "created_at": "2026-10-16T08:39:32",
+      "start_id": "4633500a4b654153b8d2adcddd33b636",
+      "status": "APPLIED"
+    },
+    {
+      "id": "feaeb0cc921e408583456d4dffed789a",
+      "kind": "START",
+      "position": "1",
+      "direction": "ΕΙΣΟΔΟΣ",
+      "created_at": "2026-10-16T08:39:34",
+      "start_id": "",
+      "status": "APPLIED"
+    },
+    {
+      "id": "344ded7e9c304b20aba12456dca18cdf",
+      "kind": "END",
+      "position": "1",
+      "direction": "ΕΙΣΟΔΟΣ",
+      "created_at": "2026-10-16T08:39:35",
+      "start_id": "feaeb0cc921e408583456d4dffed789a",
+      "status": "APPLIED"
+    }
+  ],
+  "events": [
+    {
+      "version": 2,
+      "event_id": "4633500a4b654153b8d2adcddd33b636",
+      "kind": "START",
+      "timestamp": "2026-10-16T08:39:31",
+      "agms": "910001",
+      "rank": "ΑΣΤ",
+      "surname": "ΔΟΚΙΜΗ",
+      "given_name": "ΠΡΟΣΩΠΙΚΟ",
+      "full_name": "ΔΟΚΙΜΗ ΠΡΟΣΩΠΙΚΟ",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "computer": "runnervmgnbhw",
+      "user": "runneradmin",
+      "client_id": "runnervmgnbhw__runneradmin__6852"
+    },
+    {
+      "version": 2,
+      "event_id": "4e1d3e567bdf41d0a251628503a93aea",
+      "kind": "END",
+      "timestamp": "2026-10-16T08:39:32",
+      "start_event_id": "4633500a4b654153b8d2adcddd33b636",
+      "agms": "910001",
+      "rank": "ΑΣΤ",
+      "surname": "ΔΟΚΙΜΗ",
+      "given_name": "ΠΡΟΣΩΠΙΚΟ",
+      "full_name": "ΔΟΚΙΜΗ ΠΡΟΣΩΠΙΚΟ",
+      "position": "14",
+      "direction": "ΕΞΟΔΟΣ",
+      "computer": "runnervmgnbhw",
+      "user": "runneradmin",
+      "end_reason": "OFFLINE_REPLAY"
+    },
+    {
+      "version": 2,
+      "event_id": "feaeb0cc921e408583456d4dffed789a",
+      "kind": "START",
+      "timestamp": "2026-10-16T08:39:34",
+      "agms": "910001",
+      "rank": "ΑΣΤ",
+      "surname": "ΔΟΚΙΜΗ",
+      "given_name": "ΠΡΟΣΩΠΙΚΟ",
+      "full_name": "ΔΟΚΙΜΗ ΠΡΟΣΩΠΙΚΟ",
+      "position": "1",
+      "direction": "ΕΙΣΟΔΟΣ",
+      "computer": "runnervmgnbhw",
+      "user": "runneradmin",
+      "client_id": "runnervmgnbhw__runneradmin__4708"
+    },
+    {
+      "version": 2,
+      "event_id": "344ded7e9c304b20aba12456dca18cdf",
+      "kind": "END",
+      "timestamp": "2026-10-16T08:39:35",
+      "start_event_id": "feaeb0cc921e408583456d4dffed789a",
+      "agms": "910001",
+      "rank": "ΑΣΤ",
+      "surname": "ΔΟΚΙΜΗ",
+      "given_name": "ΠΡΟΣΩΠΙΚΟ",
+      "full_name": "ΔΟΚΙΜΗ ΠΡΟΣΩΠΙΚΟ",
+      "position": "1",
+      "direction": "ΕΙΣΟΔΟΣ",
+      "computer": "runnervmgnbhw",
+      "user": "runneradmin",
+      "end_reason": "OFFLINE_REPLAY"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+...E
+======================================================================
+ERROR: test_worker_age_is_not_reset_by_gui_heartbeat_and_rotation_is_bounded (__main__.RuntimeDiagnosticsRegression.test_worker_age_is_not_reset_by_gui_heartbeat_and_rotation_is_bounded)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\a\TDE-potition_tracking\TDE-potition_tracking\tests\runtime_diagnostics_regression.py", line 57, in test_worker_age_is_not_reset_by_gui_heartbeat_and_rotation_is_bounded
+    observed |= any('worker_stall' in p.read_text() for p in Path(directory).glob('*'))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\a\TDE-potition_tracking\TDE-potition_tracking\tests\runtime_diagnostics_regression.py", line 57, in <genexpr>
+    observed |= any('worker_stall' in p.read_text() for p in Path(directory).glob('*'))
+                                      ^^^^^^^^^^^^^
+  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\tmpz237ayev\\runtime-7600.jsonl'
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.810s
+
+FAILED (errors=1)

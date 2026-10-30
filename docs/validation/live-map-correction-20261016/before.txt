@@ -1,0 +1,30 @@
+Fontconfig error: No writable cache directories
+This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+FThis plugin does not support propagateSizeHints()
+FThis plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.
+======================================================================
+FAIL: test_correction_cannot_modify_replacement_start_after_confirmation (__main__.LiveMapActions.test_correction_cannot_modify_replacement_start_after_confirmation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/live_map_actions_regression.py", line 163, in test_correction_cannot_modify_replacement_start_after_confirmation
+    self.assertTrue(errors.called);self.assertFalse(info.called)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_correction_read_does_not_block_qt (__main__.LiveMapActions.test_correction_read_does_not_block_qt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/TDE-potition_tracking/tests/live_map_actions_regression.py", line 145, in test_correction_read_does_not_block_qt
+    self.assertLess(time.monotonic()-begin,.25,'Correction read blocked Qt on shared I/O')
+AssertionError: 0.8005335240013665 not less than 0.25 : Correction read blocked Qt on shared I/O
+
+----------------------------------------------------------------------
+Ran 7 tests in 2.932s
+
+FAILED (failures=2)
