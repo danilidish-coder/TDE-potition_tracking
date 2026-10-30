@@ -41,7 +41,11 @@ jobs:
             cp ../diag.txt DIAG.txt && git add DIAG.txt && git commit -qm "diag" && git push -q origin HEAD:refs/heads/archive-diag --force
             exit 1
           fi
-          unzip -o art.zip -d dl
+          if unzip -tq art.zip >/dev/null 2>&1; then
+            unzip -o art.zip -d dl
+          else
+            mv art.zip "dl/$EXE_NAME"
+          fi
 
       - name: Verify EXE size
         shell: bash
