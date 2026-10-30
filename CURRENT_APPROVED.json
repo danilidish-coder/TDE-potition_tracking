@@ -11,10 +11,12 @@
   "source_commit": "8b392fc",
   "source_branch": "fix/v127-issue11-20261029",
   "exe": "TDE_Katagrafi_Theseon_v1.2.8c.exe",
-  "exe_sha256": "NOT_VERIFIED",
+  "exe_sha256": "9e7e40fb00ead7af5e98469fcdd33800587863361693a645f8268a052e17352b",
   "exe_bytes": 63472695,
   "drive": "https://drive.google.com/file/d/1_Vi2t6UK12y50mQHDYzKxHBJUj3P2yB8/view",
   "drive_folder": "https://drive.google.com/drive/folders/1KFhgfkU3PpJDryIyL6TwAWp6Xz3S7amT",
   "run": "https://github.com/danilidish-coder/TDE-potition_tracking/actions (run #45, ci: publish verified v1.2.8c candidate)",
-  "note": "Approved by user on 2026-10-30 as the last functional build (user confirmed it works in use). Source commit identified from the Actions run; SHA-256 of the EXE not independently verified. Previous approved: v1.2.6 (2026-10-26)."
+  "note": "Approved by user on 2026-10-30 as the last functional build (user confirmed it works in use). Source commit identified from the Actions run; SHA-256 of the EXE not independently verified. Previous approved: v1.2.6 (2026-10-26).",
+  "exe_in_repo": "release/TDE_Katagrafi_Theseon_v1.2.8c.exe",
+  "github_release": "v1.2.8c-approved-20261030"
 }
