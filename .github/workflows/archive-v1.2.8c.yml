@@ -23,13 +23,15 @@ jobs:
       TAG: v1.2.8c-approved-20261030
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Download the exact approved EXE (run 40949470047)
-        uses: actions/download-artifact@v4
-        with:
-          name: TDE_Katagrafi_Theseon_v1.2.8c.exe
-          run-id: ${{ env.RUN_ID }}
-          github-token: ${{ github.token }}
-          path: dl
+      - name: Download the exact approved EXE (artifact 12929703413, run 40949470047)
+        shell: bash
+        run: |
+          set -e
+          mkdir -p dl
+          gh api -H "Accept: application/vnd.github+json" \
+            "repos/${{ github.repository }}/actions/artifacts/12929703413/zip" > art.zip
+          ls -l art.zip
+          unzip -o art.zip -d dl
 
       - name: Verify EXE size
         shell: bash
