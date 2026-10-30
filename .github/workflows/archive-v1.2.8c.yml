@@ -1,0 +1,102 @@
+name: Archive approved v1.2.8c (EXE + source)
+
+on:
+  push:
+    branches:
+      - archive/v1.2.8c
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    env:
+      EXE_NAME: TDE_Katagrafi_Theseon_v1.2.8c.exe
+      EXE_BYTES: "63472695"
+      RUN_ID: "40949470047"
+      TARGET_BRANCH: approved/v1.2.8c
+      PKG_NAME: TDE_v1.2.8c_KODIKAS_KAI_EXE.zip
+      SRC_NAME: TDE_Katagrafi_Theseon_v1.2.8c_SOURCE.zip
+      TAG: v1.2.8c-approved-20261030
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download the exact approved EXE (run 40949470047)
+        uses: actions/download-artifact@v4
+        with:
+          name: TDE_Katagrafi_Theseon_v1.2.8c.exe
+          run-id: ${{ env.RUN_ID }}
+          github-token: ${{ github.token }}
+          path: dl
+
+      - name: Verify EXE size
+        shell: bash
+        run: |
+          set -e
+          ls -l dl
+          test -f "dl/$EXE_NAME"
+          SIZE=$(stat -c %s "dl/$EXE_NAME")
+          echo "size=$SIZE"
+          test "$SIZE" = "$EXE_BYTES"
+          sha256sum "dl/$EXE_NAME" | tee sha.txt
+
+      - name: Checkout approved branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          path: repo
+          fetch-depth: 1
+
+      - name: Store EXE in approved branch (replace old v1.2.6 binary)
+        shell: bash
+        run: |
+          set -e
+          cd repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f "release/Καταγραφή Θέσεων.exe" ]; then git rm -q "release/Καταγραφή Θέσεων.exe"; fi
+          mkdir -p release
+          cp "../dl/$EXE_NAME" "release/$EXE_NAME"
+          SHA=$(cut -d' ' -f1 ../sha.txt)
+          printf '%s  %s\n' "$SHA" "$EXE_NAME" > release/SHA256.txt
+          printf 'v1.2.8c\n' > VERSION.txt
+          python3 - "$SHA" <<'PY'
+          import json, sys
+          p = "CURRENT_APPROVED.json"
+          d = json.load(open(p, encoding="utf-8"))
+          d["exe_sha256"] = sys.argv[1]
+          d["exe_in_repo"] = "release/TDE_Katagrafi_Theseon_v1.2.8c.exe"
+          d["github_release"] = "v1.2.8c-approved-20261030"
+          json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+          open(p, "a", encoding="utf-8").write("\n")
+          PY
+          git add -A
+          git commit -m "v1.2.8c: μόνιμη αποθήκευση εγκεκριμένου EXE (από run $RUN_ID) + SHA-256"
+          git push origin "HEAD:$TARGET_BRANCH"
+
+      - name: Build package zip (source + EXE)
+        shell: bash
+        run: |
+          set -e
+          cd repo
+          git archive --format=zip -o "../$SRC_NAME" HEAD -- . ':!release'
+          cd ..
+          mkdir pkg
+          cp "dl/$EXE_NAME" pkg/
+          cp "$SRC_NAME" pkg/
+          cp repo/release/SHA256.txt pkg/
+          (cd pkg && zip -q -9 "../$PKG_NAME" "$EXE_NAME" "$SRC_NAME" SHA256.txt)
+          ls -l "$PKG_NAME"
+
+      - name: Create GitHub Release with the package
+        shell: bash
+        run: |
+          set -e
+          cd repo
+          gh release create "$TAG" \
+            --target "$TARGET_BRANCH" \
+            --title "Καταγραφή Θέσεων v1.2.8c — ΕΓΚΕΚΡΙΜΕΝΗ 30/10/2026" \
+            --notes "Τελευταία λειτουργική έκδοση v1.2.8c (εγκρίθηκε 30/10/2026). Περιέχει: το EXE, τον πηγαίο κώδικα σε zip και ένα πακέτο που τα έχει και τα δύο μαζί ($PKG_NAME). SHA-256 στο SHA256.txt." \
+            "../$PKG_NAME" "../dl/$EXE_NAME" "../$SRC_NAME" "release/SHA256.txt"
