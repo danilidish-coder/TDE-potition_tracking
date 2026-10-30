@@ -28,9 +28,19 @@ jobs:
         run: |
           set -e
           mkdir -p dl
+          rc=0
           gh api -H "Accept: application/vnd.github+json" \
-            "repos/${{ github.repository }}/actions/artifacts/12929703413/zip" > art.zip
-          ls -l art.zip
+            "repos/${{ github.repository }}/actions/artifacts/12929703413/zip" > art.zip 2> err.txt || rc=$?
+          { echo "rc=$rc"; cat err.txt; ls -l art.zip; head -c 300 art.zip; echo; } > diag.txt 2>&1 || true
+          if [ "$rc" != "0" ]; then
+            git init -q diagrepo && cd diagrepo
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}"
+            git fetch -q --depth 1 origin archive/v1.2.8c && git checkout -q FETCH_HEAD
+            cp ../diag.txt DIAG.txt && git add DIAG.txt && git commit -qm "diag" && git push -q origin HEAD:refs/heads/archive-diag --force
+            exit 1
+          fi
           unzip -o art.zip -d dl
 
       - name: Verify EXE size
